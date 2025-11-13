@@ -130,4 +130,43 @@ class Admin {
             return false;
         }
     }
+
+    // CREATE
+    public function signUpAdmin($email, $password) {
+        try {
+            // Hash password before storing for security
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+            $stmt = $this->conn->prepare("INSERT INTO admin (email, password) VALUES (:email, :password)");
+            $stmt->bindParam(':email', $email, PDO::PARAM_STR);
+            $stmt->bindParam(':password', $hashedPassword, PDO::PARAM_STR);
+
+            if ($stmt->execute()) {
+                return $this->conn->lastInsertId(); // Return new admin ID
+            }
+            return false;
+        } catch (PDOException $e) {
+            error_log("Create Admin Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    // LOGIN: Verify admin credentials
+    public function verifyCredentials($email, $password) {
+        try {
+            $stmt = $this->conn->prepare("SELECT * FROM admin WHERE email = :email");
+            $stmt->bindParam(':email', $email, PDO::PARAM_STR);
+            $stmt->execute();
+            $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($admin && password_verify($password, $admin['password'])) {
+                // Password matches
+                return $admin;
+            }
+            return false;
+        } catch (PDOException $e) {
+            error_log("Verify Credentials Error: " . $e->getMessage());
+            return false;
+        }
+    }
 }

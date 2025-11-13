@@ -3,6 +3,8 @@
 namespace DerrumbeNet\Controller;
 
 use DerrumbeNet\Model\Admin;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 
 class AdminController {
     private Admin $adminModel;
@@ -101,5 +103,57 @@ class AdminController {
         }
 
         return $this->jsonResponse($response, ['error' => 'Failed to delete admin'], 500);
+    }
+
+    // Sign up a new admin
+    public function signUpAdmin($request, $response) {
+        $data = $request->getParsedBody();
+        $email = $data['email'] ?? null;
+        $password = $data['password'] ?? null;
+
+        if (!$email || !$password) {
+            return $this->jsonResponse($response, ['error' => 'Email and Password are required'], 400);
+        }
+
+        $newId = $this->adminModel->createAdmin($email, $password);
+        if ($newId) {
+            return $this->jsonResponse($response, ['message' => 'Admin created', 'id' => $newId], 201);
+        }
+
+        return $this->jsonResponse($response, ['error' => 'Failed to create admin'], 500);
+    }
+
+    // Log in an admin and return JWT
+    public function loginAdmin($request, $response) {
+        $data = $request->getParsedBody();
+        $email = $data['email'];
+        $password = $data['password'];
+
+        if (!$email || !$password) {
+            return $this->jsonResponse($response, ['error' => 'Email and password are required'], 400);
+        }
+
+        $admin = $this->adminModel->verifyCredentials($email, $password);
+        if (!$admin) {
+            return $this->jsonResponse($response, ['error' => 'Invalid email or password'], 401);
+        }
+
+        // JWT secret key (store in env or config file)
+        $secretKey = $_ENV['JWT_SECRET'];
+
+        $payload = [
+            'iss' => 'derrumbenet', // issuer
+            'sub' => $admin['admin_id'], // subject (admin id)
+            'email' => $admin['email'],
+            'iat' => time(), // issued at
+            'exp' => time() + 3600 // expires in 1 hour
+        ];
+
+        $jwt = JWT::encode($payload, $secretKey, 'HS256');
+
+        return $this->jsonResponse($response, [
+            'message' => 'Login successful',
+            'token' => $jwt
+        ]);
     }
 }
