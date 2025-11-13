@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../cms/styles/CMSLogin.css";
+import logo from "../../assets/Landslide_Hazard_Mitigation_Logo.avif";
 
 export default function CMSLogin() {
   const [username, setUsername] = useState("");
@@ -22,6 +23,7 @@ export default function CMSLogin() {
   return (
     <div className="cms-login">
       <div className="cms-login-box">
+      <img src={logo} alt="Logo" className="cms-login-logo" />
         <h1>Admin Login</h1>
         <form onSubmit={handleLogin}>
           <label>Username</label>
@@ -41,6 +43,9 @@ export default function CMSLogin() {
           />
 
           <button type="submit">Login</button>
+          <a href="#" className="forgot-password">
+            Forgot password?
+          </a>
         </form>
       </div>
     </div>
