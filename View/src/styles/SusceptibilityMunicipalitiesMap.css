@@ -1,0 +1,68 @@
+/* === PAGE WRAPPER === */
+.municipality-page {
+    background-color: #DFE8DA;
+    font-family: "Inter", sans-serif;
+    color: #000;
+    padding: 3rem 2rem;
+    min-height: 100vh;
+}
+
+/* === TITLE === */
+.municipality-title {
+    max-width: 1000px;
+    margin: 0 auto 1rem auto;
+    font-size: 2.5rem;
+    font-weight: 800;
+    text-align: left;
+}
+
+/* === INTRO PARAGRAPH === */
+.municipality-intro {
+    max-width: 1000px;
+    margin: 0 auto 1.5rem auto;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    text-align: justify;
+}
+
+/* === MAP WRAPPER === */
+.municipality-map-wrapper {
+    max-width: 1000px;
+    margin: 2rem auto;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+}
+
+/* Ensure the Leaflet map scales properly */
+.municipality-map-wrapper .leaflet-container {
+    width: 100% !important;
+    height: 60vh !important;
+}
+
+/* === TABLET BREAKPOINT === */
+@media (max-width: 768px) {
+    .municipality-page {
+        padding: 2rem 1rem;
+    }
+
+    .municipality-title {
+        font-size: 2rem;
+        text-align: center;
+    }
+
+    .municipality-intro {
+        font-size: 1rem;
+        text-align: left;
+    }
+
+    .municipality-map-wrapper .leaflet-container {
+        height: 55vh !important;
+    }
+}
+
+/* === MOBILE BREAKPOINT === */
+@media (max-width: 480px) {
+    .municipality-map-wrapper .leaflet-container {
+        height: 50vh !important;
+    }
+}
