@@ -56,7 +56,9 @@ function Publications() {
   useEffect(() => {
     const fetchPublications = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/publications"); // CHANGE
+        // const response = await fetch("http://localhost:8080/api/publications"); // CHANGE
+        const response = await fetch("https://derrumbe-test.derrumbe.net/api/publications"); // CHANGE
+        
         if (!response.ok) throw new Error(`Error: ${response.status} ${response.statusText}`);
 
         const data = await response.json();
@@ -67,7 +69,7 @@ function Publications() {
           description: item.description || "",
           // override URL for publication 3 to open the poster image, TODO: THIS NEEDS TO CHANGE
           url:
-            item.publication_id === 3
+            item.publication_id === 1
               ? publication1
               : item.publication_url || "#",
           image: imageMap[item.publication_id] || publication1,

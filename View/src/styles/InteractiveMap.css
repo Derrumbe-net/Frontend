@@ -38,18 +38,6 @@
 }
 .leaflet-popup-content { width: 100% !important; }
 
-.logo-container {
-  position: absolute;
-  z-index: 1000;
-  top: 580px;
-  left: 20px;
-}
-
-.landslide-logo {
-  width: 150px;
-  height: auto;
-  display: block;
-}
 
 /* Styling for the custom DivIcon marker */
 .saturation-marker {
@@ -82,42 +70,127 @@
   background-color: rgb(0, 28, 104, 0.9);
 }
 
-/* --- Legend Styles --- */
+.precip-marker {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 55px;
+  height: 30px;
+  border-radius: 0;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  line-height: 1;
+  text-align: center;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* --- Legend Container --- */
 .legend-container {
   position: absolute;
   bottom: 60px;
   right: 30px;
   z-index: 1000;
-  background: rgba(0, 0, 0, 0.5);
-  padding-top: 10px;
-  padding-left: 20px;
-  padding-right: 20px;
-  border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+
+  padding: 15px 18px;
+  border-radius: 10px;
+
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+
   font-size: 0.9rem;
   color: white;
-  max-width: 200px;
+  min-width: 190px;
+  max-width: 220px;
 }
 
+/* Title */
+.legend-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  padding-bottom: 6px;
+}
+
+/* Each row */
 .legend-item {
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
+.legend-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Label text */
 .legend-item p {
   padding-left: 10px;
-  font-weight: 700;
+  font-weight: 600;
+  margin: 0;
 }
 
-.legend-color-box, .legend-landslide-box {
+/* Color squares */
+.legend-color-box {
   width: 20px;
-  height: 15px;
-  margin-right: 8px;
-  border: 1px solid #333;
-  border-radius: 3px;
-  display: inline-block;
+  height: 20px;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 4px;
+  flex-shrink: 0;
 }
+
+/* For long precipitation legend */
+.legend-scrollable {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+/* Scrollbar styling */
+.legend-scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.legend-scrollable::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+}
+
+.legend-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.4);
+  border-radius: 10px;
+}
+
+/* --- Positioning --- */
+
+/* 1) Soil Saturation - bottom right */
+.legend-bottom-right {
+  position: absolute;
+  bottom: 60px;
+  right: 30px;
+}
+
+/* 2) Susceptibility - stacked ABOVE soil saturation */
+.legend-bottom-right-top {
+  position: absolute;
+  bottom: 220px; /* Adjust stack height */
+  right: 30px;
+}
+
+/* 3) Precipitation - below MapMenu icons, left side */
+.legend-top-left {
+  position: absolute;
+  top: 120px;       /* right below the map menu buttons */
+  left: 30px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+
 
 /* --- Disclaimer --- */
 .disclaimer-overlay {
@@ -182,4 +255,22 @@
 .leaflet-touch .leaflet-bar a {
   background: rgba(0, 0, 0, 0.5);
   color: white;
+}
+
+.logo-container {
+  position: absolute;
+  z-index: 1000;
+  top: 510px;
+  left: 30px;
+}
+
+.landslide-logo {
+  width: 100px;
+  height: auto;
+  display: block;
+}
+
+.leaflet-control-zoom {
+  top: 10px !important;
+  right: 30px;
 }
