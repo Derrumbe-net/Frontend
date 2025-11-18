@@ -7,19 +7,33 @@ export default function CMSLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  // const login_route = "http://localhost:8080/api/admins/login";
+  const login_route = "https://derrumbe-test.derrumbe.net/api/admins/login";
+  
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    // Mock credentials
-    if (username === "admin" && password === "1234") {
-      localStorage.setItem("cmsAdmin", "true");
-      navigate("/cms"); // redirect to dashboard
-    } else {
-      alert("Invalid credentials! Try admin / 1234");
+    try {
+      const response = await fetch(login_route, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }), // Send the state data
+      });
+
+      if (response.ok) {
+        navigate('/cms'); 
+      } else {
+        alert('Login Failed: Please check your username and password.');
+      }
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('An error occurred. Please try again later.');
     }
   };
-
+  
   return (
     <div className="cms-login">
       <div className="cms-login-box">
