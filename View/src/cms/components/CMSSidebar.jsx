@@ -68,6 +68,14 @@ export default function Sidebar() {
         >
           Estaciones
         </NavLink>
+        <NavLink
+          to="/cms/usuarios"
+          className={({ isActive }) =>
+            `cms-link ${isActive ? "cms-link--active" : ""}`
+          }
+        >
+          Usuarios
+        </NavLink>
       </nav>
 
       {/* ===== Logout Button ===== */}
