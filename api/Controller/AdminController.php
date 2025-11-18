@@ -57,6 +57,26 @@ class AdminController {
         return $this->jsonResponse($response, $admins);
     }
 
+    // Update admin authorization
+    public function updateAuthorization($request, $response, $args) {
+        $id = $args['id'];
+        $data = $request->getParsedBody();
+
+    if (!isset($data['isAuthorized'])) {
+        return $this->jsonResponse($response, ['error' => 'isAuthorized field is required'], 400);
+    }
+
+    $isAuthorized = $data['isAuthorized'];
+    $updated = $this->adminModel->updateAuthorization($id, $isAuthorized);
+
+    if ($updated) {
+        $statusMsg = $isAuthorized ? 'authorized' : 'deauthorized';
+        return $this->jsonResponse($response, ['message' => "Admin successfully $statusMsg"]);
+    }
+
+    return $this->jsonResponse($response, ['error' => 'Failed to update authorization'], 500);
+    }
+
     // Update admin email
     public function updateEmail($request, $response, $args) {
         $id = $args['id'];
