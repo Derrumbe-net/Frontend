@@ -8,7 +8,7 @@ export default function Sidebar() {
 
   const handleLogout = () => {
     localStorage.removeItem("cmsAdmin");
-    navigate("/");
+    navigate("/cms/login/");
   };
 
   return (
