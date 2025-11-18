@@ -6,9 +6,9 @@ export default function CMSManageUsers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_URL = "http://localhost:8080/api/admins";
+  const API_URL = "//derrumbe-test.derrumbe.net/api/admins";
+  // const API_URL = "http://localhost:8080/api/admins";
 
-  // Fetch all admins on load
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -26,7 +26,6 @@ export default function CMSManageUsers() {
       if (!response.ok) throw new Error("Failed to fetch users");
 
       const data = await response.json();
-      // data might be an array, or wrapped in { data: [...] } depending on your API
       setUsers(Array.isArray(data) ? data : data.data || []);
       setLoading(false);
     } catch (err) {
@@ -35,14 +34,15 @@ export default function CMSManageUsers() {
     }
   };
 
-  const handleToggleAuth = async (userId, currentStatus) => {
-    // Determine new status (toggle 1 to 0, or 0 to 1)
-    const newStatus = currentStatus === 1 || currentStatus === true ? 0 : 1;
+  const handleToggleAuth = async (user) => {
+    const currentIsAuth = user.isAuthorized === 1 || user.isAuthorized === true;
+    const newStatus = !currentIsAuth; 
+
+    const adminId = user.admin_id; 
 
     try {
       const token = localStorage.getItem("cmsAdmin");
-      // Note: You need to ensure this route exists in your PHP API
-      const response = await fetch(`${API_URL}/${userId}/authorization`, {
+      const response = await fetch(`${API_URL}/${adminId}/isAuthorized`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -52,18 +52,19 @@ export default function CMSManageUsers() {
       });
 
       if (response.ok) {
-        // Optimistically update the UI
         setUsers((prevUsers) =>
-          prevUsers.map((user) =>
-            user.id === userId ? { ...user, isAuthorized: newStatus } : user
-          )
+          prevUsers.map((u) => {
+             const uId = u.admin_id;
+             return uId === adminId ? { ...u, isAuthorized: newStatus } : u;
+          })
         );
       } else {
-        alert("Failed to update authorization status");
+        const errData = await response.json();
+        alert(`Failed: ${errData.error || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error updating user:", error);
-      alert("An error occurred.");
+      alert("An error occurred connection to the server.");
     }
   };
 
@@ -81,7 +82,6 @@ export default function CMSManageUsers() {
         <table>
           <thead>
             <tr>
-              {/* ID Header Removed */}
               <th>Email</th>
               <th>Status</th>
               <th>Created At</th>
@@ -90,12 +90,11 @@ export default function CMSManageUsers() {
           </thead>
           <tbody>
             {users.map((user) => {
-              // Normalize status to boolean for easy checking
+              const userId = user.admin_id;
               const isAuth = user.isAuthorized === 1 || user.isAuthorized === true;
               
               return (
-                <tr key={user.id}>
-                  {/* ID Data Cell Removed */}
+                <tr key={userId}>
                   <td className="email-cell">{user.email}</td>
                   <td>
                     <span className={`status-badge ${isAuth ? "active" : "pending"}`}>
@@ -106,7 +105,7 @@ export default function CMSManageUsers() {
                   <td>
                     <button
                       className={`action-btn ${isAuth ? "revoke" : "approve"}`}
-                      onClick={() => handleToggleAuth(user.id, user.isAuthorized)}
+                      onClick={() => handleToggleAuth(user)}
                     >
                       {isAuth ? "Revoke Access" : "Authorize"}
                     </button>
