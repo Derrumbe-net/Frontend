@@ -26,12 +26,21 @@ export default function CMSLogin() {
       const data = await response.json();
 
       if (response.ok) {
-        // Store the token for future authenticated requests
-        localStorage.setItem('cmsAdmin', data.token);
-        
-        // Navigate only after confirmation
-        navigate('/cms'); 
-      } else {
+        const isAuthorized = data.isAuthorized === 1 || data.isAuthorized === true;
+
+        if (isAuthorized) {
+            // User is valid AND authorized
+            localStorage.setItem('cmsAdmin', data.token);
+            navigate('/cms'); 
+        } else {
+            // User is valid, but NOT authorized yet
+            alert('Login Successful, but your account is pending authorization. Please contact an administrator.');
+            // Ensure no token is saved so they can't brute force the URL
+            localStorage.removeItem('cmsAdmin');
+        }
+      } 
+      
+      else {
         // Use the specific error message from your API
         alert(data.error || 'Login Failed: Please check your credentials.');
       }
