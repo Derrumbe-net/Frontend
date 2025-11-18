@@ -4,7 +4,7 @@ import "../../cms/styles/CMSLogin.css";
 import logo from "../../assets/Landslide_Hazard_Mitigation_Logo.avif";
 
 export default function CMSLogin() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   // const login_route = "http://localhost:8080/api/admins/login";
@@ -20,13 +20,20 @@ export default function CMSLogin() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }), // Send the state data
+        body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
+        // Store the token for future authenticated requests
+        localStorage.setItem('cmsAdmin', data.token);
+        
+        // Navigate only after confirmation
         navigate('/cms'); 
       } else {
-        alert('Login Failed: Please check your username and password.');
+        // Use the specific error message from your API
+        alert(data.error || 'Login Failed: Please check your credentials.');
       }
     } catch (error) {
         console.error('Login error:', error);
@@ -40,11 +47,11 @@ export default function CMSLogin() {
       <img src={logo} alt="Logo" className="cms-login-logo" />
         <h1>Admin Login</h1>
         <form onSubmit={handleLogin}>
-          <label>Username</label>
+          <label>Email</label>
           <input
             type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
 
