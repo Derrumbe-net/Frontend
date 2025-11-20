@@ -80,7 +80,7 @@ import Villalba from "../assets/maps/villalba.png";
 import Yabucoa from "../assets/maps/yabucoa.png";
 import Yauco from "../assets/maps/yauco.png";
 
-export const municipalityPng = {
+const municipalityPng = {
   Adjuntas: Adjuntas,
   Aguada: Aguada,
   Aguadilla: Aguadilla,
