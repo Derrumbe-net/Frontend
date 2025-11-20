@@ -56,8 +56,8 @@ function Publications() {
   useEffect(() => {
     const fetchPublications = async () => {
       try {
-        // const response = await fetch("http://localhost:8080/api/publications"); // CHANGE
-        const response = await fetch("https://derrumbe-test.derrumbe.net/api/publications"); // CHANGE
+        // const response = await fetch("http://localhost:8080/api/publications");
+        const response = await fetch("https://derrumbe-test.derrumbe.net/api/publications");
         
         if (!response.ok) throw new Error(`Error: ${response.status} ${response.statusText}`);
 
