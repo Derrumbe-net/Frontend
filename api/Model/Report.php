@@ -31,7 +31,8 @@ class Report {
             $stmt->bindParam(':reporter_phone', $data['reporter_phone'], PDO::PARAM_STR);
             $stmt->bindParam(':reporter_email', $data['reporter_email'], PDO::PARAM_STR);
             $stmt->bindParam(':physical_address', $data['physical_address'], PDO::PARAM_STR);
-            $stmt->execute();
+            // $stmt->execute();
+
             if ($stmt->execute()) {
                 return $this->conn->lastInsertId();
             } else {

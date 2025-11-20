@@ -1,0 +1,1 @@
+Placeholder readme file, all testingb related to new Content management system (cms) will be added here.

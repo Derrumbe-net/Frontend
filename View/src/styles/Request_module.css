@@ -1,10 +1,8 @@
-/* ===== REQUEST PAGE ===== */
 .request-page {
   background-color: #DFE8DA;
   padding: 3rem 2rem;
   color: #000;
   width: 100%;
-  margin-left: calc(-1 * (100vw - 100%) / 2); /* perfectly center full-width sections */
   font-family: 'Inter', sans-serif;
   overflow: hidden;
 }

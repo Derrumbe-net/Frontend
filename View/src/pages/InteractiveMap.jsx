@@ -10,6 +10,8 @@ import GreenPinIcon from '../assets/green-location-pin.png';
 import L from 'leaflet';
 import MapMenu from "../components/MapMenu.jsx";
 
+// const BASE_STATIONS_URL = "http://localhost:8080/api/stations" // CHANGE BACK
+// const BASE_LANDSLIDES_URL = "http://localhost:8080/api/landslides"; // CHANGE BACK
 const BASE_STATIONS_URL = "https://derrumbe-test.derrumbe.net/api/stations"
 const BASE_LANDSLIDES_URL = "https://derrumbe-test.derrumbe.net/api/landslides";
 
@@ -36,7 +38,6 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
   const map = useMap();
 
   useEffect(() => {
-    // 🟫 Add base layers only once (hillshade + municipalities)
     const hillshade = EL.tiledMapLayer({
       url: 'https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Hillshade_Puerto_Rico/MapServer',
       opacity: 0.5,
@@ -47,14 +48,12 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
       style: () => ({ color: 'black', weight: 1, fillOpacity: 0 }),
     }).addTo(map);
 
-    // Cleanup only once (when component unmounts)
     return () => {
       map.removeLayer(hillshade);
       map.removeLayer(municipalities);
     };
   }, [map]);
 
-  // 🟩 Separate effect: toggle precipitation layer
   useEffect(() => {
     let precipLayer;
     if (showPrecip) {
@@ -69,7 +68,6 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
     };
   }, [map, showPrecip]);
 
-  // 🟨 Separate effect: toggle susceptibility layer
   useEffect(() => {
     let susceptibilityLayer;
     if (showSusceptibility) {
@@ -86,8 +84,8 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
   return null;
 };
 
-const PopulateStations = () => {
-    const [station, setStations] = useState([]);
+const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
+    const [stations, setStations] = useState([]);
 
     useEffect(() => {
         fetch(BASE_STATIONS_URL)
@@ -97,30 +95,69 @@ const PopulateStations = () => {
                 }
                 return response.json();
             })
-            .then((data) => {
-                setStations(data);
-            })
-            .catch((err) => {
-                console.error("API Fetch Error:", err);
-            });
+            .then((data) => setStations(data))
+            .catch((err) => console.error("API Fetch Error:", err));
     }, []);
 
-    const createStationIcon = (saturation) => {
-        let className = 'saturation-marker';
+    /** SOIL SATURATION ICON **/
+    const createSaturationIcon = (saturation) => {
+        let className = "saturation-marker";
 
-        if (saturation >= 90) {
-            className += ' high';
-        } else if (saturation >= 80){
-            className += ' medium';
-        }else {
-            className += ' low';
-        }
+        if (saturation >= 90) className += " high";
+        else if (saturation >= 80) className += " medium";
+        else className += " low";
 
-        const roundedSaturation = Math.round(saturation);
+        const rounded = Math.round(saturation);
 
         return L.divIcon({
-            html: `<div class="${className}">${roundedSaturation}%</div>`,
-            className: '',
+            html: `<div class="${className}">${rounded}%</div>`,
+            className: "",
+            iconSize: [55, 30],
+            iconAnchor: [27, 15],
+        });
+    };
+
+    /** PRECIP COLOR SCALE (MRMS QPE) **/
+    const getPrecipColor = (p) => {
+        if (p > 8.0) return "#000066";
+        if (p >= 7.0) return "#0000CC";
+        if (p >= 6.5) return "#3333FF";
+        if (p >= 6.0) return "#330033";
+        if (p >= 5.5) return "#660066";
+        if (p >= 5.0) return "#990099";
+        if (p >= 4.5) return "#CC00CC";
+        if (p >= 4.0) return "#FF00FF";
+        if (p >= 3.5) return "#FF3399";
+        if (p >= 3.0) return "#CC0000";
+        if (p >= 2.5) return "#FF3300";
+        if (p >= 2.0) return "#FF6600";
+        if (p >= 1.75) return "#FF9900";
+        if (p >= 1.5) return "#FFB733";
+        if (p >= 1.25) return "#FFD24D";
+        if (p >= 1.0) return "#FFFF66";
+        if (p >= 0.80) return "#007F00";
+        if (p >= 0.60) return "#009900";
+        if (p >= 0.40) return "#00B200";
+        if (p >= 0.20) return "#00CC00";
+        if (p >= 0.15) return "#0099FF";
+        if (p >= 0.10) return "#5FC2FF";
+        if (p >= 0.05) return "#7FD6FF";
+        if (p >= 0.01) return "#9FEAFF";
+        return "#DADADA"; // default/no data
+    };
+
+    /** PRECIPITATION ICON **/
+    const createPrecipIcon = (precip) => {
+        const color = getPrecipColor(precip);
+        const rounded = Number(precip).toFixed(2);
+
+        return L.divIcon({
+            html: `
+                <div class="precip-marker" style="background-color:${color}">
+                    ${rounded}"
+                </div>
+            `,
+            className: "",
             iconSize: [55, 30],
             iconAnchor: [27, 15],
         });
@@ -128,25 +165,46 @@ const PopulateStations = () => {
 
     return (
         <>
-            {station.map(station => {
-                if (station.is_available === 1 && station.soil_saturation != null) {
-                    const customIcon = createStationIcon(station.soil_saturation);
+            {stations.map(station => {
+                if (station.is_available !== 1) return null;
 
-                    return (
-                        <Marker
-                            key={station.id}
-                            position={[station.latitude, station.longitude]}
-                            icon={customIcon}
-                        >
-                            <StationPopup station={station} />
-                        </Marker>
-                    );
+                let icon = null;
+
+                // PRIORITY LOGIC (always show one metric):
+                // Soil Saturation (default) OR Precipitation (if selected)
+                if (showSaturation && station.soil_saturation != null) {
+                    icon = createSaturationIcon(station.soil_saturation);
+                } 
+                else if (showPrecip12hr && station.precipitation != null) {
+                    icon = createPrecipIcon(station.precipitation);
+                } 
+                else {
+                    // If the selected metric has no value, fallback to the other metric
+                    if (station.soil_saturation != null) {
+                        icon = createSaturationIcon(station.soil_saturation);
+                    } 
+                    else if (station.precipitation != null) {
+                        icon = createPrecipIcon(station.precipitation);
+                    } 
+                    else {
+                        return null; // Only if BOTH are missing (rare case)
+                    }
                 }
-                return null;
+
+                return (
+                    <Marker
+                        key={station.id}
+                        position={[station.latitude, station.longitude]}
+                        icon={icon}
+                    >
+                        <StationPopup station={station} />
+                    </Marker>
+                );
             })}
         </>
     );
-}
+};
+
 
 const createLandslideIcon = () => {
   return L.icon({
@@ -157,24 +215,8 @@ const createLandslideIcon = () => {
   });
 };
 
-
-// const YearFilter = ({ selectedYear, availableYears, onYearChange }) => {
-//     return (
-//         <div className="year-filter-container">
-//             <label htmlFor="year-select">Filter Landslides by Year:</label>
-//             <select id="year-select" value={selectedYear} onChange={onYearChange}>
-//                 <option value="all">All Years</option>
-//                 {availableYears.map(year => (
-//                     <option key={year} value={year}>{year}</option>
-//                 ))}
-//             </select>
-//         </div>
-//     );
-// }
-
 const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
     const [allLandslides, setAllLandslides] = useState([]);
-
     const customIcon = createLandslideIcon();
 
     useEffect(() => {
@@ -204,10 +246,6 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
             });
     },  [setAvailableYears]);
 
-    // const handleYearChange = (e) => {
-    //     setSelectedYear(e.target.value);
-    // };
-
     const filteredLandslides = allLandslides.filter(landslide => {
         if (selectedYear === 'all') {
             return true;
@@ -220,12 +258,6 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
 
     return (
         <>
-            {/* <YearFilter
-                selectedYear={selectedYear}
-                availableYears={availableYears}
-                onYearChange={handleYearChange}
-            /> */}
-
             {filteredLandslides.map(landslide => (
                 <Marker
                     key={landslide.landslide_id}
@@ -239,24 +271,92 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
     );
 }
 
-const AddLegend = () => {
-    return(
-        <div className="legend-container">
-            <div className="legend-item">
-                <span className="saturation-marker low"></span>
-                <p> 0-80% </p>
-            </div>
-            <div className="legend-item">
-                <span className="saturation-marker medium"></span>
-                <p>80-90%</p>
-            </div>
-            <div className="legend-item">
-                <span className="saturation-marker high"></span>
-                <p>90-100%</p>
-            </div>
-        </div>
-    );
-}
+const SoilSaturationLegend = () => (
+  <div className="legend-container legend-bottom-right">
+    <div className="legend-title">Soil Saturation</div>
+    <div className="legend-item">
+      <span className="legend-color-box" style={{background:"#e0c853"}}></span>
+      <p>0–80%</p>
+    </div>
+    <div className="legend-item">
+      <span className="legend-color-box" style={{background:"#63b3ff"}}></span>
+      <p>80–90%</p>
+    </div>
+    <div className="legend-item">
+      <span className="legend-color-box" style={{background:"#001f57"}}></span>
+      <p>90–100%</p>
+    </div>
+  </div>
+);
+
+const SusceptibilityLegend = () => (
+  <div className="legend-container legend-bottom-right-top">
+    <div className="legend-title">Landslide Susceptibility</div>
+    <div className="legend-item">
+      <span className="legend-color-box" style={{background:"#C0C0C0"}}></span>
+      <p>Low</p>
+    </div>
+
+    <div className="legend-item">
+      <span className="legend-color-box" style={{background:"#FFFF00"}}></span>
+      <p>Moderate</p>
+    </div>
+
+    <div className="legend-item">
+      <span className="legend-color-box" style={{background:"#FF9900"}}></span>
+      <p>High</p>
+    </div>
+
+    <div className="legend-item">
+      <span className="legend-color-box" style={{background:"#FF0000"}}></span>
+      <p>Very High</p>
+    </div>
+
+    <div className="legend-item">
+      <span className="legend-color-box" style={{background:"#0000FF"}}></span>
+      <p>Exceptionally High</p>
+    </div>
+  </div>
+);
+
+const PrecipLegend = () => (
+  <div className="legend-container legend-top-left legend-scrollable" >
+    <div className="legend-title">Precipitation (inches)</div>
+
+    {[
+      ["#9FEAFF", "0.01 - 0.05"],
+      ["#7FD6FF", "0.05 - 0.10"],
+      ["#5FC2FF", "0.10 - 0.15"],
+      ["#0099FF", "0.15 - 0.20"],
+      ["#00CC00", "0.20 - 0.40"],
+      ["#00B200", "0.40 - 0.60"],
+      ["#009900", "0.60 - 0.80"],
+      ["#007F00", "0.80 - 1.00"],
+      ["#FFFF66", "1.00 - 1.25"],
+      ["#FFD24D", "1.25 - 1.50"],
+      ["#FFB733", "1.50 - 1.75"],
+      ["#FF9900", "1.75 - 2.00"],
+      ["#FF6600", "2.00 - 2.50"],
+      ["#FF3300", "2.50 - 3.00"],
+      ["#CC0000", "3.00 - 3.50"],
+      ["#FF3399", "3.50 - 4.00"],
+      ["#FF00FF", "4.00 - 4.50"],
+      ["#CC00CC", "4.50 - 5.00"],
+      ["#990099", "5.00 - 5.50"],
+      ["#660066", "5.50 - 6.00"],
+      ["#330033", "6.00 - 6.50"],
+      ["#3333FF", "6.50 - 7.00"],
+      ["#0000CC", "7.00 - 8.00"],
+      ["#000066", "Above 8.00"],
+    ].map(([color, label]) => (
+      <div className="legend-item" key={label}>
+        <span className="legend-color-box" style={{background: color}}></span>
+        <p>{label}</p>
+      </div>
+    ))}
+  </div>
+);
+
 
 export default function InteractiveMap() {
   const center = [18.220833, -66.420149];
@@ -265,6 +365,13 @@ export default function InteractiveMap() {
   const [availableYears, setAvailableYears] = useState([]);
   const [showPrecip, setShowPrecip] = useState(true);
   const [showSusceptibility, setShowSusceptibility] = useState(false);
+  const [showSaturation, setShowSaturation] = useState(true);
+  const [showPrecip12hr, setShowPrecip12hr] = useState(false);
+  const [showSaturationLegend, setShowSaturationLegend] = useState(true);
+  const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
+  const [showPrecipLegend, setShowPrecipLegend] = useState(false);
+
+
 
   const [showDisclaimer, setShowDisclaimer] = useState(
     localStorage.getItem('disclaimerAccepted') !== 'true'
@@ -275,10 +382,20 @@ export default function InteractiveMap() {
     setShowDisclaimer(false);
   };
 
-  // Toggle handlers
   const toggleStations = () => setShowStations(v => !v);
   const togglePrecip = () => setShowPrecip(v => !v);
   const toggleSusceptibility = () => setShowSusceptibility(v => !v);
+  const toggleSaturation = () => {
+    setShowSaturation(true);
+    setShowPrecip12hr(false);
+  };
+  const togglePrecip12hr = () => {
+    setShowPrecip12hr(true);
+    setShowSaturation(false);
+  };
+  const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
+  const toggleSusceptibilityLegend = () => setShowSusceptibilityLegend(v => !v);
+  const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
 
 
   return (
@@ -288,7 +405,7 @@ export default function InteractiveMap() {
       <MapContainer
         id="map"
         center={center}
-        zoom={10}
+        zoom={9}
         minZoom={7}
         maxZoom={18}
         scrollWheelZoom={false}
@@ -301,16 +418,33 @@ export default function InteractiveMap() {
         />
 
         <MapMenu
-            showStations={showStations}
-            onToggleStations={toggleStations}
-            showPrecip={showPrecip}
-            onTogglePrecip={togglePrecip}
-            showSusceptibility={showSusceptibility}
-            onToggleSusceptibility={toggleSusceptibility}
-            availableYears={availableYears}
-            selectedYear={selectedYear}
-            onYearChange={setSelectedYear}
-            setAvailableYears={setAvailableYears}
+          showStations={showStations}
+          onToggleStations={toggleStations}
+
+          showPrecip={showPrecip}
+          onTogglePrecip={togglePrecip}
+
+          showSusceptibility={showSusceptibility}
+          onToggleSusceptibility={toggleSusceptibility}
+
+          showSaturation={showSaturation}
+          onToggleSaturation={toggleSaturation}
+
+          showPrecip12hr={showPrecip12hr}
+          onTogglePrecip12hr={togglePrecip12hr}
+
+          showSaturationLegend={showSaturationLegend}
+          onToggleSaturationLegend={toggleSaturationLegend}
+
+          showSusceptibilityLegend={showSusceptibilityLegend}
+          onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
+
+          showPrecipLegend={showPrecipLegend}
+          onTogglePrecipLegend={togglePrecipLegend}
+
+          availableYears={availableYears}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
         />
 
         <EsriOverlays
@@ -320,14 +454,21 @@ export default function InteractiveMap() {
 
         <ZoomControl position="topright" />
         
-        {showStations && <PopulateStations />}
+        {showStations && (
+          <PopulateStations
+            showSaturation={showSaturation}
+            showPrecip12hr={showPrecip12hr}
+          />
+        )}
 
         <PopulateLandslides
           selectedYear={selectedYear}
           setAvailableYears={setAvailableYears}
         />
 
-        <AddLegend/>
+        {showSaturationLegend && <SoilSaturationLegend />}
+        {showSusceptibilityLegend && <SusceptibilityLegend />}
+        {showPrecipLegend && <PrecipLegend />}
 
         <div className="logo-container">
           <img src={LandslideLogo} alt="Landslide Hazard Mitigation Logo" className="landslide-logo" />

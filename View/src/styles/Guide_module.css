@@ -10,11 +10,11 @@
 /* ===== HEADER ===== */
 .guide__content {
   width: 100%;
-  max-width: 800px; /* keeps alignment consistent */
+  max-width: 800px;
   margin: 0 auto;
   position: relative;
   z-index: 2;
-  text-align: center; /* Centers titles */
+  text-align: center;
 }
 
 .guide h1 {

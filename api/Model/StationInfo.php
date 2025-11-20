@@ -34,7 +34,8 @@ class StationInfo {
             $stmt->bindParam(':wc2', $data['wc2'], PDO::PARAM_STR);
             $stmt->bindParam(':wc3', $data['wc3'], PDO::PARAM_STR);
             $stmt->bindParam(':wc4', $data['wc4'], PDO::PARAM_STR);
-            $stmt->execute();
+            // $stmt->execute();
+            
             if ($stmt->execute()) {
                 return $this->conn->lastInsertId();
             } else {

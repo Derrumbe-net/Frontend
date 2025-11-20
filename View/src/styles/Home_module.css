@@ -1,4 +1,3 @@
-/* ===== MAIN LANDING PAGE WRAPPER ===== */
 .landing {
   font-family: 'Inter', sans-serif;
   background-color: #ffffff;
@@ -97,7 +96,6 @@
   transform: scale(1.05);
 }
 
-/* Responsive (slight scale for very small screens) */
 @media (max-width: 900px) {
   .hero {
     min-height: 25vh;

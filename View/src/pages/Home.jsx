@@ -35,11 +35,6 @@ function Home() {
 
       {/* SECTION: MAPA */}
       <section className="landing__map"> 
-        {/* <img
-          src={logo}
-          alt="PRLHMO Logo"
-          className="landing__map-logo"
-        /> */}
 
         <div className="landing__map-text">
           <h2>Explora nuestro Mapa Interactivo de Monitoreo de Deslizamientos</h2>

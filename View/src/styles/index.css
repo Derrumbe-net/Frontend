@@ -1,7 +1,4 @@
 /* ====================================================================================================*/
-/* =========================
-   MAIN NAVBAR CONTAINER
-   ========================= */
 .nav {
   width: 100%;
   background: rgba(0, 0, 0, 0.55);
@@ -16,7 +13,6 @@
   box-sizing: border-box;
 }
 
-/* Keeps the navbar centered and capped */
 .nav__inner {
   max-width: 1200px;
   margin: 0 auto;
@@ -135,11 +131,6 @@
   cursor: pointer;
 }
 
-/* =========================
-   RESPONSIVE BREAKPOINTS
-   ========================= */
-
-/* Collapse navbar as soon as items don't fit */
 @media (max-width: 1150px) {
 
   .nav__hamburger {
@@ -185,9 +176,7 @@
   }
 }
 
-
 /* ====================================================================================================*/
-
 .footer {
   width: 100%;
   background-color: #A4BC9B;
@@ -210,7 +199,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: nowrap; /* prevent stacking */
+  flex-wrap: nowrap;
   overflow-x: auto;
   scrollbar-width: none;
 }

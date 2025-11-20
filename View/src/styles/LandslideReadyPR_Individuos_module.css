@@ -87,7 +87,6 @@
   height: auto;
 }
 
-/* Optional Responsive */
 @media screen and (max-width: 900px) {
   .landslideReadyIndividuos__content {
     flex-direction: column;

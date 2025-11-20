@@ -1,7 +1,7 @@
 .map-menu {
   position: absolute;
   top: 20px;
-  left: 20px;
+  left: 30px;
   background: rgba(0, 0, 0, 0.5);
   border-radius: 6px;
   color: white;
@@ -14,13 +14,11 @@
   max-width: 200px;
 }
 
-/* Top row (search bar + icons) */
 .menu-row {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-
 
 .icon-btn {
   background: none;
@@ -46,13 +44,11 @@
   transition: filter 0.3s ease;
 }
 
-/* Active state — makes icon appear greenish */
 .icon-btn.active .menu-icon {
   filter: brightness(0) saturate(100%) invert(32%) sepia(99%) saturate(558%) 
     hue-rotate(93deg) brightness(95%) contrast(90%);
 }
 
-/* --- Expanded Filters --- */
 .filters {
   display: flex;
   flex-direction: column;
@@ -85,4 +81,3 @@
   text-align: left;
   font-size: 15px;
 }
-

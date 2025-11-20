@@ -15,12 +15,11 @@ function Navbar() {
   return (
     <nav className="nav">
       <div className="nav__inner">
-        {/* Logo → Landing */}
+
         <Link to="/" className="nav__brand" aria-label="Ir al inicio">
           <img src={logo} alt="PR Landslide Hazard Mitigation Office" className="nav__logo" />
         </Link>
 
-        {/* Hamburger Button */}
         <button
           className="nav__hamburger"
           aria-label="Toggle menu"
@@ -33,7 +32,6 @@ function Navbar() {
           <li className="nav__item"><Link to="/" className="nav__link">Inicio</Link></li>
           <li className="nav__item"><Link to="/sobre-nosotros" className="nav__link">Sobre Nosotros</Link></li>
 
-          {/* Investigación */}
           <li className="nav__item nav__item--dropdown">
             <button
               className="nav__link nav__toggle"
@@ -49,7 +47,6 @@ function Navbar() {
             )}
           </li>
 
-          {/* Monitoreo */}
           <li className="nav__item nav__item--dropdown">
             <button
               className="nav__link nav__toggle"
@@ -66,7 +63,6 @@ function Navbar() {
             )}
           </li>
 
-          {/* Recursos */}
           <li className="nav__item nav__item--dropdown">
             <button
               className="nav__link nav__toggle"
@@ -77,14 +73,13 @@ function Navbar() {
             {openDropdown === 'recursos' && (
               <ul className="nav__menu">
                 <li><Link to="/guia-deslizamientos" className="nav__sublink">Guía sobre Deslizamientos</Link></li>
-                {/* <li><Link to="/mapa-susceptibilidad" className="nav__sublink">Mapa de Susceptibilidad</Link></li> */}
+                <li><Link to="/mapa-susceptibilidad-municipios" className="nav__sublink">Mapas Municipales</Link></li>
               </ul>
             )}
           </li>
 
           <li className="nav__item"><Link to="/reportar" className="nav__link">Reportar</Link></li>
 
-          {/* LandslideReady */}
           <li className="nav__item nav__item--dropdown">
             <button
               className="nav__link nav__toggle"
