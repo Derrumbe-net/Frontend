@@ -23,7 +23,7 @@ describe('Home Component', () => {
         const contactBtn = within(heroSection).getByRole('link', { name: /Contáctenos/i });
         expect(contactBtn).toHaveAttribute('href', '#contact');
 
-        const requestBtn = within(heroSection).getByRole('link', { name: /Solicitud de Charla/i });
+        const requestBtn = within(heroSection).getByRole('link', { name: /Solicita una Charla/i });
         expect(requestBtn).toHaveAttribute('href', '/solicitud');
     });
 
