@@ -10,10 +10,10 @@ import GreenPinIcon from '../assets/green-location-pin.png';
 import L from 'leaflet';
 import MapMenu from "../components/MapMenu.jsx";
 
-// const BASE_STATIONS_URL = "http://localhost:8080/api/stations" // CHANGE BACK
-// const BASE_LANDSLIDES_URL = "http://localhost:8080/api/landslides"; // CHANGE BACK
-const BASE_STATIONS_URL = "https://derrumbe-test.derrumbe.net/api/stations"
-const BASE_LANDSLIDES_URL = "https://derrumbe-test.derrumbe.net/api/landslides";
+const BASE_STATIONS_URL = "http://localhost:8080/api/stations" // CHANGE BACK
+const BASE_LANDSLIDES_URL = "http://localhost:8080/api/landslides"; // CHANGE BACK
+// const BASE_STATIONS_URL = "https://derrumbe-test.derrumbe.net/api/stations"
+// const BASE_LANDSLIDES_URL = "https://derrumbe-test.derrumbe.net/api/landslides";
 
 const Disclaimer = ({ onAgree }) => {
     return (
@@ -34,54 +34,68 @@ const Disclaimer = ({ onAgree }) => {
     );
 };
 
-const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
-  const map = useMap();
+const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast }) => {
+    const map = useMap();
 
-  useEffect(() => {
-    const hillshade = EL.tiledMapLayer({
-      url: 'https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Hillshade_Puerto_Rico/MapServer',
-      opacity: 0.5,
-    }).addTo(map);
+    useEffect(() => {
+        const hillshade = EL.tiledMapLayer({
+            url: 'https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Hillshade_Puerto_Rico/MapServer',
+            opacity: 0.5,
+        }).addTo(map);
 
-    const municipalities = EL.featureLayer({
-      url: 'https://services5.arcgis.com/TQ9qkk0dURXSP7LQ/arcgis/rest/services/LIMITES_LEGALES_MUNICIPIOS/FeatureServer/0',
-      style: () => ({ color: 'black', weight: 1, fillOpacity: 0 }),
-    }).addTo(map);
+        const municipalities = EL.featureLayer({
+            url: 'https://services5.arcgis.com/TQ9qkk0dURXSP7LQ/arcgis/rest/services/LIMITES_LEGALES_MUNICIPIOS/FeatureServer/0',
+            style: () => ({ color: 'black', weight: 1, fillOpacity: 0 }),
+        }).addTo(map);
 
-    return () => {
-      map.removeLayer(hillshade);
-      map.removeLayer(municipalities);
-    };
-  }, [map]);
+        return () => {
+            map.removeLayer(hillshade);
+            map.removeLayer(municipalities);
+        };
+    }, [map]);
 
-  useEffect(() => {
-    let precipLayer;
-    if (showPrecip) {
-      precipLayer = EL.imageMapLayer({
-        url: 'https://mapservices.weather.noaa.gov/raster/rest/services/obs/mrms_qpe/ImageServer',
-        opacity: 0.5,
-        renderingRule: { rasterFunction: 'rft_12hr' },
-      }).addTo(map);
-    }
-    return () => {
-      if (precipLayer) map.removeLayer(precipLayer);
-    };
-  }, [map, showPrecip]);
+    useEffect(() => {
+        let radarLayer;
+        if (showForecast) {
+            radarLayer = EL.dynamicMapLayer({
+                url: 'https://mapservices.weather.noaa.gov/eventdriven/rest/services/radar/radar_base_reflectivity/MapServer',
+                opacity: 0.7,
+                f: 'image'
+            }).addTo(map);
+        }
+        return () => {
+            if (radarLayer) map.removeLayer(radarLayer);
+        };
+    }, [map, showForecast]);
 
-  useEffect(() => {
-    let susceptibilityLayer;
-    if (showSusceptibility) {
-      susceptibilityLayer = EL.tiledMapLayer({
-        url: "https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Susceptibilidad_Derrumbe_PR/MapServer",
-        opacity: 0.5,
-      }).addTo(map);
-    }
-    return () => {
-      if (susceptibilityLayer) map.removeLayer(susceptibilityLayer);
-    };
-  }, [map, showSusceptibility]);
+    useEffect(() => {
+        let precipLayer;
+        if (showPrecip) {
+            precipLayer = EL.imageMapLayer({
+                url: 'https://mapservices.weather.noaa.gov/raster/rest/services/obs/mrms_qpe/ImageServer',
+                opacity: 0.5,
+                renderingRule: { rasterFunction: 'rft_12hr' },
+            }).addTo(map);
+        }
+        return () => {
+            if (precipLayer) map.removeLayer(precipLayer);
+        };
+    }, [map, showPrecip]);
 
-  return null;
+    useEffect(() => {
+        let susceptibilityLayer;
+        if (showSusceptibility) {
+            susceptibilityLayer = EL.tiledMapLayer({
+                url: "https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Susceptibilidad_Derrumbe_PR/MapServer",
+                opacity: 0.5,
+            }).addTo(map);
+        }
+        return () => {
+            if (susceptibilityLayer) map.removeLayer(susceptibilityLayer);
+        };
+    }, [map, showSusceptibility]);
+
+    return null;
 };
 
 const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
@@ -370,7 +384,7 @@ export default function InteractiveMap() {
   const [showSaturationLegend, setShowSaturationLegend] = useState(true);
   const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
   const [showPrecipLegend, setShowPrecipLegend] = useState(false);
-
+  const [showForecast, setShowForecast] = useState(false);
 
 
   const [showDisclaimer, setShowDisclaimer] = useState(
@@ -397,6 +411,7 @@ export default function InteractiveMap() {
   const toggleSusceptibilityLegend = () => setShowSusceptibilityLegend(v => !v);
   const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
 
+  const toggleForecast = () => setShowForecast(v => !v);
 
   return (
     <main>
@@ -445,12 +460,15 @@ export default function InteractiveMap() {
           availableYears={availableYears}
           selectedYear={selectedYear}
           onYearChange={setSelectedYear}
+          showForecast={showForecast}
+          onToggleForecast={toggleForecast}
         />
 
-        <EsriOverlays
-        showPrecip={showPrecip}
-        showSusceptibility={showSusceptibility}
-        />
+          <EsriOverlays
+              showPrecip={showPrecip}
+              showSusceptibility={showSusceptibility}
+              showForecast={showForecast}
+          />
 
         <ZoomControl position="topright" />
         
