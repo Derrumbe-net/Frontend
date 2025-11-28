@@ -1,71 +1,128 @@
-/* src/styles/Stations.css */
+/* Apply the font globally to this component */
 .stations-container {
-    padding: 20px;
-    max-width: 1600px;
-    margin: 0 auto;
+    font-family: 'Inter', sans-serif;
+    background-color: #DFE8DA; /* Matches landing__map background */
+    min-height: 100vh;
+    padding: 3rem 2rem; /* Matches landing section padding */
+    color: #000;
+    box-sizing: border-box;
 }
 
+/* Title Styling - Matches your bold section headers */
+.stations-container h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    color: #000;
+    margin-top: 0;
+}
+
+/* Description Styling - Matches landing__map-text p */
+.stations-container p {
+    font-weight: 300;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    max-width: 800px;
+}
+
+/* Grid Layout */
 .stations-layout {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* Two equal columns */
-    gap: 20px;
-    height: 80vh; /* Fixed height for the dashboard feel */
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem; /* Matches gap in landing__map */
+    height: 55vh; /* Fixed height for dashboard feel */
+    min-height: 450px;
 }
 
-/* Left Column: Map Control */
-.map-column {
+/* Common Card Styling for Columns */
+/* Similar to directory__card but for full panels */
+.map-column,
+.chart-column {
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Matches directory__card shadow */
     display: flex;
     flex-direction: column;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    overflow: hidden;
+    overflow: hidden; /* Ensures corners stay rounded */
+    border: 1px solid rgba(0,0,0,0.05);
 }
 
-.map-controls {
-    padding: 10px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #ddd;
+/* Control Bars (Top of Map/Chart) */
+.map-controls,
+.chart-controls {
+    background-color: #A4BC9B; /* Matches landing__report background */
+    padding: 1rem 1.5rem;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 1rem;
+    border-bottom: 2px solid #3B7D23; /* Matches button/accent color */
 }
 
+.map-controls label,
+.chart-controls label {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+/* Styled Select Inputs */
+/* mimicking the btn--black and btn--contact aesthetic */
+select {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    border: 1px solid #000;
+    background-color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+select:hover {
+    border-color: #3B7D23;
+    color: #3B7D23;
+}
+
+select:focus {
+    outline: none;
+    border-color: #3B7D23;
+    box-shadow: 0 0 0 2px rgba(59, 125, 35, 0.2);
+}
+
+/* Map Wrapper */
 .stations-map-wrapper {
     flex-grow: 1;
     position: relative;
+    height: 100%; /* Important */
+    min-height: 0; /* Allows flex child to shrink properly */
 }
 
-/* Right Column: Chart Control */
-.chart-column {
-    display: flex;
-    flex-direction: column;
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 10px;
+/* Chart Information Text */
+.chart-controls span {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #000;
 }
 
-.chart-controls {
-    padding: 10px;
-    background-color: #f8f9fa;
-    margin-bottom: 10px;
-    border-radius: 4px;
-}
+/* Responsive Design */
+@media (max-width: 900px) {
+    .stations-container {
+        padding: 1.5rem 1rem;
+    }
 
-select {
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    font-size: 1rem;
-}
-
-/* Make it responsive: Stack on mobile */
-@media (max-width: 768px) {
     .stations-layout {
         grid-template-columns: 1fr;
-        height: auto;
+        height: 500px;
+        gap: 2rem;
     }
+
+    /* Define height for mobile map so it doesn't collapse */
     .stations-map-wrapper {
         height: 400px;
+    }
+
+    .chart-column {
+        min-height: 100%;
     }
 }

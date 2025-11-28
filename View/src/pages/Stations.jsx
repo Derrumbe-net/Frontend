@@ -26,7 +26,6 @@ const createSaturationIcon = (saturation) => {
 
 const getPrecipColor = (p) => {
     if (p > 8.0) return "#000066";
-    // ... (rest of your colors) ...
     if (p >= 0.01) return "#9FEAFF";
     return "#DADADA";
 };
@@ -41,15 +40,26 @@ const createPrecipIcon = (precip) => {
     });
 };
 
-// Generic Pin for "Status"
-const DefaultIcon = L.icon({
-    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-});
+const createStatusIcon = (color) => {
+    return L.divIcon({
+        className: "",
+        html: `
+      <div style="
+        background-color: ${color};
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 4px rgba(0,0,0,0.4);
+      "></div>
+    `,
+        iconSize: [22, 22],   // Size of the div
+        iconAnchor: [11, 11], // Center the circle (half of size)
+        popupAnchor: [0, -12] // Popup appears slightly above
+    });
+};
 
-const StationsMap = ({ selectedMetric, onStationSelect }) => {
+const StationsMap = ({ selectedMetric, onStationSelect, selectedStationId }) => {
     const [stations, setStations] = useState([]);
     const center = [18.220833, -66.420149];
 
@@ -60,28 +70,83 @@ const StationsMap = ({ selectedMetric, onStationSelect }) => {
             .catch((err) => console.error("Fetch error:", err));
     }, []);
 
+    const getStatusColor = (station) => {
+        if (selectedStationId === station.station_id) {
+            return "#ff0000"; // Red
+        }
+        if (station.last_updated) {
+            const dateString = station.last_updated.replace(" ", "T");
+            const lastUpdate = new Date(dateString);
+            const now = new Date();
+            console.log("Last Updated", lastUpdate);
+            console.log("Now", now);
+            const diffMs = now - lastUpdate;
+            const diffHours = diffMs / (1000 * 60 * 60);
+            console.log("Difference", diffHours);
+            if (diffHours >= 12) {
+                return "#6c757d";
+            }
+            else if (diffHours >= 1) {
+                return "#ffc107";
+            }
+        }
+
+        if (station.soil_saturation !== null && station.soil_saturation !== undefined) {
+            return "#28a745"; // Green
+        }
+
+        return "#6c757d";
+    };
+
     return (
-        <MapContainer center={center} zoom={9} style={{ height: "100%", width: "100%" }}>
+        <MapContainer
+            center={center}
+            zoom={9}
+            style={{ height: "100%", width: "100%" }}
+
+            // 1. Remove the +/- buttons
+            zoomControl={false}
+
+            // 2. Disable Mouse/Touch Zoom interactions
+            scrollWheelZoom={false}
+            doubleClickZoom={false}
+            touchZoom={false}
+            boxZoom={false}
+
+            // 3. Disable Keyboard shortcuts (+/- keys)
+            keyboard={false}
+
+            // Optional: If you also want to prevent moving/panning the map, set this to false:
+            dragging={true}
+        >
             <TileLayer
                 url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 attribution="Tiles © Esri"
             />
-            {/* Optional: Add Municipality Borders here if needed using your EsriOverlays logic */}
 
             {stations.map((station) => {
                 if (station.is_available !== 1) return null;
 
-                let icon = DefaultIcon; // Default for 'status'
+                let icon;
 
-                if (selectedMetric === 'saturation' && station.soil_saturation != null) {
+                if (selectedMetric === 'status') {
+                    const color = getStatusColor(station);
+                    icon = createStatusIcon(color);
+                }
+                else if (selectedMetric === 'saturation' && station.soil_saturation != null) {
                     icon = createSaturationIcon(station.soil_saturation);
-                } else if (selectedMetric === 'rainfall' && station.precipitation != null) {
+                }
+                else if (selectedMetric === 'rainfall' && station.precipitation != null) {
                     icon = createPrecipIcon(station.precipitation);
+                }
+                else {
+                    const color = getStatusColor(station);
+                    icon = createStatusIcon(color);
                 }
 
                 return (
                     <Marker
-                        key={station.id}
+                        key={station.station_id}
                         position={[station.latitude, station.longitude]}
                         icon={icon}
                         eventHandlers={{
@@ -105,7 +170,7 @@ const StationChart = ({ station, sensorIndex }) => {
         if (!station) return;
 
         // --- MOCK DATA GENERATION ---
-        // fetch(`${BASE_STATIONS_URL}/${station.id}/history?sensor=${sensorIndex}`)
+        // TODO fetch(`${BASE_STATIONS_URL}/${station.id}/history?sensor=${sensorIndex}`)
 
         const generateData = () => {
             const data = [];
@@ -153,7 +218,7 @@ const StationChart = ({ station, sensorIndex }) => {
             ],
             chart: {
                 type: 'spline',
-                height: 500
+                height: null,
             },
             credits: { enabled: false }
         });
@@ -167,17 +232,14 @@ const StationChart = ({ station, sensorIndex }) => {
         );
     }
 
-    return <HighchartsReact highcharts={Highcharts} options={chartOptions} />;
+    return <HighchartsReact highcharts={Highcharts} options={chartOptions} containerProps={{ style: { height: "100%" } }} />;
 };
 
 // --- MAIN COMPONENT ---
 function Stations() {
-    // State for Map Control
-    const [mapMetric, setMapMetric] = useState("status"); // 'status', 'saturation', 'rainfall'
-
-    // State for Chart Control
+    const [mapMetric, setMapMetric] = useState("status");
     const [selectedStation, setSelectedStation] = useState(null);
-    const [selectedSensor, setSelectedSensor] = useState(1); // 1, 2, 3, or 4
+    const [selectedSensor, setSelectedSensor] = useState(1);
 
     return (
         <div className="stations-container">
@@ -186,7 +248,7 @@ function Stations() {
 
             <div className="stations-layout">
 
-                {/* LEFT COLUMN: MAP */}
+                {/* LEFT COLUMN */}
                 <div className="map-column">
                     <div className="map-controls">
                         <label htmlFor="metric-select"><strong>Mostrar en mapa:</strong></label>
@@ -205,6 +267,7 @@ function Stations() {
                         <StationsMap
                             selectedMetric={mapMetric}
                             onStationSelect={setSelectedStation}
+                            selectedStationId={selectedStation ? selectedStation.station_id : null}
                         />
                     </div>
                 </div>
@@ -217,7 +280,7 @@ function Stations() {
                             id="sensor-select"
                             value={selectedSensor}
                             onChange={(e) => setSelectedSensor(parseInt(e.target.value))}
-                            disabled={!selectedStation} // Disable if no station selected
+                            disabled={!selectedStation}
                         >
                             <option value={1}>Sensor de Humedad 1</option>
                             <option value={2}>Sensor de Humedad 2</option>
