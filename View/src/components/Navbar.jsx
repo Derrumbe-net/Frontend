@@ -57,7 +57,7 @@ function Navbar() {
             {openDropdown === 'monitoreo' && (
               <ul className="nav__menu">
                 <li><Link to="/mapa-interactivo" className="nav__sublink">Mapa Interactivo</Link></li>
-                {/* <li><Link to="/estaciones" className="nav__sublink">Estaciones</Link></li> */}
+                 <li><Link to="/estaciones" className="nav__sublink">Estaciones</Link></li>
                 <li><Link to="/pronostico-lluvia" className="nav__sublink">Pronóstico de lluvia</Link></li>
               </ul>
             )}
