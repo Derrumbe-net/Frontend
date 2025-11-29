@@ -7,6 +7,7 @@ export default function CMSSignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  
   // const signup_route = "http://localhost:8080/api/admins/signup";
   const signup_route = "https://derrumbe-test.derrumbe.net/api/admins/signup";
 

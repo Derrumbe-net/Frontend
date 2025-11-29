@@ -5,11 +5,25 @@ export default function CMSManageUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  const [currentUserEmail, setCurrentUserEmail] = useState(""); 
 
   const API_URL = "//derrumbe-test.derrumbe.net/api/admins";
   // const API_URL = "http://localhost:8080/api/admins";
+  const SUPER_ADMIN_EMAIL = "slidespr@gmail.com";
 
   useEffect(() => {
+    const token = localStorage.getItem("cmsAdmin");
+    if (token) {
+      try {
+        // JWT decode without external library
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setCurrentUserEmail(payload.email);
+      } catch (e) {
+        console.error("Invalid token", e);
+      }
+    }
+
     fetchUsers();
   }, []);
 
@@ -34,11 +48,19 @@ export default function CMSManageUsers() {
     }
   };
 
-  const handleToggleAuth = async (user) => {
-    const currentIsAuth = user.isAuthorized === 1 || user.isAuthorized === true;
-    const newStatus = !currentIsAuth; 
+  const handleToggleAuth = async (targetUser) => {
+    if (currentUserEmail !== SUPER_ADMIN_EMAIL) {
+      alert("Permission Denied: Only the Super Admin can change authorization status.");
+      return; 
+    }
+    if (targetUser.email === SUPER_ADMIN_EMAIL) {
+        alert("You cannot revoke your own super admin access.");
+        return;
+    }
 
-    const adminId = user.admin_id; 
+    const currentIsAuth = targetUser.isAuthorized === 1 || targetUser.isAuthorized === true;
+    const newStatus = !currentIsAuth; 
+    const adminId = targetUser.admin_id; 
 
     try {
       const token = localStorage.getItem("cmsAdmin");
@@ -64,7 +86,7 @@ export default function CMSManageUsers() {
       }
     } catch (error) {
       console.error("Error updating user:", error);
-      alert("An error occurred connection to the server.");
+      alert("An error occurred connecting to the server.");
     }
   };
 
@@ -75,7 +97,7 @@ export default function CMSManageUsers() {
     <div className="cms-manage-users">
       <div className="header-row">
         <h2>Manage Admin Access</h2>
-        <span className="user-count">{users.length} Users found</span>
+        <p>Logged in as: {currentUserEmail}</p> {/* Visual Confirm */}
       </div>
 
       <div className="table-container">
@@ -84,7 +106,6 @@ export default function CMSManageUsers() {
             <tr>
               <th>Email</th>
               <th>Status</th>
-              <th>Created At</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -95,16 +116,17 @@ export default function CMSManageUsers() {
               
               return (
                 <tr key={userId}>
-                  <td className="email-cell">{user.email}</td>
+                  <td>{user.email}</td>
                   <td>
                     <span className={`status-badge ${isAuth ? "active" : "pending"}`}>
                       {isAuth ? "Authorized" : "Pending"}
                     </span>
                   </td>
-                  <td>{new Date(user.created_at || Date.now()).toLocaleDateString()}</td>
                   <td>
                     <button
                       className={`action-btn ${isAuth ? "revoke" : "approve"}`}
+                      disabled={currentUserEmail !== SUPER_ADMIN_EMAIL}
+                      style={{ opacity: currentUserEmail !== SUPER_ADMIN_EMAIL ? 0.5 : 1 }}
                       onClick={() => handleToggleAuth(user)}
                     >
                       {isAuth ? "Revoke Access" : "Authorize"}

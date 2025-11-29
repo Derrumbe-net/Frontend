@@ -96,7 +96,7 @@ class Admin {
     
             return $stmt->execute();
         } catch (PDOException $e) {
-            error_log("Update Email Error: " . $e->getMessage());
+            error_log("Update Authorization Error: " . $e->getMessage());
             return false;
         }
     }

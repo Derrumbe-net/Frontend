@@ -57,25 +57,50 @@ class AdminController {
         return $this->jsonResponse($response, $admins);
     }
 
-    // Update admin authorization
-    public function updateAuthorization($request, $response, $args) {
-        $id = $args['id'];
-        $data = $request->getParsedBody();
-
-    if (!isset($data['isAuthorized'])) {
-        return $this->jsonResponse($response, ['error' => 'isAuthorized field is required'], 400);
-    }
-
-    $isAuthorized = $data['isAuthorized'];
-    $updated = $this->adminModel->updateAuthorization($id, $isAuthorized);
-
-    if ($updated) {
-        $statusMsg = $isAuthorized ? 'authorized' : 'deauthorized';
-        return $this->jsonResponse($response, ['message' => "Admin successfully $statusMsg"]);
-    }
-
-    return $this->jsonResponse($response, ['error' => 'Failed to update authorization'], 500);
-    }
+        // Helper to decode token manually 
+        private function getRequestorEmail($request) {
+            $authHeader = $request->getHeaderLine('Authorization');
+            if (!$authHeader) return null;
+    
+            $token = str_replace('Bearer ', '', $authHeader);
+            
+            try {
+                // Use your stored secret key
+                $key = new Key($_ENV['JWT_SECRET'], 'HS256');
+                $decoded = JWT::decode($token, $key);
+                return $decoded->email ?? null;
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+    
+        // Update admin authorization
+        public function updateAuthorization($request, $response, $args) {
+            $targetAdminId = $args['id'];
+            $data = $request->getParsedBody();
+    
+            if (!isset($data['isAuthorized'])) {
+                return $this->jsonResponse($response, ['error' => 'isAuthorized field is required'], 400);
+            }
+    
+            $requesterEmail = $this->getRequestorEmail($request);
+    
+            if (!$requesterEmail || strtolower($requesterEmail) !== "slidespr@gmail.com") {
+                return $this->jsonResponse($response, [
+                    'error' => 'Forbidden: Only the Super Admin can change authorization status.'
+                ], 403);
+            }
+            
+            $isAuthorized = $data['isAuthorized'];
+            $updated = $this->adminModel->updateAuthorization($targetAdminId, $isAuthorized);
+    
+            if ($updated) {
+                $statusMsg = $isAuthorized ? 'authorized' : 'deauthorized';
+                return $this->jsonResponse($response, ['message' => "Admin Auth successfully $statusMsg"]);
+            }
+    
+            return $this->jsonResponse($response, ['error' => 'Failed to update authorization'], 500);
+        }
 
     // Update admin email
     public function updateEmail($request, $response, $args) {
