@@ -158,7 +158,7 @@ export default function CMSManageUsers() {
                 <tr key={userId}>
                   <td>{user.email}</td>
                   <td>
-                    <span className={`status-badge ${isAuth ? "active" : "pending"}`}>
+                    <span className={`status-badge ${isAuth ? "Activo" : "Pendiente"}`}>
                       {isAuth ? "Authorized" : "Pending"}
                     </span>
                   </td>
@@ -171,14 +171,14 @@ export default function CMSManageUsers() {
                           style={{ opacity: currentUserEmail !== SUPER_ADMIN_EMAIL ? 0.5 : 1 }}
                           onClick={() => handleToggleAuth(user)}
                         >
-                          {isAuth ? "Revoke Access" : "Authorize"}
+                          {isAuth ? "Quitar Acceso" : "Autorizar"}
                         </button>
                         <button
                           className="action-btn delete"
                           disabled={currentUserEmail !== SUPER_ADMIN_EMAIL}
                           style={{ 
                               opacity: currentUserEmail !== SUPER_ADMIN_EMAIL ? 0.5 : 1,
-                              backgroundColor: '#dc3545', // Red color for danger
+                              backgroundColor: '#dc3545', // red
                               color: 'white',
                               border: 'none',
                               cursor: 'pointer'
