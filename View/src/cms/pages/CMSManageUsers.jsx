@@ -90,6 +90,46 @@ export default function CMSManageUsers() {
     }
   };
 
+  const handleDeleteUser = async (targetUser) => {
+    if (currentUserEmail !== SUPER_ADMIN_EMAIL) {
+        alert("Permission Denied: Only the Super Admin can delete users.");
+        return; 
+    }
+    if (targetUser.email === SUPER_ADMIN_EMAIL) {
+        alert("CRITICAL: You cannot delete the Super Admin account.");
+        return;
+    }
+
+    const confirmDelete = window.confirm(
+        `Are you sure you want to permanently delete ${targetUser.email}? This action cannot be undone.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+        const token = localStorage.getItem("cmsAdmin");
+        const adminId = targetUser.admin_id;
+
+        const response = await fetch(`${API_URL}/${adminId}`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (response.ok) {
+            setUsers((prevUsers) => prevUsers.filter((u) => u.admin_id !== adminId));
+        } else {
+            const errData = await response.json();
+            alert(`Failed to delete: ${errData.error || "Unknown error"}`);
+        }
+    } catch (error) {
+        console.error("Error deleting user:", error);
+        alert("An error occurred connecting to the server.");
+    }
+  };
+
   if (loading) return <div className="loading">Loading users...</div>;
   if (error) return <div className="error-message">{error}</div>;
 
@@ -97,7 +137,7 @@ export default function CMSManageUsers() {
     <div className="cms-manage-users">
       <div className="header-row">
         <h2>Manage Admin Access</h2>
-        <p>Logged in as: {currentUserEmail}</p> {/* Visual Confirm */}
+        <p>Logged in as: {currentUserEmail}</p>
       </div>
 
       <div className="table-container">
@@ -123,14 +163,31 @@ export default function CMSManageUsers() {
                     </span>
                   </td>
                   <td>
-                    <button
-                      className={`action-btn ${isAuth ? "revoke" : "approve"}`}
-                      disabled={currentUserEmail !== SUPER_ADMIN_EMAIL}
-                      style={{ opacity: currentUserEmail !== SUPER_ADMIN_EMAIL ? 0.5 : 1 }}
-                      onClick={() => handleToggleAuth(user)}
-                    >
-                      {isAuth ? "Revoke Access" : "Authorize"}
-                    </button>
+                    {/* Action Buttons Wrapper */}
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                          className={`action-btn ${isAuth ? "revoke" : "approve"}`}
+                          disabled={currentUserEmail !== SUPER_ADMIN_EMAIL}
+                          style={{ opacity: currentUserEmail !== SUPER_ADMIN_EMAIL ? 0.5 : 1 }}
+                          onClick={() => handleToggleAuth(user)}
+                        >
+                          {isAuth ? "Revoke Access" : "Authorize"}
+                        </button>
+                        <button
+                          className="action-btn delete"
+                          disabled={currentUserEmail !== SUPER_ADMIN_EMAIL}
+                          style={{ 
+                              opacity: currentUserEmail !== SUPER_ADMIN_EMAIL ? 0.5 : 1,
+                              backgroundColor: '#dc3545', // Red color for danger
+                              color: 'white',
+                              border: 'none',
+                              cursor: 'pointer'
+                          }}
+                          onClick={() => handleDeleteUser(user)}
+                        >
+                          Delete
+                        </button>
+                    </div>
                   </td>
                 </tr>
               );
