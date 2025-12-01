@@ -1,6 +1,6 @@
 import 'leaflet/dist/leaflet.css';
 import '../styles/InteractiveMap.css';
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react"; // Added useRef
 import { MapContainer, TileLayer, ZoomControl, useMap, Marker } from 'react-leaflet';
 import * as EL from 'esri-leaflet';
 import LandslideLogo from '../assets/PRLHMO_LOGO.svg';
@@ -10,10 +10,16 @@ import GreenPinIcon from '../assets/green-location-pin.png';
 import L from 'leaflet';
 import MapMenu from "../components/MapMenu.jsx";
 
-const BASE_STATIONS_URL = "http://localhost:8080/api/stations" // CHANGE BACK
-const BASE_LANDSLIDES_URL = "http://localhost:8080/api/landslides"; // CHANGE BACK
-// const BASE_STATIONS_URL = "https://derrumbe-test.derrumbe.net/api/stations"
-// const BASE_LANDSLIDES_URL = "https://derrumbe-test.derrumbe.net/api/landslides";
+// const BASE_STATIONS_URL = "http://localhost:8080/api/stations" // CHANGE BACK
+// const BASE_LANDSLIDES_URL = "http://localhost:8080/api/landslides"; // CHANGE BACK
+const BASE_STATIONS_URL = "https://derrumbe-test.derrumbe.net/api/stations"
+const BASE_LANDSLIDES_URL = "https://derrumbe-test.derrumbe.net/api/landslides";
+
+
+// --- CONSTANTS FOR RADAR ---
+const STEP_SIZE = 5 * 60 * 1000; // 5 minutes
+const FRAME_SPEED = 1500; // 1.5 seconds per frame
+const HISTORY_DURATION = 60 * 60 * 1000; // 1 hour history
 
 const Disclaimer = ({ onAgree }) => {
     return (
@@ -34,8 +40,53 @@ const Disclaimer = ({ onAgree }) => {
     );
 };
 
-const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, onTimeUpdate }) => {
+const TimeControlBar = ({
+                            startTime,
+                            endTime,
+                            currentTime,
+                            isPlaying,
+                            onTogglePlay,
+                            onSeek
+                        }) => {
+
+    const formatTime = (ts) => {
+        if (!ts) return "--:--";
+        return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    return (
+        <div className="time-control-bar">
+            <button
+                className="play-pause-btn"
+                onClick={onTogglePlay}
+                title={isPlaying ? "Pause Animation" : "Play Animation"}
+            >
+                {isPlaying ? "❚❚" : "▶"}
+            </button>
+
+            <div className="time-slider-wrapper">
+                <div className="time-labels">
+                    <span>{formatTime(startTime)}</span>
+                    <span className="current-time-label">{formatTime(currentTime)}</span>
+                    <span>{formatTime(endTime)}</span>
+                </div>
+                <input
+                    type="range"
+                    className="time-slider-input"
+                    min={startTime}
+                    max={endTime}
+                    step={STEP_SIZE}
+                    value={currentTime}
+                    onChange={(e) => onSeek(Number(e.target.value))}
+                />
+            </div>
+        </div>
+    );
+};
+
+const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTime }) => {
     const map = useMap();
+    const radarLayerRef = useRef(null);
 
     useEffect(() => {
         const hillshade = EL.tiledMapLayer({
@@ -54,65 +105,39 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, onTimeUpda
         };
     }, [map]);
 
+    // Forecast Layer Creation
     useEffect(() => {
-        let radarLayer;
-        let animationInterval;
-
         if (showForecast) {
             const radarUrl = 'https://mapservices.weather.noaa.gov/eventdriven/rest/services/radar/radar_base_reflectivity_time/ImageServer';
 
-            // Initialize the layer
-            radarLayer = EL.imageMapLayer({
+            radarLayerRef.current = EL.imageMapLayer({
                 url: radarUrl,
                 opacity: 0.7,
+                useCors: false
             }).addTo(map);
 
-            // Animation Configuration
-            const STEP_SIZE = 5 * 60 * 1000; // 5 minutes (Radar standard update)
-            const HISTORY_DURATION = 60 * 60 * 1000; // 2 hours of history
-            const FRAME_SPEED = 1500; // 1.5 seconds per frame (gives time to load)
-
-            // Start from 2 hours ago
-            let currentOffset = HISTORY_DURATION;
-
-            const animateFrame = () => {
-                const now = new Date().getTime();
-
-                // Calculate the specific time window for this frame
-                // We move from [Past] -> [Present]
-                const end = now - currentOffset;
-                const start = end - STEP_SIZE;
-
-                // Update the layer's time range
-                radarLayer.setTimeRange(new Date(start), new Date(end));
-                const dateObj = new Date(end);
-                const timeString = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                if (onTimeUpdate) onTimeUpdate(timeString);
-
-                // Advance time for the next frame
-                currentOffset -= STEP_SIZE;
-
-                // If we reach the present (offset < 0), reset loop to the past
-                if (currentOffset < 0) {
-                    currentOffset = HISTORY_DURATION;
-                }
-            };
-
-            // Run first frame immediately
-            animateFrame();
-
-            // Start the loop
-            animationInterval = setInterval(animateFrame, FRAME_SPEED);
-        }
-        else {
-            if (onTimeUpdate) onTimeUpdate(null);
+        } else {
+            if (radarLayerRef.current) {
+                map.removeLayer(radarLayerRef.current);
+                radarLayerRef.current = null;
+            }
         }
 
         return () => {
-            if (radarLayer) map.removeLayer(radarLayer);
-            if (animationInterval) clearInterval(animationInterval);
+            if (radarLayerRef.current) {
+                map.removeLayer(radarLayerRef.current);
+                radarLayerRef.current = null;
+            }
         };
-    }, [map, showForecast, onTimeUpdate]);
+    }, [map, showForecast]);
+
+    useEffect(() => {
+        if (showForecast && radarLayerRef.current && currentTime) {
+            const end = currentTime;
+            const start = end - STEP_SIZE;
+            radarLayerRef.current.setTimeRange(new Date(start), new Date(end));
+        }
+    }, [currentTime, showForecast]);
 
     useEffect(() => {
         let precipLayer;
@@ -144,6 +169,11 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, onTimeUpda
     return null;
 };
 
+// ... [PopulateStations, PopulateLandslides, Legends remain exactly the same] ...
+// I am keeping the logic for PopulateStations and PopulateLandslides identical to your snippet
+// to save space, assuming they are unchanged.
+// Just ensure you include the PopulateStations, createSaturationIcon, PopulateLandslides, etc., code blocks here.
+
 const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
     const [stations, setStations] = useState([]);
 
@@ -162,13 +192,10 @@ const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
     /** SOIL SATURATION ICON **/
     const createSaturationIcon = (saturation) => {
         let className = "saturation-marker";
-
         if (saturation >= 90) className += " high";
         else if (saturation >= 80) className += " medium";
         else className += " low";
-
         const rounded = Math.round(saturation);
-
         return L.divIcon({
             html: `<div class="${className}">${rounded}%</div>`,
             className: "",
@@ -210,13 +237,8 @@ const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
     const createPrecipIcon = (precip) => {
         const color = getPrecipColor(precip);
         const rounded = Number(precip).toFixed(2);
-
         return L.divIcon({
-            html: `
-                <div class="precip-marker" style="background-color:${color}">
-                    ${rounded}"
-                </div>
-            `,
+            html: `<div class="precip-marker" style="background-color:${color}">${rounded}"</div>`,
             className: "",
             iconSize: [55, 30],
             iconAnchor: [27, 15],
@@ -227,7 +249,6 @@ const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
         <>
             {stations.map(station => {
                 if (station.is_available !== 1) return null;
-
                 let icon = null;
 
                 // PRIORITY LOGIC (always show one metric):
@@ -245,18 +266,14 @@ const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
                     }
                     else if (station.precipitation != null) {
                         icon = createPrecipIcon(station.precipitation);
-                    }
+                }
                     else {
                         return null; // Only if BOTH are missing (rare case)
                     }
                 }
 
                 return (
-                    <Marker
-                        key={station.id}
-                        position={[station.latitude, station.longitude]}
-                        icon={icon}
-                    >
+                    <Marker key={station.id} position={[station.latitude, station.longitude]} icon={icon}>
                         <StationPopup station={station} />
                     </Marker>
                 );
@@ -264,7 +281,6 @@ const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
         </>
     );
 };
-
 
 const createLandslideIcon = () => {
     return L.icon({
@@ -304,7 +320,7 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
             .catch((err) => {
                 console.error("API Fetch Error:", err);
             });
-    },  [setAvailableYears]);
+    }, [setAvailableYears]);
 
     const filteredLandslides = allLandslides.filter(landslide => {
         if (selectedYear === 'all') {
@@ -319,11 +335,7 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
     return (
         <>
             {filteredLandslides.map(landslide => (
-                <Marker
-                    key={landslide.landslide_id}
-                    position={[landslide.latitude, landslide.longitude]}
-                    icon={customIcon}
-                >
+                <Marker key={landslide.landslide_id} position={[landslide.latitude, landslide.longitude]} icon={customIcon}>
                     <LandslidePopup landslide={landslide} />
                 </Marker>
             ))}
@@ -334,80 +346,33 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
 const SoilSaturationLegend = () => (
     <div className="legend-container legend-bottom-right">
         <div className="legend-title">Soil Saturation</div>
-        <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#e0c853"}}></span>
-            <p>0–80%</p>
-        </div>
-        <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#63b3ff"}}></span>
-            <p>80–90%</p>
-        </div>
-        <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#001f57"}}></span>
-            <p>90–100%</p>
-        </div>
+        <div className="legend-item"><span className="legend-color-box" style={{background:"#e0c853"}}></span><p>0–80%</p></div>
+        <div className="legend-item"><span className="legend-color-box" style={{background:"#63b3ff"}}></span><p>80–90%</p></div>
+        <div className="legend-item"><span className="legend-color-box" style={{background:"#001f57"}}></span><p>90–100%</p></div>
     </div>
 );
 
 const SusceptibilityLegend = () => (
     <div className="legend-container legend-bottom-right-top">
         <div className="legend-title">Landslide Susceptibility</div>
-        <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#C0C0C0"}}></span>
-            <p>Low</p>
-        </div>
-
-        <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#FFFF00"}}></span>
-            <p>Moderate</p>
-        </div>
-
-        <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#FF9900"}}></span>
-            <p>High</p>
-        </div>
-
-        <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#FF0000"}}></span>
-            <p>Very High</p>
-        </div>
-
-        <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#0000FF"}}></span>
-            <p>Exceptionally High</p>
-        </div>
+        <div className="legend-item"><span className="legend-color-box" style={{background:"#C0C0C0"}}></span><p>Low</p></div>
+        <div className="legend-item"><span className="legend-color-box" style={{background:"#FFFF00"}}></span><p>Moderate</p></div>
+        <div className="legend-item"><span className="legend-color-box" style={{background:"#FF9900"}}></span><p>High</p></div>
+        <div className="legend-item"><span className="legend-color-box" style={{background:"#FF0000"}}></span><p>Very High</p></div>
+        <div className="legend-item"><span className="legend-color-box" style={{background:"#0000FF"}}></span><p>Exceptionally High</p></div>
     </div>
 );
 
 const PrecipLegend = () => (
     <div className="legend-container legend-top-left legend-scrollable" >
         <div className="legend-title">Precipitation (inches)</div>
-
         {[
-            ["#9FEAFF", "0.01 - 0.05"],
-            ["#7FD6FF", "0.05 - 0.10"],
-            ["#5FC2FF", "0.10 - 0.15"],
-            ["#0099FF", "0.15 - 0.20"],
-            ["#00CC00", "0.20 - 0.40"],
-            ["#00B200", "0.40 - 0.60"],
-            ["#009900", "0.60 - 0.80"],
-            ["#007F00", "0.80 - 1.00"],
-            ["#FFFF66", "1.00 - 1.25"],
-            ["#FFD24D", "1.25 - 1.50"],
-            ["#FFB733", "1.50 - 1.75"],
-            ["#FF9900", "1.75 - 2.00"],
-            ["#FF6600", "2.00 - 2.50"],
-            ["#FF3300", "2.50 - 3.00"],
-            ["#CC0000", "3.00 - 3.50"],
-            ["#FF3399", "3.50 - 4.00"],
-            ["#FF00FF", "4.00 - 4.50"],
-            ["#CC00CC", "4.50 - 5.00"],
-            ["#990099", "5.00 - 5.50"],
-            ["#660066", "5.50 - 6.00"],
-            ["#330033", "6.00 - 6.50"],
-            ["#3333FF", "6.50 - 7.00"],
-            ["#0000CC", "7.00 - 8.00"],
-            ["#000066", "Above 8.00"],
+            ["#9FEAFF", "0.01 - 0.05"], ["#7FD6FF", "0.05 - 0.10"], ["#5FC2FF", "0.10 - 0.15"], ["#0099FF", "0.15 - 0.20"],
+            ["#00CC00", "0.20 - 0.40"], ["#00B200", "0.40 - 0.60"], ["#009900", "0.60 - 0.80"], ["#007F00", "0.80 - 1.00"],
+            ["#FFFF66", "1.00 - 1.25"], ["#FFD24D", "1.25 - 1.50"], ["#FFB733", "1.50 - 1.75"], ["#FF9900", "1.75 - 2.00"],
+            ["#FF6600", "2.00 - 2.50"], ["#FF3300", "2.50 - 3.00"], ["#CC0000", "3.00 - 3.50"], ["#FF3399", "3.50 - 4.00"],
+            ["#FF00FF", "4.00 - 4.50"], ["#CC00CC", "4.50 - 5.00"], ["#990099", "5.00 - 5.50"], ["#660066", "5.50 - 6.00"],
+            ["#330033", "6.00 - 6.50"], ["#3333FF", "6.50 - 7.00"], ["#0000CC", "7.00 - 8.00"], ["#000066", "Above 8.00"],
         ].map(([color, label]) => (
             <div className="legend-item" key={label}>
                 <span className="legend-color-box" style={{background: color}}></span>
@@ -431,11 +396,40 @@ export default function InteractiveMap() {
     const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
     const [showPrecipLegend, setShowPrecipLegend] = useState(false);
     const [showForecast, setShowForecast] = useState(true);
-    const [weatherTime, setWeatherTime] = useState(null);
+
+    const now = new Date();
+    const coeff = 1000 * 60 * 5;
+    const roundedEnd = new Date(Math.floor(now.getTime() / coeff) * coeff).getTime();
+    const roundedStart = roundedEnd - HISTORY_DURATION;
+
+    const [radarTimeRange] = useState({ start: roundedStart, end: roundedEnd });
+    const [currentTime, setCurrentTime] = useState(roundedStart);
+    const [isPlaying, setIsPlaying] = useState(true);
 
     const [showDisclaimer, setShowDisclaimer] = useState(
         localStorage.getItem('disclaimerAccepted') !== 'true'
     );
+
+    useEffect(() => {
+        let interval;
+        if (showForecast && isPlaying) {
+            interval = setInterval(() => {
+                setCurrentTime(prevTime => {
+                    const nextTime = prevTime + STEP_SIZE;
+                    if (nextTime > radarTimeRange.end) {
+                        return radarTimeRange.start;
+                    }
+                    return nextTime;
+                });
+            }, FRAME_SPEED);
+        }
+        return () => clearInterval(interval);
+    }, [isPlaying, showForecast, radarTimeRange]);
+
+    const handleSeek = (time) => {
+        const snapped = Math.round((time - radarTimeRange.start) / STEP_SIZE) * STEP_SIZE + radarTimeRange.start;
+        setCurrentTime(snapped);
+    };
 
     const handleAgree = () => {
         localStorage.setItem('disclaimerAccepted', 'true');
@@ -445,27 +439,18 @@ export default function InteractiveMap() {
     const toggleStations = () => setShowStations(v => !v);
     const togglePrecip = () => setShowPrecip(v => !v);
     const toggleSusceptibility = () => setShowSusceptibility(v => !v);
-    const toggleSaturation = () => {
-        setShowSaturation(true);
-        setShowPrecip12hr(false);
-    };
-    const togglePrecip12hr = () => {
-        setShowPrecip12hr(true);
-        setShowSaturation(false);
-    };
+    const toggleSaturation = () => { setShowSaturation(true); setShowPrecip12hr(false); };
+    const togglePrecip12hr = () => { setShowPrecip12hr(true); setShowSaturation(false); };
     const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
     const toggleSusceptibilityLegend = () => setShowSusceptibilityLegend(v => !v);
     const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
-
     const toggleForecast = () => setShowForecast(v => !v);
 
     return (
         <main>
             {showDisclaimer && <Disclaimer onAgree={handleAgree} />}
             <div className="map-label">SOIL SATURATION PERCENTAGE</div>
-            {showForecast && weatherTime && (
-                <div className="time-display">{weatherTime}</div>
-            )}
+
             <MapContainer
                 id="map"
                 center={center}
@@ -482,61 +467,48 @@ export default function InteractiveMap() {
                 />
 
                 <MapMenu
-                    showStations={showStations}
-                    onToggleStations={toggleStations}
-
-                    showPrecip={showPrecip}
-                    onTogglePrecip={togglePrecip}
-
-                    showSusceptibility={showSusceptibility}
-                    onToggleSusceptibility={toggleSusceptibility}
-
-                    showSaturation={showSaturation}
-                    onToggleSaturation={toggleSaturation}
-
-                    showPrecip12hr={showPrecip12hr}
-                    onTogglePrecip12hr={togglePrecip12hr}
-
-                    showSaturationLegend={showSaturationLegend}
-                    onToggleSaturationLegend={toggleSaturationLegend}
-
-                    showSusceptibilityLegend={showSusceptibilityLegend}
-                    onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
-
-                    showPrecipLegend={showPrecipLegend}
-                    onTogglePrecipLegend={togglePrecipLegend}
-
-                    availableYears={availableYears}
-                    selectedYear={selectedYear}
-                    onYearChange={setSelectedYear}
-                    showForecast={showForecast}
-                    onToggleForecast={toggleForecast}
+                    showStations={showStations} onToggleStations={toggleStations}
+                    showPrecip={showPrecip} onTogglePrecip={togglePrecip}
+                    showSusceptibility={showSusceptibility} onToggleSusceptibility={toggleSusceptibility}
+                    showSaturation={showSaturation} onToggleSaturation={toggleSaturation}
+                    showPrecip12hr={showPrecip12hr} onTogglePrecip12hr={togglePrecip12hr}
+                    showSaturationLegend={showSaturationLegend} onToggleSaturationLegend={toggleSaturationLegend}
+                    showSusceptibilityLegend={showSusceptibilityLegend} onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
+                    showPrecipLegend={showPrecipLegend} onTogglePrecipLegend={togglePrecipLegend}
+                    availableYears={availableYears} selectedYear={selectedYear} onYearChange={setSelectedYear}
+                    showForecast={showForecast} onToggleForecast={toggleForecast}
                 />
 
                 <EsriOverlays
                     showPrecip={showPrecip}
                     showSusceptibility={showSusceptibility}
                     showForecast={showForecast}
-                    onTimeUpdate={setWeatherTime}
+                    currentTime={currentTime}
                 />
 
                 <ZoomControl position="topright" />
 
                 {showStations && (
-                    <PopulateStations
-                        showSaturation={showSaturation}
-                        showPrecip12hr={showPrecip12hr}
-                    />
+                    <PopulateStations showSaturation={showSaturation} showPrecip12hr={showPrecip12hr} />
                 )}
 
-                <PopulateLandslides
-                    selectedYear={selectedYear}
-                    setAvailableYears={setAvailableYears}
-                />
+                <PopulateLandslides selectedYear={selectedYear} setAvailableYears={setAvailableYears} />
 
                 {showSaturationLegend && <SoilSaturationLegend />}
                 {showSusceptibilityLegend && <SusceptibilityLegend />}
                 {showPrecipLegend && <PrecipLegend />}
+
+                {/* --- RENDER TIME CONTROL BAR IF FORECAST IS ON --- */}
+                {showForecast && (
+                    <TimeControlBar
+                        startTime={radarTimeRange.start}
+                        endTime={radarTimeRange.end}
+                        currentTime={currentTime}
+                        isPlaying={isPlaying}
+                        onTogglePlay={() => setIsPlaying(p => !p)}
+                        onSeek={handleSeek}
+                    />
+                )}
 
                 <div className="logo-container">
                     <img src={LandslideLogo} alt="Landslide Hazard Mitigation Logo" className="landslide-logo" />
