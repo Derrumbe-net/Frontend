@@ -4,6 +4,7 @@ namespace DerrumbeNet\Model;
 
 use PDO;
 use PDOException;
+use Exception;
 
 class StationInfo {
     private $conn;
@@ -34,8 +35,7 @@ class StationInfo {
             $stmt->bindParam(':wc2', $data['wc2'], PDO::PARAM_STR);
             $stmt->bindParam(':wc3', $data['wc3'], PDO::PARAM_STR);
             $stmt->bindParam(':wc4', $data['wc4'], PDO::PARAM_STR);
-            // $stmt->execute();
-            
+
             if ($stmt->execute()) {
                 return $this->conn->lastInsertId();
             } else {
@@ -120,7 +120,7 @@ class StationInfo {
 
         ftp_pasv($conn_id, true);
 
-        $files = ftp_nlist($conn_id, $base_remote_path);
+//        $files = ftp_nlist($conn_id, $base_remote_path);
 
         // Download to temporary file
         $tmpFile = tmpfile();
@@ -238,4 +238,3 @@ class StationInfo {
         return $result;
     }
 }
-
