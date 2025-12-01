@@ -274,3 +274,21 @@
   top: 10px !important;
   right: 30px;
 }
+
+.time-display {
+    position: absolute;
+    bottom: 30px; /* Moved to bottom */
+    left: 30px;   /* Moved to left */
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    font-weight: bold;
+    font-family: "Bebas Neue", monospace;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    display: block;
+    letter-spacing: 0.05em;
+}

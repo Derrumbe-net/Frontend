@@ -34,7 +34,7 @@ const Disclaimer = ({ onAgree }) => {
     );
 };
 
-const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast }) => {
+const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, onTimeUpdate }) => {
     const map = useMap();
 
     useEffect(() => {
@@ -56,17 +56,63 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast }) => {
 
     useEffect(() => {
         let radarLayer;
+        let animationInterval;
+
         if (showForecast) {
-            radarLayer = EL.dynamicMapLayer({
-                url: 'https://mapservices.weather.noaa.gov/eventdriven/rest/services/radar/radar_base_reflectivity/MapServer',
+            const radarUrl = 'https://mapservices.weather.noaa.gov/eventdriven/rest/services/radar/radar_base_reflectivity_time/ImageServer';
+
+            // Initialize the layer
+            radarLayer = EL.imageMapLayer({
+                url: radarUrl,
                 opacity: 0.7,
-                f: 'image'
             }).addTo(map);
+
+            // Animation Configuration
+            const STEP_SIZE = 5 * 60 * 1000; // 5 minutes (Radar standard update)
+            const HISTORY_DURATION = 60 * 60 * 1000; // 2 hours of history
+            const FRAME_SPEED = 1500; // 1.5 seconds per frame (gives time to load)
+
+            // Start from 2 hours ago
+            let currentOffset = HISTORY_DURATION;
+
+            const animateFrame = () => {
+                const now = new Date().getTime();
+
+                // Calculate the specific time window for this frame
+                // We move from [Past] -> [Present]
+                const end = now - currentOffset;
+                const start = end - STEP_SIZE;
+
+                // Update the layer's time range
+                radarLayer.setTimeRange(new Date(start), new Date(end));
+                const dateObj = new Date(end);
+                const timeString = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                if (onTimeUpdate) onTimeUpdate(timeString);
+
+                // Advance time for the next frame
+                currentOffset -= STEP_SIZE;
+
+                // If we reach the present (offset < 0), reset loop to the past
+                if (currentOffset < 0) {
+                    currentOffset = HISTORY_DURATION;
+                }
+            };
+
+            // Run first frame immediately
+            animateFrame();
+
+            // Start the loop
+            animationInterval = setInterval(animateFrame, FRAME_SPEED);
         }
+        else {
+            if (onTimeUpdate) onTimeUpdate(null);
+        }
+
         return () => {
             if (radarLayer) map.removeLayer(radarLayer);
+            if (animationInterval) clearInterval(animationInterval);
         };
-    }, [map, showForecast]);
+    }, [map, showForecast, onTimeUpdate]);
 
     useEffect(() => {
         let precipLayer;
@@ -188,18 +234,18 @@ const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
                 // Soil Saturation (default) OR Precipitation (if selected)
                 if (showSaturation && station.soil_saturation != null) {
                     icon = createSaturationIcon(station.soil_saturation);
-                } 
+                }
                 else if (showPrecip12hr && station.precipitation != null) {
                     icon = createPrecipIcon(station.precipitation);
-                } 
+                }
                 else {
                     // If the selected metric has no value, fallback to the other metric
                     if (station.soil_saturation != null) {
                         icon = createSaturationIcon(station.soil_saturation);
-                    } 
+                    }
                     else if (station.precipitation != null) {
                         icon = createPrecipIcon(station.precipitation);
-                    } 
+                    }
                     else {
                         return null; // Only if BOTH are missing (rare case)
                     }
@@ -221,12 +267,12 @@ const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
 
 
 const createLandslideIcon = () => {
-  return L.icon({
-    iconUrl: GreenPinIcon,
-    iconSize: [30, 40],        // Adjust size as needed
-    iconAnchor: [15, 30],      // Bottom center of the icon
-    popupAnchor: [0, -10]      // Popup appears above the pin
-  });
+    return L.icon({
+        iconUrl: GreenPinIcon,
+        iconSize: [30, 40],        // Adjust size as needed
+        iconAnchor: [15, 30],      // Bottom center of the icon
+        popupAnchor: [0, -10]      // Popup appears above the pin
+    });
 };
 
 const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
@@ -286,212 +332,216 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
 }
 
 const SoilSaturationLegend = () => (
-  <div className="legend-container legend-bottom-right">
-    <div className="legend-title">Soil Saturation</div>
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#e0c853"}}></span>
-      <p>0–80%</p>
+    <div className="legend-container legend-bottom-right">
+        <div className="legend-title">Soil Saturation</div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#e0c853"}}></span>
+            <p>0–80%</p>
+        </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#63b3ff"}}></span>
+            <p>80–90%</p>
+        </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#001f57"}}></span>
+            <p>90–100%</p>
+        </div>
     </div>
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#63b3ff"}}></span>
-      <p>80–90%</p>
-    </div>
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#001f57"}}></span>
-      <p>90–100%</p>
-    </div>
-  </div>
 );
 
 const SusceptibilityLegend = () => (
-  <div className="legend-container legend-bottom-right-top">
-    <div className="legend-title">Landslide Susceptibility</div>
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#C0C0C0"}}></span>
-      <p>Low</p>
-    </div>
+    <div className="legend-container legend-bottom-right-top">
+        <div className="legend-title">Landslide Susceptibility</div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#C0C0C0"}}></span>
+            <p>Low</p>
+        </div>
 
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#FFFF00"}}></span>
-      <p>Moderate</p>
-    </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#FFFF00"}}></span>
+            <p>Moderate</p>
+        </div>
 
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#FF9900"}}></span>
-      <p>High</p>
-    </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#FF9900"}}></span>
+            <p>High</p>
+        </div>
 
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#FF0000"}}></span>
-      <p>Very High</p>
-    </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#FF0000"}}></span>
+            <p>Very High</p>
+        </div>
 
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#0000FF"}}></span>
-      <p>Exceptionally High</p>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#0000FF"}}></span>
+            <p>Exceptionally High</p>
+        </div>
     </div>
-  </div>
 );
 
 const PrecipLegend = () => (
-  <div className="legend-container legend-top-left legend-scrollable" >
-    <div className="legend-title">Precipitation (inches)</div>
+    <div className="legend-container legend-top-left legend-scrollable" >
+        <div className="legend-title">Precipitation (inches)</div>
 
-    {[
-      ["#9FEAFF", "0.01 - 0.05"],
-      ["#7FD6FF", "0.05 - 0.10"],
-      ["#5FC2FF", "0.10 - 0.15"],
-      ["#0099FF", "0.15 - 0.20"],
-      ["#00CC00", "0.20 - 0.40"],
-      ["#00B200", "0.40 - 0.60"],
-      ["#009900", "0.60 - 0.80"],
-      ["#007F00", "0.80 - 1.00"],
-      ["#FFFF66", "1.00 - 1.25"],
-      ["#FFD24D", "1.25 - 1.50"],
-      ["#FFB733", "1.50 - 1.75"],
-      ["#FF9900", "1.75 - 2.00"],
-      ["#FF6600", "2.00 - 2.50"],
-      ["#FF3300", "2.50 - 3.00"],
-      ["#CC0000", "3.00 - 3.50"],
-      ["#FF3399", "3.50 - 4.00"],
-      ["#FF00FF", "4.00 - 4.50"],
-      ["#CC00CC", "4.50 - 5.00"],
-      ["#990099", "5.00 - 5.50"],
-      ["#660066", "5.50 - 6.00"],
-      ["#330033", "6.00 - 6.50"],
-      ["#3333FF", "6.50 - 7.00"],
-      ["#0000CC", "7.00 - 8.00"],
-      ["#000066", "Above 8.00"],
-    ].map(([color, label]) => (
-      <div className="legend-item" key={label}>
-        <span className="legend-color-box" style={{background: color}}></span>
-        <p>{label}</p>
-      </div>
-    ))}
-  </div>
+        {[
+            ["#9FEAFF", "0.01 - 0.05"],
+            ["#7FD6FF", "0.05 - 0.10"],
+            ["#5FC2FF", "0.10 - 0.15"],
+            ["#0099FF", "0.15 - 0.20"],
+            ["#00CC00", "0.20 - 0.40"],
+            ["#00B200", "0.40 - 0.60"],
+            ["#009900", "0.60 - 0.80"],
+            ["#007F00", "0.80 - 1.00"],
+            ["#FFFF66", "1.00 - 1.25"],
+            ["#FFD24D", "1.25 - 1.50"],
+            ["#FFB733", "1.50 - 1.75"],
+            ["#FF9900", "1.75 - 2.00"],
+            ["#FF6600", "2.00 - 2.50"],
+            ["#FF3300", "2.50 - 3.00"],
+            ["#CC0000", "3.00 - 3.50"],
+            ["#FF3399", "3.50 - 4.00"],
+            ["#FF00FF", "4.00 - 4.50"],
+            ["#CC00CC", "4.50 - 5.00"],
+            ["#990099", "5.00 - 5.50"],
+            ["#660066", "5.50 - 6.00"],
+            ["#330033", "6.00 - 6.50"],
+            ["#3333FF", "6.50 - 7.00"],
+            ["#0000CC", "7.00 - 8.00"],
+            ["#000066", "Above 8.00"],
+        ].map(([color, label]) => (
+            <div className="legend-item" key={label}>
+                <span className="legend-color-box" style={{background: color}}></span>
+                <p>{label}</p>
+            </div>
+        ))}
+    </div>
 );
 
 
 export default function InteractiveMap() {
-  const center = [18.220833, -66.420149];
-  const [showStations, setShowStations] = useState(true);
-  const [selectedYear, setSelectedYear] = useState("2025");
-  const [availableYears, setAvailableYears] = useState([]);
-  const [showPrecip, setShowPrecip] = useState(true);
-  const [showSusceptibility, setShowSusceptibility] = useState(false);
-  const [showSaturation, setShowSaturation] = useState(true);
-  const [showPrecip12hr, setShowPrecip12hr] = useState(false);
-  const [showSaturationLegend, setShowSaturationLegend] = useState(true);
-  const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
-  const [showPrecipLegend, setShowPrecipLegend] = useState(false);
-  const [showForecast, setShowForecast] = useState(false);
+    const center = [18.220833, -66.420149];
+    const [showStations, setShowStations] = useState(true);
+    const [selectedYear, setSelectedYear] = useState("2025");
+    const [availableYears, setAvailableYears] = useState([]);
+    const [showPrecip, setShowPrecip] = useState(false);
+    const [showSusceptibility, setShowSusceptibility] = useState(false);
+    const [showSaturation, setShowSaturation] = useState(true);
+    const [showPrecip12hr, setShowPrecip12hr] = useState(false);
+    const [showSaturationLegend, setShowSaturationLegend] = useState(true);
+    const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
+    const [showPrecipLegend, setShowPrecipLegend] = useState(false);
+    const [showForecast, setShowForecast] = useState(true);
+    const [weatherTime, setWeatherTime] = useState(null);
 
+    const [showDisclaimer, setShowDisclaimer] = useState(
+        localStorage.getItem('disclaimerAccepted') !== 'true'
+    );
 
-  const [showDisclaimer, setShowDisclaimer] = useState(
-    localStorage.getItem('disclaimerAccepted') !== 'true'
-  );
+    const handleAgree = () => {
+        localStorage.setItem('disclaimerAccepted', 'true');
+        setShowDisclaimer(false);
+    };
 
-  const handleAgree = () => {
-    localStorage.setItem('disclaimerAccepted', 'true');
-    setShowDisclaimer(false);
-  };
+    const toggleStations = () => setShowStations(v => !v);
+    const togglePrecip = () => setShowPrecip(v => !v);
+    const toggleSusceptibility = () => setShowSusceptibility(v => !v);
+    const toggleSaturation = () => {
+        setShowSaturation(true);
+        setShowPrecip12hr(false);
+    };
+    const togglePrecip12hr = () => {
+        setShowPrecip12hr(true);
+        setShowSaturation(false);
+    };
+    const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
+    const toggleSusceptibilityLegend = () => setShowSusceptibilityLegend(v => !v);
+    const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
 
-  const toggleStations = () => setShowStations(v => !v);
-  const togglePrecip = () => setShowPrecip(v => !v);
-  const toggleSusceptibility = () => setShowSusceptibility(v => !v);
-  const toggleSaturation = () => {
-    setShowSaturation(true);
-    setShowPrecip12hr(false);
-  };
-  const togglePrecip12hr = () => {
-    setShowPrecip12hr(true);
-    setShowSaturation(false);
-  };
-  const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
-  const toggleSusceptibilityLegend = () => setShowSusceptibilityLegend(v => !v);
-  const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
+    const toggleForecast = () => setShowForecast(v => !v);
 
-  const toggleForecast = () => setShowForecast(v => !v);
+    return (
+        <main>
+            {showDisclaimer && <Disclaimer onAgree={handleAgree} />}
+            <div className="map-label">SOIL SATURATION PERCENTAGE</div>
+            {showForecast && weatherTime && (
+                <div className="time-display">{weatherTime}</div>
+            )}
+            <MapContainer
+                id="map"
+                center={center}
+                zoom={9}
+                minZoom={7}
+                maxZoom={18}
+                scrollWheelZoom={false}
+                zoomControl={false}
+                style={{ height: '100vh', width: '100%' }}
+            >
+                <TileLayer
+                    url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                    attribution="Tiles © Esri"
+                />
 
-  return (
-    <main>
-      {showDisclaimer && <Disclaimer onAgree={handleAgree} />}
-      <div className="map-label">SOIL SATURATION PERCENTAGE</div>
-      <MapContainer
-        id="map"
-        center={center}
-        zoom={9}
-        minZoom={7}
-        maxZoom={18}
-        scrollWheelZoom={false}
-        zoomControl={false}
-        style={{ height: '100vh', width: '100%' }}
-      >
-        <TileLayer
-          url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution="Tiles © Esri"
-        />
+                <MapMenu
+                    showStations={showStations}
+                    onToggleStations={toggleStations}
 
-        <MapMenu
-          showStations={showStations}
-          onToggleStations={toggleStations}
+                    showPrecip={showPrecip}
+                    onTogglePrecip={togglePrecip}
 
-          showPrecip={showPrecip}
-          onTogglePrecip={togglePrecip}
+                    showSusceptibility={showSusceptibility}
+                    onToggleSusceptibility={toggleSusceptibility}
 
-          showSusceptibility={showSusceptibility}
-          onToggleSusceptibility={toggleSusceptibility}
+                    showSaturation={showSaturation}
+                    onToggleSaturation={toggleSaturation}
 
-          showSaturation={showSaturation}
-          onToggleSaturation={toggleSaturation}
+                    showPrecip12hr={showPrecip12hr}
+                    onTogglePrecip12hr={togglePrecip12hr}
 
-          showPrecip12hr={showPrecip12hr}
-          onTogglePrecip12hr={togglePrecip12hr}
+                    showSaturationLegend={showSaturationLegend}
+                    onToggleSaturationLegend={toggleSaturationLegend}
 
-          showSaturationLegend={showSaturationLegend}
-          onToggleSaturationLegend={toggleSaturationLegend}
+                    showSusceptibilityLegend={showSusceptibilityLegend}
+                    onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
 
-          showSusceptibilityLegend={showSusceptibilityLegend}
-          onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
+                    showPrecipLegend={showPrecipLegend}
+                    onTogglePrecipLegend={togglePrecipLegend}
 
-          showPrecipLegend={showPrecipLegend}
-          onTogglePrecipLegend={togglePrecipLegend}
+                    availableYears={availableYears}
+                    selectedYear={selectedYear}
+                    onYearChange={setSelectedYear}
+                    showForecast={showForecast}
+                    onToggleForecast={toggleForecast}
+                />
 
-          availableYears={availableYears}
-          selectedYear={selectedYear}
-          onYearChange={setSelectedYear}
-          showForecast={showForecast}
-          onToggleForecast={toggleForecast}
-        />
+                <EsriOverlays
+                    showPrecip={showPrecip}
+                    showSusceptibility={showSusceptibility}
+                    showForecast={showForecast}
+                    onTimeUpdate={setWeatherTime}
+                />
 
-          <EsriOverlays
-              showPrecip={showPrecip}
-              showSusceptibility={showSusceptibility}
-              showForecast={showForecast}
-          />
+                <ZoomControl position="topright" />
 
-        <ZoomControl position="topright" />
-        
-        {showStations && (
-          <PopulateStations
-            showSaturation={showSaturation}
-            showPrecip12hr={showPrecip12hr}
-          />
-        )}
+                {showStations && (
+                    <PopulateStations
+                        showSaturation={showSaturation}
+                        showPrecip12hr={showPrecip12hr}
+                    />
+                )}
 
-        <PopulateLandslides
-          selectedYear={selectedYear}
-          setAvailableYears={setAvailableYears}
-        />
+                <PopulateLandslides
+                    selectedYear={selectedYear}
+                    setAvailableYears={setAvailableYears}
+                />
 
-        {showSaturationLegend && <SoilSaturationLegend />}
-        {showSusceptibilityLegend && <SusceptibilityLegend />}
-        {showPrecipLegend && <PrecipLegend />}
+                {showSaturationLegend && <SoilSaturationLegend />}
+                {showSusceptibilityLegend && <SusceptibilityLegend />}
+                {showPrecipLegend && <PrecipLegend />}
 
-        <div className="logo-container">
-          <img src={LandslideLogo} alt="Landslide Hazard Mitigation Logo" className="landslide-logo" />
-        </div>
-      </MapContainer>
-    </main>
-  );
+                <div className="logo-container">
+                    <img src={LandslideLogo} alt="Landslide Hazard Mitigation Logo" className="landslide-logo" />
+                </div>
+            </MapContainer>
+        </main>
+    );
 }
