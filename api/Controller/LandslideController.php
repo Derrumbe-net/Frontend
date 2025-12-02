@@ -47,4 +47,56 @@ class LandslideController {
         if ($deleted) return $this->jsonResponse($response, ['message'=>'Deleted']);
         return $this->jsonResponse($response, ['error'=>'Failed'], 500);
     }
+
+    public function getLandslideImages($request, $response, $args) {
+        $id = $args['id'];
+        $landslide = $this->landslideModel->getLandslideById($id);
+        if (!$landslide) {
+            return $this->jsonResponse($response, ['error' => 'Landslide not found'], 404);
+        }
+
+        $folderName = $landslide['image_url'];
+        if (!$folderName) {
+            // Fallback: If no column exists, try constructing it or return empty
+            return $this->jsonResponse($response, ['images' => []]);
+        }
+
+        try {
+            $images = $this->landslideModel->getLandslideImagesList($folderName);
+            return $this->jsonResponse($response, ['images' => $images]);
+        } catch (\Exception $e) {
+            return $this->jsonResponse($response, ['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // GET /landslides/{id}/images/{filename}
+    public function serveLandslideImage($request, $response, $args) {
+        $id = $args['id'];
+        $filename = $args['filename'];
+
+        $landslide = $this->landslideModel->getLandslideById($id);
+        $folderName = $landslide['image_url'];
+
+        if (!$folderName) {
+            return $response->withStatus(404)->write('Folder name not found in DB');
+        }
+
+        try {
+            $imageContent = $this->landslideModel->getLandslideImageContent($folderName, $filename);
+
+            $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            $mimeType = match ($extension) {
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                default => 'image/jpeg',
+            };
+
+            $response->getBody()->write($imageContent);
+            return $response->withHeader('Content-Type', $mimeType);
+
+        } catch (\Exception $e) {
+            return $response->withStatus(404)->write('Image not found');
+        }
+    }
 }

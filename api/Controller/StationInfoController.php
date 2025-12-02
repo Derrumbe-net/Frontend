@@ -54,7 +54,6 @@ class StationInfoController {
                     try {
                         $data = $this->stationInfoModel->getStationFileData($fileName);
                         echo "<pre>";
-                        prettyPrintDatRows($data, 15);
                         echo "</pre>";
                         $result[] = [
                             'station_id' => $station['station_id'],
@@ -131,6 +130,47 @@ class StationInfoController {
                 'error' => 'Exception occurred while processing station file',
                 'details' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function serveStationImage($request, $response, $args) {
+        $stationId = $args['id'];
+        $type = $args['type']; // 'sensor' or 'data'
+
+        try {
+            $station = $this->stationInfoModel->getStationInfoById($stationId);
+
+            if (!$station) {
+                return $response->withStatus(404)->write('Station not found');
+            }
+
+            // Determine which column to look at
+            $column = ($type === 'sensor') ? 'sensor_image_url' : 'data_image_url';
+            $fileName = $station[$column] ?? null;
+
+            if (empty($fileName)) {
+                // Return a 404 or a placeholder if no image defined
+                return $response->withStatus(404)->write('Image not defined for this station');
+            }
+
+            // Fetch binary content
+            $imageContent = $this->stationInfoModel->getStationImageContent($fileName);
+
+            // Determine Mime Type (Simple check based on extension, or default to jpeg)
+            $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $mimeType = match ($extension) {
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                default => 'image/jpeg',
+            };
+
+            $response->getBody()->write($imageContent);
+            return $response->withHeader('Content-Type', $mimeType);
+
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+            return $response->withStatus(500)->write('Error fetching image');
         }
     }
 
