@@ -23,7 +23,8 @@ class Project {
             $stmt->bindParam(':project_status', $data['project_status'], PDO::PARAM_STR);
             $stmt->bindParam(':description', $data['description'], PDO::PARAM_STR);
             $stmt->bindParam(':image_url', $data['image_url'], PDO::PARAM_STR);
-            $stmt->execute();
+            // $stmt->execute();
+            
             if ($stmt->execute()) {
                 return $this->conn->lastInsertId();
             } else {

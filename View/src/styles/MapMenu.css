@@ -1,7 +1,7 @@
 .map-menu {
   position: absolute;
   top: 20px;
-  left: 20px;
+  left: 30px;
   background: rgba(0, 0, 0, 0.5);
   border-radius: 6px;
   color: white;
@@ -80,4 +80,34 @@
   margin-bottom: 0.5rem;
   text-align: left;
   font-size: 15px;
+}
+
+@media (max-width: 768px) {
+
+  .map-menu {
+    left: 20px !important;
+    top: 20px !important;
+  }
+
+  .filters input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+  }
+
+  .filters label {
+    font-size: 0.9em;
+  }
+
+  .filter-title {
+    font-size: 0.7rem;
+  }
+
+  .menu-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .icon-btn {
+    padding: 4px;
+  }
 }

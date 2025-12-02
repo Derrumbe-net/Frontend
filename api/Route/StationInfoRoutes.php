@@ -14,6 +14,10 @@ return function (App $app, $db) {
     // ---- Public routes ----
     $app->get('/stations', [$stationInfoController, 'getAllStations']);
     $app->get('/stations/{id}', [$stationInfoController, 'getStation']);
+
+    // Route to serve images from FTP via the Controller
+    $app->get('/stations/{id}/image/{type}', [$stationInfoController, 'serveStationImage']);
+
     $app->get('/stations/files/data', [$stationInfoController, 'getAllStationFilesData']);
     $app->get('/stations/files/data/{id}', [$stationInfoController, 'getStationFileData']);
     $app->put('/stations/files/data/{id}/update', [$stationInfoController, 'processStationFileAndUpdate']);

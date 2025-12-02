@@ -27,26 +27,26 @@ import pub19 from "../assets/publications/pub19.webp";
 
 // Map backend publication_id to local images
 const imageMap = {
-  3: pub1,
-  4: pub2,
-  5: pub3,
-  6: pub4,
-  7: pub5,
-  8: pub6,
-  9: pub7,
-  10: pub8,
-  11: pub9,
-  12: pub10,
-  13: pub11,
-  14: pub12, 
-  15: pub13, 
-  16: pub14,
-  17: pub15,
-  18: pub16,
-  19: pub17,
-  20: pub18,
-  21: pub19,
-};
+  1: pub1,
+  2: pub2,
+  3: pub3,
+  4: pub4,
+  5: pub5,
+  6: pub6,
+  7: pub7,
+  8: pub8,
+  9: pub9,
+  10: pub10,
+  11: pub11,
+  12: pub12, 
+  13: pub13, 
+  14: pub14,
+  15: pub15,
+  16: pub16,
+  17: pub17,
+  18: pub18,
+  19: pub19,
+}
 
 function Publications() {
   const [publications, setPublications] = useState([]);
@@ -56,7 +56,9 @@ function Publications() {
   useEffect(() => {
     const fetchPublications = async () => {
       try {
+        // const response = await fetch("http://localhost:8080/api/publications");
         const response = await fetch("https://derrumbe-test.derrumbe.net/api/publications");
+        
         if (!response.ok) throw new Error(`Error: ${response.status} ${response.statusText}`);
 
         const data = await response.json();
@@ -67,7 +69,7 @@ function Publications() {
           description: item.description || "",
           // override URL for publication 3 to open the poster image, TODO: THIS NEEDS TO CHANGE
           url:
-            item.publication_id === 3
+            item.publication_id === 1
               ? publication1
               : item.publication_url || "#",
           image: imageMap[item.publication_id] || publication1,

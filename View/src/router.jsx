@@ -15,6 +15,7 @@ import Report from './pages/Report';
 import Request from './pages/Request'
 import Stations from './pages/Stations';
 import SusceptibilityMap from './pages/SusceptibilityMap';
+import SusceptibilityMunicipalitiesMap from './pages/SusceptibilityMunicipalitiesMap';
 
 // CMS (Admin Dashboard)
 import CMSLayout from './cms/layout/CMSLayout';
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
       { path: 'pronostico-lluvia', element: <RainForecast /> },
       { path: 'guia-deslizamientos', element: <Guide /> },
       { path: 'mapa-susceptibilidad', element: <SusceptibilityMap /> },
+      { path: 'mapa-susceptibilidad-municipios', element: <SusceptibilityMunicipalitiesMap /> },
       { path: 'reportar', element: <Report /> },
       { path: 'solicitud', element: <Request />},
       { path: 'landslideready-individuos', element: <LandslideReadyPR_Individuos /> },

@@ -21,11 +21,11 @@ const imageMap = {
   2: pastproject2,
   3: pastproject3,
   4: pastproject4,
-  6: actualproject1,
-  7: actualproject2,
-  8: actualproject3,
-  10: actualproject4,
-  12: actualproject5,
+  5: actualproject1,
+  6: actualproject2,
+  7: actualproject3,
+  8: actualproject4,
+  9: actualproject5,
 };
 
 function Projects() {
@@ -37,7 +37,9 @@ function Projects() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
+        // const response = await fetch("http://localhost:8080/api/projects");
         const response = await fetch("https://derrumbe-test.derrumbe.net/api/projects");
+
         if (!response.ok) throw new Error(`Error: ${response.status} ${response.statusText}`);
 
         const data = await response.json();

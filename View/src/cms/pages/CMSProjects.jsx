@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { FaEdit, FaPlus } from "react-icons/fa";
+import { FaEdit } from "react-icons/fa";
 import "../../cms/styles/CMSProjects.css";
+
+import Swal from "sweetalert2";
 
 export default function CMSProjects() {
   const [projects, setProjects] = useState([]);
@@ -19,7 +21,9 @@ export default function CMSProjects() {
 
   const fetchProjects = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/projects");
+      // const response = await fetch("http://localhost:8080/api/projects");
+      const response = await fetch("https://derrumbe-test.derrumbe.net/api/projects");
+
       const data = await response.json();
       setProjects(data);
     } catch (error) {
@@ -30,7 +34,6 @@ export default function CMSProjects() {
   const handleOpenForm = (project = null) => {
     setEditProject(project);
     setShowForm(true);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   };
 
   const handleCloseForm = () => {
@@ -41,8 +44,6 @@ export default function CMSProjects() {
   return (
     <div className="cms-projects">
       <h1>Proyectos</h1>
-
-      {/* TABLE */}
       <table className="cms-table">
         <thead>
           <tr>
@@ -72,7 +73,6 @@ export default function CMSProjects() {
         </tbody>
       </table>
 
-      {/* PAGINATION */}
       <div className="pagination">
         <button
           disabled={currentPage === 1}
@@ -91,14 +91,12 @@ export default function CMSProjects() {
         </button>
       </div>
 
-      {/* ADD BUTTON */}
       <div className="add-btn-container">
-        <button className="add-btn" onClick={() => handleOpenForm()}>
-          <FaPlus />
+        <button className="add-btn-text" onClick={() => handleOpenForm()}>
+          Añadir Proyecto
         </button>
       </div>
 
-      {/* INLINE FORM */}
       {showForm && (
         <div className="inline-form-container">
           <ProjectForm
@@ -112,7 +110,6 @@ export default function CMSProjects() {
   );
 }
 
-/* FORM COMPONENT */
 function ProjectForm({ project, onClose, refreshProjects }) {
   const [formData, setFormData] = useState({
     title: project?.title || "",
@@ -124,7 +121,6 @@ function ProjectForm({ project, onClose, refreshProjects }) {
 
   const isEdit = !!project;
 
-  // ⬅️ FIX: Ensure form loads the selected project's data
   useEffect(() => {
     if (project) {
       setFormData({
@@ -134,34 +130,105 @@ function ProjectForm({ project, onClose, refreshProjects }) {
         project_status: project.project_status,
         description: project.description,
       });
+    } else {
+      setFormData({
+        title: "",
+        start_year: "",
+        end_year: "",
+        project_status: "active",
+        description: "",
+      });
     }
   }, [project]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+  const validate = () => {
+    if (!formData.title.trim()) {
+      Swal.fire("Campo requerido", "El título es obligatorio.", "warning");
+      return false;
+    }
+    if (!formData.start_year || !formData.end_year) {
+      Swal.fire("Datos incompletos", "Debe ingresar los años.", "warning");
+      return false;
+    }
+    if (formData.start_year < 1900 || formData.start_year > 2100) {
+      Swal.fire("Año inválido", "El año de inicio no es válido.", "warning");
+      return false;
+    }
+    if (formData.end_year < formData.start_year) {
+      Swal.fire(
+        "Rango inválido",
+        "El año de fin no puede ser menor al de inicio.",
+        "warning"
+      );
+      return false;
+    }
+    if (formData.description.trim().length < 10) {
+      Swal.fire(
+        "Descripción muy corta",
+        "Debe incluir al menos 10 caracteres.",
+        "warning"
+      );
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!validate()) return;
+
+    const confirm = await Swal.fire({
+      title: isEdit ? "Guardar cambios" : "Añadir Proyecto",
+      text: isEdit
+        ? "¿Desea confirmar los cambios realizados?"
+        : "¿Desea añadir este nuevo proyecto?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Sí",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (!confirm.isConfirmed) return; 
+
     const method = isEdit ? "PUT" : "POST";
     const url = isEdit
-      ? `http://localhost:8080/api/projects/${project.project_id}`
-      : "http://localhost:8080/api/projects";
+      ? `http://localhost:8080/api/projects/${project.project_id}`  // CHANGE 
+      : "http://localhost:8080/api/projects";                       // CHANGE 
 
     try {
-      await fetch(url, {
+      const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          admin_id: 1 // TODO: replace with logged user
+        }),
       });
+
+      if (!response.ok) {
+        const msg = await response.text();
+        Swal.fire("Error", msg || "Ocurrió un error al guardar.", "error");
+        return;
+      }
+
+      Swal.fire(
+        "Éxito",
+        isEdit ? "Proyecto actualizado correctamente" : "Proyecto creado correctamente",
+        "success"
+      );
 
       refreshProjects();
       onClose();
     } catch (error) {
       console.error("Error submitting form:", error);
+      Swal.fire("Error", "No se pudo conectar al servidor.", "error");
     }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
   return (
@@ -207,7 +274,6 @@ function ProjectForm({ project, onClose, refreshProjects }) {
         onChange={handleChange}
       />
 
-      {/* BUTTONS FIXED — Cancel left, Submit right */}
       <div className="cms-form__actions">
         <button type="button" className="cancel-btn" onClick={onClose}>
           Cancelar

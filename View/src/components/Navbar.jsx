@@ -1,5 +1,5 @@
 import "../styles/index.css";
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import logo from '../assets/PRLHMO_LOGO.svg';
 import landslideReadyLogo from '../assets/LANDSLIDEREADY_LOGO.png';
@@ -7,6 +7,26 @@ import landslideReadyLogo from '../assets/LANDSLIDEREADY_LOGO.png';
 function Navbar() {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const menuRef = useRef(null);
+  const buttonRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target)
+      ) {
+        setMenuOpen(false);
+        setOpenDropdown(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const toggleDropdown = (menu) => {
     setOpenDropdown(openDropdown === menu ? null : menu);
@@ -24,11 +44,12 @@ function Navbar() {
           className="nav__hamburger"
           aria-label="Toggle menu"
           onClick={() => setMenuOpen(!menuOpen)}
+          ref={buttonRef}
         >
           ☰
         </button>
 
-        <ul className={`nav__list ${menuOpen ? 'active' : ''}`}>
+        <ul className={`nav__list ${menuOpen ? 'active' : ''}`} ref={menuRef}>
           <li className="nav__item"><Link to="/" className="nav__link">Inicio</Link></li>
           <li className="nav__item"><Link to="/sobre-nosotros" className="nav__link">Sobre Nosotros</Link></li>
 
@@ -73,7 +94,8 @@ function Navbar() {
             {openDropdown === 'recursos' && (
               <ul className="nav__menu">
                 <li><Link to="/guia-deslizamientos" className="nav__sublink">Guía sobre Deslizamientos</Link></li>
-                {/* <li><Link to="/mapa-susceptibilidad" className="nav__sublink">Mapa de Susceptibilidad</Link></li> */}
+                  <li><Link to="/mapa-susceptibilidad" className="nav__sublink">Mapa Susceptibilidad</Link></li>
+                <li><Link to="/mapa-susceptibilidad-municipios" className="nav__sublink">Mapas Municipales</Link></li>
               </ul>
             )}
           </li>
