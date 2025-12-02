@@ -1,671 +1,306 @@
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto+Condensed:wght@400;500&display=swap');
 
 .bebas-neue {
-  font-family: "Bebas Neue", sans-serif;
-  font-optical-sizing: auto;
-  font-weight: 400;
-  font-style: normal;
+    font-family: "Bebas Neue", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
 }
 
 .roboto-condensed {
-  font-family: "Roboto Condensed", sans-serif;
-  font-optical-sizing: auto;
-  font-weight: 500;
-  font-style: normal;
-}
-
-main {
-  height: 100%; /* Full height for the body */
-  width: 100%; /* Full width for the body */
-}
-
-#map {
-  width: 100%;
-  height: 100%; /* Full height for the body */
-  position: relative; /* Ensure the map is positioned relative to its container */
-  display: block;
+    font-family: "Roboto Condensed", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-style: normal;
 }
 
 /* Modal Styles */
 .modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
 }
 
 .modal-content {
-  background-color: #f2c731;
-  padding: 20px;
-  border-radius: 8px;
-  text-align: center;
-  width: fit-content;
-  max-width: 70%;
+    background-color: #f2c731;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    width: fit-content;
+    max-width: 70%;
 }
 
 .modal-content h2 {
-  margin-top: 0;
-  font-size: 2em;
+    margin-top: 0;
+    font-size: 2em;
 }
 
 .modal-content p {
-  margin: 20px 0;
-  font-size: 1.4em;
+    margin: 20px 0;
+    font-size: 1.4em;
 }
 
 .modal-content button {
-  background-color: #244a1e;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
+    background-color: #244a1e;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
 .modal-content button:hover {
-  background-color: #9cbc93;
-}
-
-/* Hide the modal by default */
-#disclaimer-modal {
-  display: none; /* Ensure the modal is hidden initially */
-}
-
-/* Show the modal when JavaScript sets it to "flex" */
-#disclaimer-modal.active {
-  display: flex;
-}
-
-/* Map Overlay */
-#map-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 3em;
-  z-index: 1000;
-  display: none; /* Initially hidden */
-  pointer-events: none; /* Allow interactions to pass through */
-}
-
-/* Sidebar Styles */
-.sidebar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 250px;
-  background-color: rgba(50, 50, 50); /* Dark gray */
-  color: white; /* White font color */
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  overflow: hidden; /* Hide overflow */
-  transition: transform 0.5s ease, padding 1s ease; /* Smooth transition for transform and padding */
-  padding-top: 60px;
-  z-index: 1001; /* Ensure it is above other elements */
-  transform: translateX(0); /* Initially visible */
-  font-family: "Custom", Bebas Neue, Roboto Condensed, sans-serif;
-  font-display: swap;
-  font-size: 18px; /* Increase font size */
-}
-
-.sidebar.closed {
-  transform: translateX(-100%); /* Move sidebar out of view */
-  padding-top: 0;
-  padding-left: 0;
-}
-
-.sidebar-toggle {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  font-size: 30px;
-  cursor: pointer;
-  background: none;
-  border: none;
-  color: white; /* White font color for the toggle button */
-}
-
-.sidebar-content {
-  padding: 15px;
-  transition: opacity 0.5s ease; /* Smooth transition for opacity */
-}
-
-.sidebar.closed .sidebar-content {
-  opacity: 0; /* Hide content when sidebar is closed */
-}
-
-.sidebar h1 {
-  margin-top: 0;
-  text-decoration: underline;
-  color: rgb(255, 255, 255); /* Coral font color for the heading */
-  font-family: "Custom", Bebas Neue, Roboto Condensed, sans-serif;
-  font-display: swap;
-  font-size: 24px; /* Increase font size */
-}
-
-.sidebar h2 {
-  margin-top: 0;
-  color: coral; /* Coral font color for the heading */
-  font-family: "Custom", Bebas Neue, Roboto Condensed, sans-serif;
-  font-display: swap;
-  font-size: 24px; /* Increase font size */
-}
-
-.checkbox-container {
-  display: flex;
-  align-items: center;
-  margin: 10px 0;
-}
-
-.checkbox-button {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  background-color: #fff;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  cursor: pointer;
-  position: relative;
-  margin-right: 10px;
-}
-
-.checkbox-button.checked {
-  background-color: #000000;
-  color: white;
-}
-
-.checkbox-button.checked::after {
-  content: "\2713";
-  position: absolute;
-  left: 15%;
-  bottom: -15%;
-  color: white;
-  font-size: 18px;
-}
-
-.checkbox-label {
-  font-family: "Custom", Bebas Neue, Roboto Condensed, sans-serif;
-  font-display: swap;
-  font-size: 18px;
-  color: white;
-}
-
-.attributions {
-  display: block;
-  width: 100%;
-  padding: 5px 10px;
-  margin: 10px 0;
-  background-color: #333;
-  color: white;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-  font-family: "Custom", Bebas Neue, Roboto Condensed, sans-serif;
-  font-display: swap;
-  font-size: 16px;
-  text-align: center;
-}
-
-.attributions:hover {
-  background-color: #555;
-}
-
-/* Button Bar Styles */
-.button-bar {
-  display: flex;
-  justify-content: center;
-  margin-top: 10px;
-}
-
-.button-bar button {
-  background-color: #333;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  margin: 0 5px;
-  cursor: pointer;
-  border-radius: 5px;
-  font-family: "Custom", Bebas Neue, Roboto Condensed, sans-serif;
-  font-display: swap;
-  font-size: 18px; /* Increase font size */
-}
-
-.button-bar button:hover {
-  background-color: #555;
-}
-
-/* Map Label */
-.map-label {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 10px 20px;
-  font-size: 24px;
-  font-weight: bold;
-  border-radius: 5px;
-  z-index: 1001; /* Ensure it is above other elements */
-  display: none; /* Initially hidden */
-}
-
-/* Hamburger Icon Button Styles */
-.hamburger-button {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  font-size: 24px;
-  cursor: pointer;
-  background: none;
-  border: none;
-  color: white; /* White font color */
-  z-index: 1002; /* Ensure it is above other elements */
-}
-
-.leaflet-control-attribution {
-  display: none;
+    background-color: #9cbc93;
 }
 
 /* Custom Marker Styles */
 .leaflet-popup-content-wrapper {
-  background: rgb(20, 20, 20) !important;
-  border-radius: 5px;
-  padding: 0;
-  display: flex;
-  flex-direction: row;
-  overflow: hidden; /* Ensure content doesn't overflow */
-  position: relative;
-  width: 500px;
-  font-family: "Custom", Bebas Neue, Roboto Condensed, sans-serif;
-  font-display: swap;
+    background: #1a1a1a !important; /* Dark neutral background */
+    color: #fff !important;
+    border-radius: 8px !important;
+    padding: 0 !important;
+    display: flex;
+    flex-direction: column; /* Vertical stack */
+    width: 350px !important; /* Fixed width for card consistency */
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important; /* Enhanced shadow */
+    font-family: "Roboto Condensed", sans-serif !important;
+    overflow: hidden;
 }
 
-/* Enable zoom for the whole popup */
-.leaflet-popup-content-wrapper,
+/* Remove default leaflet padding/margins */
 .leaflet-popup-content {
-  transition: transform 0.3s ease;
-  touch-action: none; /* Allow pinch zoom and pan */
-}
-
-.leaflet-popup-content-wrapper.zoomed,
-.leaflet-popup-content.zoomed {
-  transform: scale(1.2); /* Adjust zoom factor as needed */
-  z-index: 9999;
-  overflow: visible !important; /* Allow content to overflow when zoomed */
-  box-shadow: 0 0 30px 10px rgba(0, 0, 0, 0.5);
-}
-
-.leaflet-popup-content {
-  width: 100% !important; /* Extend to maximum width */
-  height: 400px !important;
+    width: 100% !important;
+    height: auto !important; /* Allow height to fit content */
+    margin: 0 !important;
+    line-height: 1.4;
 }
 
 .custom-popup-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #000; /* Black background */
-  padding: 10px;
-  border-radius: 5px;
-  height: 95%;
-}
-
-.image-container {
-  position: relative;
-  background-color: #161616;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden; /* Ensure content doesn't overflow */
-}
-
-.arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 24px;
-  padding: 5px;
-  cursor: pointer;
-  z-index: 2;
-}
-
-.arrow img {
-  width: 24px; /* Adjust the size of the SVG */
-  height: 24px; /* Adjust the size of the SVG */
-  background-color: rgba(255, 255, 255, 1); /* Keep the background color */
-}
-
-.left-arrow {
-  left: 0;
-}
-
-.right-arrow {
-  right: 0;
-}
-
-.popup-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: opacity 0.5s ease;
-}
-
-.popup-image.hidden {
-  opacity: 0;
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 0;
 }
 
 .custom-popup-content .info {
-  margin-left: 20px;
-  color: white;
-  font-size: 18px;
-  width: 50%;
-  justify-content: center !important;
+    width: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+    text-align: left;
 }
 
+/* Header Styling */
 .custom-popup-content .info h2 {
-  margin-top: 0;
+    margin: 0 0 12px 0;
+    font-size: 26px;
+    text-align: center;
+    color: #f2c731; /* Gold accent to match modal */
+    border-bottom: 1px solid #333;
+    padding-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
+/* Data List as a clean grid/table */
 .custom-popup-content .info ul {
-  list-style-type: none;
-  padding: 0;
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
 }
 
 .custom-popup-content .info ul li {
-  margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between; /* Label left, Value right */
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #2a2a2a;
+    font-size: 16px;
 }
 
-.custom-popup-content .info a {
-  color: rgb(51, 255, 194);
-}
-
-.leaflet-popup-link {
-  text-decoration: none;
-  color: inherit;
-  display: block;
-  margin-top: 10px;
-}
-
-.custom-popup-content .info ul li {
-  margin-bottom: 8px;
+.custom-popup-content .info ul li:last-child {
+    border-bottom: none;
 }
 
 .custom-popup-content .info ul li strong {
-  display: block;
-  color: coral; /* Set the title color to coral */
+    color: #a0a0a0; /* Muted label color */
+    font-weight: 400;
+    margin-right: 10px;
 }
 
-.leaflet-popup-link:hover {
-  text-decoration: underline;
+.custom-popup-content .info a {
+    color: #f2c731;
+    text-decoration: none;
+}
+.custom-popup-content .info a:hover {
+    text-decoration: underline;
 }
 
-/* Legend Container Styles */
-#precipitation-legend-container {
-  position: absolute;
-  top: 10px;
-  right: 10px; /* Move to right */
-  max-height: 120px; /* Adjust the height as needed */
-  max-width: 100%;
-  background: rgba(255, 255, 255, 0.9); /* Semi-transparent white background */
-  padding: 10px 1px 1px 1px;
-  border-radius: 5px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-  z-index: 1000; /* Ensure it is above other elements */
-}
-
-#precipitaion-legend-image {
-  max-width: 100%;
-  height: 100%;
-}
-
-#susceptibility-legend-container {
-  position: absolute;
-  bottom: 8%;
-  left: 5px; /* Move to left */
-  max-height: 160px; /* Adjust the height as needed */
-  /* overflow-y: auto; */
-  height: 160px;
-  background: rgba(255, 255, 255, 0.9); /* Semi-transparent white background */
-  padding: 3px;
-  border-radius: 5px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-  z-index: 1000; /* Ensure it is above other elements */
-}
-
-#susceptibility-legend-image {
-  max-width: 100%;
-  height: 100%;
-}
-
-#precipitation-legend-container span {
-  display: block;
-  text-align: center;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-/* Logo Container Styles */
-#logo-container {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  z-index: 1000; /* Ensure it is above other elements */
-}
-
-#logo-image {
-  max-width: 150px; /* Adjust the size as needed */
-  height: auto;
-}
-
-/* Additional Styles for New Buttons */
-.button-bar-container {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: black; /* Black background */
-  padding: 10px;
-  border-radius: 5px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-  z-index: 999; /* Ensure it is below the sidebar */
-}
-
-/* Button Bar Styles */
-.button-bar {
-  display: flex;
-  justify-content: center;
-  margin-top: 10px;
-}
-
-.button-bar button {
-  background-color: #494949;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  margin: 0 5px;
-  cursor: pointer;
-  border-radius: 5px;
-  font-family: "Custom", Bebas Neue, Roboto Condensed, sans-serif;
-  font-display: swap;
-  font-size: 18px; /* Increase font size */
-}
-
-.button-bar button:hover {
-  background-color: #555;
-}
-
-/* Media Queries for Mobile Devices */
-@media (max-width: 768px) {
-  html,
-  body,
-  main,
-  #map {
-    height: 100%;
-    min-height: 100%;
+/* CAROUSEL STYLES */
+.popup-carousel {
+    position: relative;
     width: 100%;
-    min-width: 100%;
-    margin: 0;
-    padding: 0;
+    margin-bottom: 15px;
+    background: #000;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #333;
+}
+
+.carousel-image-container {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+}
+
+.carousel-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.carousel-label {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    font-size: 0.85rem;
+    padding: 6px;
+    text-align: center;
+    font-family: "Roboto Condensed", sans-serif;
+    backdrop-filter: blur(2px);
+}
+
+.carousel-controls {
+    position: absolute;
+    top: 50%;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    transform: translateY(-50%);
+    pointer-events: none;
+    padding: 0 5px;
     box-sizing: border-box;
-    font-family: Bebas Neue, Roboto Condensed, sans-serif;
-  }
+}
 
-  .map-label {
-    font-size: 20px; /* Reduce font size for small devices */
-    padding: 2px 5px; /* Adjust padding for small devices */
-    display: flex; /* Use Flexbox */
-    align-items: center; /* Center vertically */
-    justify-content: center; /* Center horizontally */
-  }
+.carousel-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: background 0.2s ease, transform 0.2s ease;
+    color: white;
+    padding: 0;
+}
 
-  .leaflet-popup-content-wrapper {
-    max-width: 300px; /* Adjust width for mobile devices */
-    max-height: 250px; /* Adjust height for mobile devices */
-    padding: 0px;
-  }
+.carousel-btn:hover {
+    background: rgba(255, 255, 255, 0.9);
+    color: black;
+    transform: scale(1.1);
+}
 
-  .leaflet-popup-content {
-    width: 100% !important; /* Make the popup full width */
-    height: auto !important; /* Adjust height for mobile devices */
-    margin: 0px !important;
+/* FULLSCREEN & CLICKABLE STYLES */
+.carousel-img.clickable {
+    cursor: zoom-in;
+    transition: transform 0.2s ease;
+}
+.carousel-img.clickable:hover {
+    transform: scale(1.02);
+}
+
+.fullscreen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 99999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.fullscreen-content {
+    position: relative;
+    max-width: 95%;
+    max-height: 95%;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-  }
+    align-items: center;
+}
 
-  .custom-popup-content .info {
-    margin-left: 4px; /* Remove the left margin */
-    width: 100%; /* Make the info section full width */
-    text-align: center; /* Center align text */
-  }
+.fullscreen-img {
+    max-width: 100%;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
 
-  .custom-popup-content .info h2 {
-    font-size: 16px; /* Reduce font size */
-    margin: 5px 0; /* Reduce margin */
-  }
+.fullscreen-label {
+    color: #fff;
+    font-family: "Roboto Condensed", sans-serif;
+    font-size: 1.4rem;
+    margin-top: 15px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
 
-  .custom-popup-content .info ul li {
-    font-size: 14px; /* Reduce font size */
-    margin-bottom: 3px; /* Reduce margin */
-  }
-
-  .custom-popup-content .info a {
-    font-size: 12px; /* Reduce font size */
-  }
-
-  .image-container {
-    width: 100%; /* Make the image container full width */
-    height: auto; /* Adjust height for mobile devices */
-  }
-
-  .arrow {
-    font-size: 12px; /* Reduce font size */
-  }
-
-  .arrow img {
-    width: 12px; /* Adjust the size of the SVG for mobile devices */
-    height: 12px; /* Adjust the size of the SVG for mobile devices */
-    background-color: rgba(255, 255, 255, 1); /* Keep the background color */
-  }
-
-  .button-bar {
-    flex-direction: column; /* Stack buttons vertically */
-  }
-
-  .button-bar button {
-    margin: 3px 0; /* Reduce margin between buttons */
-    padding: 5px; /* Reduce padding */
-    font-size: 12px; /* Reduce font size */
-  }
-
-  /* Logo Container Styles */
-  #logo-container {
+.fullscreen-close-btn {
     position: absolute;
-    top: 80%;
-    left: 0; /* Move to left */
-  }
-
-  #logo-image {
-    max-width: 80px; /* Adjust the size as needed */
-    height: auto;
-  }
-
-  .sidebar {
-    font-size: 14px; /* Reduce font size for sidebar on small devices */
-  }
-
-  .sidebar h1,
-  .sidebar h2 {
-    font-size: 18px; /* Reduce font size for headings on small devices */
-  }
-
-  .sidebar label {
-    font-size: 14px; /* Reduce font size for labels on small devices */
-  }
-
-  .hamburger-button {
-    position: absolute;
-    left: 5px;
+    top: -60px;
+    right: -10px;
+    background: transparent;
+    color: white;
     border: none;
-  }
+    font-size: 3rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s, transform 0.2s;
+}
 
-  .attributions {
-    font-size: 14px; /* Reduce font size for attributions on small devices */
-  }
+.fullscreen-close-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
 
-  /* Legend Container Styles */
-  #precipitation-legend-container {
-    position: absolute;
-    top: 0%;
-    right: 0%; /* Move to left */
-    overflow-y: auto; /* Allow vertical scrolling */
-    max-height: 80px; /* Adjust the height as needed */
-    max-width: 100px;
-    z-index: 1000; /* Ensure it is above other elements */
-  }
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
 
-  #precipitation-legend-image {
-    max-width: 100%;
-    height: auto;
-  }
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    .leaflet-popup-content-wrapper { width: 300px !important; }
+    .custom-popup-content .info h2 { font-size: 22px; }
+    .carousel-image-container { height: 160px; }
+}
 
-  #susceptibility-legend-container {
-    position: absolute;
-    bottom: 2px;
-    left: 73%;
-    height: 105px; /* Adjust the height as needed */
-    width: 105px;
-    z-index: 1004; /* Ensure it is above other elements */
-  }
+#disclaimer-modal {
+  display: none;
+}
 
-  #susceptibility-legend-image {
-    max-width: 100%;
-    height: auto;
-  }
-
-  #precipitation-legend-container span {
-    display: block;
-    text-align: center;
-    font-size: 8px;
-    font-weight: bold;
-  }
+#disclaimer-modal.active {
+  display: flex;
 }
