@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Popup } from 'react-leaflet';
 import '../styles/StationPopup.css';
-import { createPortal } from 'react-dom';
 
 // Simple SVG Icons for arrows
 const ChevronLeft = () => (
@@ -17,7 +16,6 @@ const ChevronRight = () => (
 
 const StationPopup = ({ station }) => {
     const [currentImgIndex, setCurrentImgIndex] = useState(0);
-    const [isFullscreen, setIsFullscreen] = useState(false);
 
     if (!station) {
         return null;
@@ -33,11 +31,13 @@ const StationPopup = ({ station }) => {
     if (station.sensor_image_url) {
         images.push({
             src: `/api/stations/${station.station_id}/image/sensor`,
+            label: 'Sensor View' // Added label for clarity
         });
     }
     if (station.data_image_url) {
         images.push({
             src: `/api/stations/${station.station_id}/image/data`,
+            label: 'Data View' // Added label for clarity
         });
     }
 
@@ -51,22 +51,10 @@ const StationPopup = ({ station }) => {
         setCurrentImgIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
     };
 
-    const toggleFullscreen = () => {
-        setIsFullscreen(!isFullscreen);
-    };
-
-    // Portal Component for Fullscreen Overlay
-    const FullscreenModal = ({ image, onClose }) => {
-        return createPortal(
-            <div className="fullscreen-overlay" onClick={onClose}>
-                <div className="fullscreen-content" onClick={(e) => e.stopPropagation()}>
-                    <button className="fullscreen-close-btn" onClick={onClose}>&times;</button>
-                    <img src={image.src} alt={image.label} className="fullscreen-img" />
-                    <div className="fullscreen-label">{image.label}</div>
-                </div>
-            </div>,
-            document.body
-        );
+    const openInNewTab = (e) => {
+        if (images.length > 0) {
+            window.open(images[currentImgIndex].src, '_blank', 'noopener,noreferrer');
+        }
     };
 
     return (
@@ -80,14 +68,20 @@ const StationPopup = ({ station }) => {
                     {/* CAROUSEL SECTION */}
                     {images.length > 0 && (
                         <div className="popup-carousel">
-                            <div className="carousel-image-container" onClick={toggleFullscreen}>
+                            <div
+                                className="carousel-image-container"
+                                onClick={openInNewTab}
+                                style={{ cursor: 'pointer' }}
+                            >
                                 <img
                                     src={images[currentImgIndex].src}
-                                    alt={images[currentImgIndex].label}
+                                    alt={images[currentImgIndex].label || "Station Image"}
                                     className="carousel-img clickable"
-                                    title="Click to expand"
+                                    title="Click to open in new tab"
                                 />
-                                <div className="carousel-label">{images[currentImgIndex].label}</div>
+                                <div className="carousel-label">
+                                    {images[currentImgIndex].label}
+                                </div>
                             </div>
 
                             {images.length > 1 && (
@@ -115,14 +109,6 @@ const StationPopup = ({ station }) => {
                             <strong>12 HRS Precipitation:</strong> <span>{precip} inches</span>
                         </li>
                     </ul>
-
-                    {/* Render Portal if active */}
-                    {isFullscreen && images.length > 0 && (
-                        <FullscreenModal
-                            image={images[currentImgIndex]}
-                            onClose={toggleFullscreen}
-                        />
-                    )}
 
                 </div>
             </div>
