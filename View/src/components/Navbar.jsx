@@ -73,6 +73,7 @@ function Navbar() {
             {openDropdown === 'recursos' && (
               <ul className="nav__menu">
                 <li><Link to="/guia-deslizamientos" className="nav__sublink">Guía sobre Deslizamientos</Link></li>
+                  <li><Link to="/mapa-susceptibilidad" className="nav__sublink">Mapa Susceptibilidad</Link></li>
                 <li><Link to="/mapa-susceptibilidad-municipios" className="nav__sublink">Mapas Municipales</Link></li>
               </ul>
             )}
