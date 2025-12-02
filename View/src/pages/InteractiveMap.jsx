@@ -10,10 +10,19 @@ import GreenPinIcon from '../assets/green-location-pin.png';
 import L from 'leaflet';
 import MapMenu from "../components/MapMenu.jsx";
 
-// const BASE_STATIONS_URL = "http://localhost:8080/api/stations" // CHANGE BACK
-// const BASE_LANDSLIDES_URL = "http://localhost:8080/api/landslides"; // CHANGE BACK
-const BASE_STATIONS_URL = "https://derrumbe-test.derrumbe.net/api/stations"
-const BASE_LANDSLIDES_URL = "https://derrumbe-test.derrumbe.net/api/landslides";
+const BASE_DOMAIN = "https://derrumbe-test.derrumbe.net";
+// const BASE_DOMAIN = "http://localhost:8080"; // Toggle for local dev
+
+// $app->get('/stations', ...)
+const BASE_STATIONS_URL = `${BASE_DOMAIN}/api/stations`;
+
+// $app->get('/stations/files/data', ...)
+const BASE_FILES_DATA_URL = `${BASE_DOMAIN}/api/stations/files/data`;
+
+// $app->put('/stations/files/data/{id}/update', ...)
+const BASE_UPDATE_PREFIX = `${BASE_DOMAIN}/api/stations/files/data`;
+
+const BASE_LANDSLIDES_URL = `${BASE_DOMAIN}/api/landslides`;
 
 const Disclaimer = ({ onAgree }) => {
     return (
@@ -35,59 +44,60 @@ const Disclaimer = ({ onAgree }) => {
 };
 
 const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
-  const map = useMap();
+    const map = useMap();
 
-  useEffect(() => {
-    const hillshade = EL.tiledMapLayer({
-      url: 'https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Hillshade_Puerto_Rico/MapServer',
-      opacity: 0.5,
-    }).addTo(map);
+    useEffect(() => {
+        const hillshade = EL.tiledMapLayer({
+            url: 'https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Hillshade_Puerto_Rico/MapServer',
+            opacity: 0.5,
+        }).addTo(map);
 
-    const municipalities = EL.featureLayer({
-      url: 'https://services5.arcgis.com/TQ9qkk0dURXSP7LQ/arcgis/rest/services/LIMITES_LEGALES_MUNICIPIOS/FeatureServer/0',
-      style: () => ({ color: 'black', weight: 1, fillOpacity: 0 }),
-    }).addTo(map);
+        const municipalities = EL.featureLayer({
+            url: 'https://services5.arcgis.com/TQ9qkk0dURXSP7LQ/arcgis/rest/services/LIMITES_LEGALES_MUNICIPIOS/FeatureServer/0',
+            style: () => ({ color: 'black', weight: 1, fillOpacity: 0 }),
+        }).addTo(map);
 
-    return () => {
-      map.removeLayer(hillshade);
-      map.removeLayer(municipalities);
-    };
-  }, [map]);
+        return () => {
+            map.removeLayer(hillshade);
+            map.removeLayer(municipalities);
+        };
+    }, [map]);
 
-  useEffect(() => {
-    let precipLayer;
-    if (showPrecip) {
-      precipLayer = EL.imageMapLayer({
-        url: 'https://mapservices.weather.noaa.gov/raster/rest/services/obs/mrms_qpe/ImageServer',
-        opacity: 0.5,
-        renderingRule: { rasterFunction: 'rft_12hr' },
-      }).addTo(map);
-    }
-    return () => {
-      if (precipLayer) map.removeLayer(precipLayer);
-    };
-  }, [map, showPrecip]);
+    useEffect(() => {
+        let precipLayer;
+        if (showPrecip) {
+            precipLayer = EL.imageMapLayer({
+                url: 'https://mapservices.weather.noaa.gov/raster/rest/services/obs/mrms_qpe/ImageServer',
+                opacity: 0.5,
+                renderingRule: { rasterFunction: 'rft_12hr' },
+            }).addTo(map);
+        }
+        return () => {
+            if (precipLayer) map.removeLayer(precipLayer);
+        };
+    }, [map, showPrecip]);
 
-  useEffect(() => {
-    let susceptibilityLayer;
-    if (showSusceptibility) {
-      susceptibilityLayer = EL.tiledMapLayer({
-        url: "https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Susceptibilidad_Derrumbe_PR/MapServer",
-        opacity: 0.5,
-      }).addTo(map);
-    }
-    return () => {
-      if (susceptibilityLayer) map.removeLayer(susceptibilityLayer);
-    };
-  }, [map, showSusceptibility]);
+    useEffect(() => {
+        let susceptibilityLayer;
+        if (showSusceptibility) {
+            susceptibilityLayer = EL.tiledMapLayer({
+                url: "https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Susceptibilidad_Derrumbe_PR/MapServer",
+                opacity: 0.5,
+            }).addTo(map);
+        }
+        return () => {
+            if (susceptibilityLayer) map.removeLayer(susceptibilityLayer);
+        };
+    }, [map, showSusceptibility]);
 
-  return null;
+    return null;
 };
 
 const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
     const [stations, setStations] = useState([]);
+    const [hasCheckedSync, setHasCheckedSync] = useState(false);
 
-    useEffect(() => {
+    const fetchStations = () => {
         fetch(BASE_STATIONS_URL)
             .then((response) => {
                 if (!response.ok) {
@@ -97,7 +107,103 @@ const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
             })
             .then((data) => setStations(data))
             .catch((err) => console.error("API Fetch Error:", err));
+    };
+
+    useEffect(() => {
+        fetchStations();
     }, []);
+
+    const calculateMetricsFromRawData = (rows, stationInfo) => {
+        if (!rows || rows.length === 0) return null;
+
+        const last12 = rows.slice(-12);
+        const totalRain = last12.reduce((acc, row) => {
+            const val = parseFloat(row['Rain_mm_Tot']);
+            return acc + (isNaN(val) ? 0 : val);
+        }, 0);
+
+        const lastRow = rows[rows.length - 1];
+        const wcRatios = [];
+
+        const getValue = (keyPrefix) => {
+            const key = Object.keys(lastRow).find(k => k.toLowerCase().startsWith(keyPrefix));
+            return key ? parseFloat(lastRow[key]) : null;
+        };
+
+        const limits = [stationInfo.wc1, stationInfo.wc2, stationInfo.wc3, stationInfo.wc4];
+
+        limits.forEach((limit, index) => {
+            const val = getValue(`wc${index + 1}`); // looks for wc1, wc2...
+            const max = parseFloat(limit);
+            if (!isNaN(val) && !isNaN(max) && max !== 0) {
+                wcRatios.push(val / max);
+            }
+        });
+
+        let avgSaturation = 0;
+        if (wcRatios.length > 0) {
+            const sumRatio = wcRatios.reduce((a, b) => a + b, 0);
+            avgSaturation = (sumRatio / wcRatios.length) * 100;
+        }
+
+        return {
+            calculatedPrecip: totalRain,
+            calculatedSaturation: avgSaturation
+        };
+    };
+
+    useEffect(() => {
+        if (stations.length > 0 && !hasCheckedSync) {
+            const checkDataConsistency = async () => {
+                try {
+                    const response = await fetch(BASE_FILES_DATA_URL);
+                    if (!response.ok) return;
+
+                    const filesData = await response.json();
+                    const updatesNeeded = [];
+
+                    filesData.forEach(fileRecord => {
+                        const station = stations.find(s => s.station_id === fileRecord.station_id);
+
+                        if (station && fileRecord.data) {
+                            const metrics = calculateMetricsFromRawData(fileRecord.data, station);
+
+                            if (metrics) {
+                                const dbSat = parseFloat(station.soil_saturation || 0);
+                                const dbPrecip = parseFloat(station.precipitation || 0);
+
+                                const calcSat = metrics.calculatedSaturation;
+                                const calcPrecip = metrics.calculatedPrecip;
+
+                                const satDiff = Math.abs(dbSat - calcSat);
+                                const precipDiff = Math.abs(dbPrecip - calcPrecip);
+
+                                if (satDiff > 1.0 || precipDiff > 0.05) {
+                                    console.log(`Update needed for Station ${station.station_id}. Diff - Sat: ${satDiff.toFixed(2)}, Precip: ${precipDiff.toFixed(2)}`);
+                                    updatesNeeded.push(station.station_id);
+                                }
+                            }
+                        }
+                    });
+
+                    if (updatesNeeded.length > 0) {
+                        await Promise.all(updatesNeeded.map(id =>
+                            fetch(`${BASE_UPDATE_PREFIX}/${id}/update`, { method: 'PUT' })
+                        ));
+
+                        fetchStations();
+                    }
+
+                } catch (error) {
+                    console.error("Error checking station consistency:", error);
+                } finally {
+                    setHasCheckedSync(true);
+                }
+            };
+
+            checkDataConsistency();
+        }
+    }, [stations, hasCheckedSync]);
 
     /** SOIL SATURATION ICON **/
     const createSaturationIcon = (saturation) => {
@@ -174,18 +280,18 @@ const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
                 // Soil Saturation (default) OR Precipitation (if selected)
                 if (showSaturation && station.soil_saturation != null) {
                     icon = createSaturationIcon(station.soil_saturation);
-                } 
+                }
                 else if (showPrecip12hr && station.precipitation != null) {
                     icon = createPrecipIcon(station.precipitation);
-                } 
+                }
                 else {
                     // If the selected metric has no value, fallback to the other metric
                     if (station.soil_saturation != null) {
                         icon = createSaturationIcon(station.soil_saturation);
-                    } 
+                    }
                     else if (station.precipitation != null) {
                         icon = createPrecipIcon(station.precipitation);
-                    } 
+                    }
                     else {
                         return null; // Only if BOTH are missing (rare case)
                     }
@@ -207,12 +313,12 @@ const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
 
 
 const createLandslideIcon = () => {
-  return L.icon({
-    iconUrl: GreenPinIcon,
-    iconSize: [30, 40],        // Adjust size as needed
-    iconAnchor: [15, 30],      // Bottom center of the icon
-    popupAnchor: [0, -10]      // Popup appears above the pin
-  });
+    return L.icon({
+        iconUrl: GreenPinIcon,
+        iconSize: [30, 40],        // Adjust size as needed
+        iconAnchor: [15, 30],      // Bottom center of the icon
+        popupAnchor: [0, -10]      // Popup appears above the pin
+    });
 };
 
 const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
@@ -272,91 +378,90 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
 }
 
 const SoilSaturationLegend = () => (
-  <div className="legend-container legend-bottom-right">
-    <div className="legend-title">Soil Saturation</div>
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#e0c853"}}></span>
-      <p>0–80%</p>
+    <div className="legend-container legend-bottom-right">
+        <div className="legend-title">Soil Saturation</div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#e0c853"}}></span>
+            <p>0–80%</p>
+        </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#63b3ff"}}></span>
+            <p>80–90%</p>
+        </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#001f57"}}></span>
+            <p>90–100%</p>
+        </div>
     </div>
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#63b3ff"}}></span>
-      <p>80–90%</p>
-    </div>
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#001f57"}}></span>
-      <p>90–100%</p>
-    </div>
-  </div>
 );
 
 const SusceptibilityLegend = () => (
-  <div className="legend-container legend-bottom-right-top">
-    <div className="legend-title">Landslide Susceptibility</div>
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#C0C0C0"}}></span>
-      <p>Low</p>
-    </div>
+    <div className="legend-container legend-bottom-right-top">
+        <div className="legend-title">Landslide Susceptibility</div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#C0C0C0"}}></span>
+            <p>Low</p>
+        </div>
 
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#FFFF00"}}></span>
-      <p>Moderate</p>
-    </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#FFFF00"}}></span>
+            <p>Moderate</p>
+        </div>
 
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#FF9900"}}></span>
-      <p>High</p>
-    </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#FF9900"}}></span>
+            <p>High</p>
+        </div>
 
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#FF0000"}}></span>
-      <p>Very High</p>
-    </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#FF0000"}}></span>
+            <p>Very High</p>
+        </div>
 
-    <div className="legend-item">
-      <span className="legend-color-box" style={{background:"#0000FF"}}></span>
-      <p>Exceptionally High</p>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#0000FF"}}></span>
+            <p>Exceptionally High</p>
+        </div>
     </div>
-  </div>
 );
 
 const PrecipLegend = () => (
-  <div className="legend-container legend-top-left legend-scrollable" >
-    <div className="legend-title">Precipitation (inches)</div>
+    <div className="legend-container legend-top-left legend-scrollable" >
+        <div className="legend-title">Precipitation (inches)</div>
 
-    {[
-      ["#9FEAFF", "0.01 - 0.05"],
-      ["#7FD6FF", "0.05 - 0.10"],
-      ["#5FC2FF", "0.10 - 0.15"],
-      ["#0099FF", "0.15 - 0.20"],
-      ["#00CC00", "0.20 - 0.40"],
-      ["#00B200", "0.40 - 0.60"],
-      ["#009900", "0.60 - 0.80"],
-      ["#007F00", "0.80 - 1.00"],
-      ["#FFFF66", "1.00 - 1.25"],
-      ["#FFD24D", "1.25 - 1.50"],
-      ["#FFB733", "1.50 - 1.75"],
-      ["#FF9900", "1.75 - 2.00"],
-      ["#FF6600", "2.00 - 2.50"],
-      ["#FF3300", "2.50 - 3.00"],
-      ["#CC0000", "3.00 - 3.50"],
-      ["#FF3399", "3.50 - 4.00"],
-      ["#FF00FF", "4.00 - 4.50"],
-      ["#CC00CC", "4.50 - 5.00"],
-      ["#990099", "5.00 - 5.50"],
-      ["#660066", "5.50 - 6.00"],
-      ["#330033", "6.00 - 6.50"],
-      ["#3333FF", "6.50 - 7.00"],
-      ["#0000CC", "7.00 - 8.00"],
-      ["#000066", "Above 8.00"],
-    ].map(([color, label]) => (
-      <div className="legend-item" key={label}>
-        <span className="legend-color-box" style={{background: color}}></span>
-        <p>{label}</p>
-      </div>
-    ))}
-  </div>
+        {[
+            ["#9FEAFF", "0.01 - 0.05"],
+            ["#7FD6FF", "0.05 - 0.10"],
+            ["#5FC2FF", "0.10 - 0.15"],
+            ["#0099FF", "0.15 - 0.20"],
+            ["#00CC00", "0.20 - 0.40"],
+            ["#00B200", "0.40 - 0.60"],
+            ["#009900", "0.60 - 0.80"],
+            ["#007F00", "0.80 - 1.00"],
+            ["#FFFF66", "1.00 - 1.25"],
+            ["#FFD24D", "1.25 - 1.50"],
+            ["#FFB733", "1.50 - 1.75"],
+            ["#FF9900", "1.75 - 2.00"],
+            ["#FF6600", "2.00 - 2.50"],
+            ["#FF3300", "2.50 - 3.00"],
+            ["#CC0000", "3.00 - 3.50"],
+            ["#FF3399", "3.50 - 4.00"],
+            ["#FF00FF", "4.00 - 4.50"],
+            ["#CC00CC", "4.50 - 5.00"],
+            ["#990099", "5.00 - 5.50"],
+            ["#660066", "5.50 - 6.00"],
+            ["#330033", "6.00 - 6.50"],
+            ["#3333FF", "6.50 - 7.00"],
+            ["#0000CC", "7.00 - 8.00"],
+            ["#000066", "Above 8.00"],
+        ].map(([color, label]) => (
+            <div className="legend-item" key={label}>
+                <span className="legend-color-box" style={{background: color}}></span>
+                <p>{label}</p>
+            </div>
+        ))}
+    </div>
 );
-
 
 export default function InteractiveMap() {
   const center = [18.220833, -66.420149];
@@ -370,8 +475,6 @@ export default function InteractiveMap() {
   const [showSaturationLegend, setShowSaturationLegend] = useState(true);
   const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
   const [showPrecipLegend, setShowPrecipLegend] = useState(false);
-
-
 
   const [showDisclaimer, setShowDisclaimer] = useState(
     localStorage.getItem('disclaimerAccepted') !== 'true'
@@ -396,11 +499,14 @@ export default function InteractiveMap() {
   const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
   const toggleSusceptibilityLegend = () => setShowSusceptibilityLegend(v => !v);
   const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
+  
+  // MERGE KEEP: Mobile logic from demo2
   const isMobile = window.innerWidth < 768;
 
+  // MERGE KEEP: Dynamic label logic from demo2
   const mapLabelText = showSaturation
-  ? "SOIL SATURATION PERCENTAGE"
-  : "PAST 12 HOUR PRECIPITATION (INCHES)";
+    ? "SOIL SATURATION PERCENTAGE"
+    : "PAST 12 HOUR PRECIPITATION (INCHES)";
 
   return (
     <main>
@@ -409,11 +515,16 @@ export default function InteractiveMap() {
       <MapContainer
         id="map"
         center={center}
+        // MERGE KEEP: Mobile zoom logic from demo2
         zoom={isMobile ? 8 : 9}
+        // MERGE KEEP: Constraints from fix-soil-saturation-updates
+        minZoom={7}
+        maxZoom={18}
         scrollWheelZoom={false}
         zoomControl={false}
         style={{ height: '100vh', width: '100%' }}
       >
+        {/* MERGE KEEP: Dynamic label inside container from demo2 */}
         <div className="map-label">{mapLabelText}</div>
         
         <TileLayer
@@ -424,36 +535,28 @@ export default function InteractiveMap() {
         <MapMenu
           showStations={showStations}
           onToggleStations={toggleStations}
-
           showPrecip={showPrecip}
           onTogglePrecip={togglePrecip}
-
           showSusceptibility={showSusceptibility}
           onToggleSusceptibility={toggleSusceptibility}
-
           showSaturation={showSaturation}
           onToggleSaturation={toggleSaturation}
-
           showPrecip12hr={showPrecip12hr}
           onTogglePrecip12hr={togglePrecip12hr}
-
           showSaturationLegend={showSaturationLegend}
           onToggleSaturationLegend={toggleSaturationLegend}
-
           showSusceptibilityLegend={showSusceptibilityLegend}
           onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
-
           showPrecipLegend={showPrecipLegend}
           onTogglePrecipLegend={togglePrecipLegend}
-
           availableYears={availableYears}
           selectedYear={selectedYear}
           onYearChange={setSelectedYear}
         />
 
         <EsriOverlays
-        showPrecip={showPrecip}
-        showSusceptibility={showSusceptibility}
+          showPrecip={showPrecip}
+          showSusceptibility={showSusceptibility}
         />
 
         <ZoomControl position="topright" />

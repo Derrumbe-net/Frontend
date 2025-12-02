@@ -3,6 +3,7 @@
 namespace DerrumbeNet\Controller;
 
 use DerrumbeNet\Model\StationInfo;
+use Exception;
 
 class StationInfoController {
     private StationInfo $stationInfoModel;
@@ -53,8 +54,7 @@ class StationInfoController {
 
                     try {
                         $data = $this->stationInfoModel->getStationFileData($fileName);
-                        echo "<pre>";
-                        echo "</pre>";
+
                         $result[] = [
                             'station_id' => $station['station_id'],
                             'file_path'  => $fileName,
