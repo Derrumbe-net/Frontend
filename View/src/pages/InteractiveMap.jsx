@@ -396,22 +396,26 @@ export default function InteractiveMap() {
   const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
   const toggleSusceptibilityLegend = () => setShowSusceptibilityLegend(v => !v);
   const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
+  const isMobile = window.innerWidth < 768;
 
+  const mapLabelText = showSaturation
+  ? "SOIL SATURATION PERCENTAGE"
+  : "PAST 12 HOUR PRECIPITATION (INCHES)";
 
   return (
     <main>
       {showDisclaimer && <Disclaimer onAgree={handleAgree} />}
-      <div className="map-label">SOIL SATURATION PERCENTAGE</div>
+      
       <MapContainer
         id="map"
         center={center}
-        zoom={9}
-        minZoom={7}
-        maxZoom={18}
+        zoom={isMobile ? 8 : 9}
         scrollWheelZoom={false}
         zoomControl={false}
         style={{ height: '100vh', width: '100%' }}
       >
+        <div className="map-label">{mapLabelText}</div>
+        
         <TileLayer
           url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
           attribution="Tiles © Esri"

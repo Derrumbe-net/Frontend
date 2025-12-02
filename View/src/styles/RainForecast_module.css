@@ -104,3 +104,87 @@
   transform: scale(1.02);
   cursor: pointer;
 }
+
+/* ============================================
+   MOBILE — RAIN FORECAST PAGE
+============================================ */
+@media (max-width: 768px) {
+  .rain-forecast {
+    padding: 2rem 1rem !important;
+  }
+
+  /* MAIN CONTENT */
+  .rain-forecast__content {
+    flex-direction: column !important;
+    gap: 1.5rem !important;
+    padding-left: 0.50rem !important;
+    padding-right: 1rem !important;
+    box-sizing: border-box;
+  }
+
+  /* ===========================
+       TEXT SECTION
+     =========================== */
+  .rain-forecast__text {
+    max-width: 100% !important;
+  }
+
+  .rain-forecast__text h1 {
+    font-size: 1.6rem !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-bottom: 0.75rem;
+    text-align: justify !important;
+  }
+
+  .rain-forecast__note {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    text-align: justify !important;
+    font-size: 0.9rem !important;
+  }
+
+  .rain-forecast__text p {
+    padding-left: 0 !important;
+    padding-right: 1.75rem !important;
+    text-align: justify !important;
+    font-size: 0.9rem !important;
+    line-height: 1.45 !important;
+  }
+
+  /* ===========================
+       MAP SECTION
+     =========================== */
+  .rain-forecast__map-image {
+    width: 93% !important;
+    height: auto !important;
+    object-fit: contain !important;
+    box-sizing: border-box;
+  }
+
+  .rain-forecast__comparison {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    gap: 0 !important;
+  }
+
+  .rain-forecast__card {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .rain-forecast__card h2 {
+    margin: 0 0 0.5rem 0 !important;
+    padding: 0 !important;
+  }
+
+  .rain-forecast__card img {
+    display: block !important;
+    margin: 0 0 1rem 0 !important;
+    padding: 0 !important;
+    width: 95% !important;
+    height: auto !important;
+  }
+}

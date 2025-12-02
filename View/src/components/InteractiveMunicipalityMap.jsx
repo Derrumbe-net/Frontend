@@ -164,7 +164,7 @@ export default function InteractiveMunicipalityMap() {
   const [activeMunicipality, setActiveMunicipality] = useState(null);
 
   useEffect(() => {
-    fetch("./public/puerto-rico-municipalities.geojson")
+    fetch("/data/puerto-rico-municipalities.geojson")
       .then(res => res.json())
       .then(json => setData(json));
   }, []);
