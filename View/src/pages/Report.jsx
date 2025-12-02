@@ -11,7 +11,7 @@ import Graphic from "@arcgis/core/Graphic";
 import Point from "@arcgis/core/geometry/Point";
 import CoordinateConversion from "@arcgis/core/widgets/CoordinateConversion";
 
-const BASE_REPORT_URL = "https://derrumbe-test.derrumbe.net"
+const BASE_REPORT_URL = "https://derrumbe-test.derrumbe.net/api/reports"
 // const BASE_REPORT_URL = "http://localhost:8080/api/reports"
 
 function Report() {
@@ -221,7 +221,7 @@ function Report() {
       longitude: coords.lng,          
       reported_at: form.date, 
       description: form.description,     
-      landslide_id: 123,
+
       physical_address: form.carretera || "",
       reporter_name: form.name || "Anonymous",
       reporter_phone: form.phone || "",
