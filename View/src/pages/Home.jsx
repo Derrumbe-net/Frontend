@@ -28,7 +28,7 @@ function Home() {
 
           <div className="hero__buttons">
             <a href="#contact" className="btn btn--contact">Contáctenos</a>
-            <Link to="/solicitud" className="btn btn--outline">Solicitud de Charla</Link>
+            <Link to="/solicitud" className="btn btn--outline">Solicita una Charla</Link>
           </div>
         </div>
       </section>
@@ -53,7 +53,7 @@ function Home() {
           alt="Mapa interactivo"
           loading="lazy"
         />
-      </section> 
+      </section>
 
 
       {/* SECTION: REPORTAR */}

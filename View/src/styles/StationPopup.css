@@ -296,3 +296,11 @@
     .custom-popup-content .info h2 { font-size: 22px; }
     .carousel-image-container { height: 160px; }
 }
+
+#disclaimer-modal {
+  display: none;
+}
+
+#disclaimer-modal.active {
+  display: flex;
+}

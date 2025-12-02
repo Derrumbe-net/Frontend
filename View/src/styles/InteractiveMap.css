@@ -7,21 +7,20 @@
 
 /* --- title pill centered at top --- */
 .map-label {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
+  top: 20px;
+  left: 550px;
   background: rgba(0,0,0,.85);
   color: #fff;
   padding: 10px 18px;
-  font: 700 18px/1.2 "Bebas Neue","Helvetica Neue",Arial,sans-serif;
   border-radius: 6px;
-  letter-spacing: .02em;
-  z-index: 1001;
+  z-index: 999 !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-transform: uppercase;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
 }
 
 /* --- popup styling --- */
@@ -260,7 +259,7 @@
 .logo-container {
   position: absolute;
   z-index: 1000;
-  top: 510px;
+  bottom: 60px;
   left: 30px;
 }
 
@@ -273,4 +272,62 @@
 .leaflet-control-zoom {
   top: 10px !important;
   right: 30px;
+}
+
+/* MOBILE — shrink legends */
+@media (max-width: 768px) {
+  /* shrink every legend */
+  .legend-container,
+  .legend-top-left,
+  .legend-bottom-right,
+  .legend-bottom-right-top {
+    transform: scale(0.5);
+    transform-origin: center;
+  }
+
+  /* reduce spacing so they don’t collide */
+  .legend-bottom-right {
+    bottom: 30px !important;
+    right: -30px !important;
+  }
+
+  .legend-bottom-right-top {
+    bottom: 100px !important;
+    right: -30px !important;
+  }
+
+  .legend-top-left {
+    top: 300px !important;
+    left: -30px !important;
+    max-height: 45vh !important;
+  }
+
+  /* Smaller text */
+  .legend-title {
+    font-size: 0.8rem !important;
+  }
+
+  .legend-item p {
+    font-size: 0.7rem !important;
+  }
+
+  .legend-color-box {
+    width: 12px;
+    height: 12px;
+  }
+
+  .logo-container {
+    bottom: 30px; /* a bit higher on mobile */
+    left: 5px;
+  }
+
+  .landslide-logo {
+    transform: scale(0.5);
+  }
+
+  .leaflet-control-zoom {
+    transform: scale(0.9);
+    transform-origin: top right;
+
+  }
 }

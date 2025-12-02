@@ -46,15 +46,24 @@
     }
 
     .municipality-title {
-        font-size: 2rem;
-        text-align: center;
+        font-size: 1.6rem !important;
+        font-weight: 800;
+        text-align: left !important;
+        margin-bottom: 0.75rem !important;
+        padding-left: 0.50rem !important;
+        padding-right: 1.50rem !important;
+        box-sizing: border-box !important;
     }
 
     .municipality-intro {
-        font-size: 1rem;
-        text-align: left;
+        font-size: 0.95rem !important;
+        line-height: 1.45 !important;
+        text-align: justify !important;
+        margin-bottom: 1rem !important;
+        padding-left: 0.50rem !important;
+        padding-right: 1rem !important;
+        box-sizing: border-box !important;
     }
-
     .municipality-map-wrapper .leaflet-container {
         height: 55vh !important;
     }
