@@ -26,6 +26,7 @@ import CMSProjects from './cms/pages/CMSProjects';
 import CMSPublications from './cms/pages/CMSPublications';
 import CMSReports from './cms/pages/CMSReports';
 import CMSStations from './cms/pages/CMSStations';
+import CMSManageUsers from './cms/pages/CMSManageUsers';
 
 // Auth protection
 import ProtectedRoute from './cms/layout/ProtectedRoute';
@@ -75,6 +76,7 @@ const router = createBrowserRouter([
       { path: 'publicaciones', element: <CMSPublications /> },
       { path: 'reportes', element: <CMSReports /> },
       { path: 'estaciones', element: <CMSStations /> },
+      { path: 'usuarios', element: <CMSManageUsers /> },
     ],
   },
 ]);

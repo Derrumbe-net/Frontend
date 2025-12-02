@@ -57,4 +57,33 @@ class AdminModelTest extends TestCase
 
         $this->assertTrue($result);
     }
+
+    public function testUpdateAuthorizationToTrue()
+    {
+        $stmtMock = $this->createMock(PDOStatement::class);
+        
+        $stmtMock->expects($this->once())->method('execute')->willReturn(true);
+        
+        $stmtMock->method('rowCount')->willReturn(1);
+
+        $this->mockPDO->expects($this->once())->method('prepare')->willReturn($stmtMock);
+
+        $result = $this->admin->updateAuthorization(1, true);
+
+        $this->assertTrue($result, "Failed to authorize admin (set to true)");
+    }
+
+    public function testUpdateAuthorizationToFalse()
+    {
+        $stmtMock = $this->createMock(PDOStatement::class);
+        
+        $stmtMock->expects($this->once())->method('execute')->willReturn(true);
+        $stmtMock->method('rowCount')->willReturn(1);
+
+        $this->mockPDO->expects($this->once())->method('prepare')->willReturn($stmtMock);
+        
+        $result = $this->admin->updateAuthorization(1, false);
+
+        $this->assertTrue($result, "Failed to deauthorize admin (set to false)");
+    }
 }
