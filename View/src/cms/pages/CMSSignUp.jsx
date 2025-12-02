@@ -25,14 +25,14 @@ export default function CMSSignUp() {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Account created successfully!\n\nYour account is currently pending confirmation. Please wait for an administrator to approve your access before logging in.");
+        alert("¡Cuenta creada exitosamente!\n\nSu cuenta está pendiente de confirmación. Por favor espere a que un administrador apruebe su acceso antes de iniciar sesión.");
         navigate('/cms/login'); 
       } else {
-        alert(data.error || 'Sign Up Failed: Please check your input.');
+        alert(data.error || 'Registro fallido: Por favor verifique su información.');
       }
     } catch (error) {
         console.error('Sign Up error:', error);
-        alert('An error occurred. Please try again later.');
+        alert('Ocurrió un error. Por favor intente más tarde.');
     }
   };
 
@@ -40,13 +40,13 @@ export default function CMSSignUp() {
     <div className="cms-signup">
       <div className="cms-signup-box">
         <img src={logo} alt="Logo" className="cms-signup-logo" />
-        <h1>Admin Sign Up</h1>
+        <h1>Sign Up</h1>
         
         <form onSubmit={handleSignUp}>
           
           <input
             type="email"
-            placeholder="Email"
+            placeholder="Correo Electrónico"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -54,16 +54,16 @@ export default function CMSSignUp() {
 
           <input
             type="password"
-            placeholder="Password"
+            placeholder="Contraseña"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
 
-          <button type="submit">Create Account</button>
+          <button type="submit">Crear Cuenta</button>
           
           <Link to="/cms/login" className="cms-signup-link">
-            Already have an account? <span style={{ color: '#007bff', fontWeight: 'bold' }}>Login</span>
+            ¿Ya tienes una cuenta? <span style={{ color: '#007bff', fontWeight: 'bold' }}>Inicia Sesión</span>
           </Link>
         </form>
       </div>

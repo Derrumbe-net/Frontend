@@ -37,7 +37,7 @@ export default function CMSManageUsers() {
         },
       });
 
-      if (!response.ok) throw new Error("Failed to fetch users");
+      if (!response.ok) throw new Error("Error al cargar los usuarios");
 
       const data = await response.json();
       setUsers(Array.isArray(data) ? data : data.data || []);
@@ -50,11 +50,11 @@ export default function CMSManageUsers() {
 
   const handleToggleAuth = async (targetUser) => {
     if (currentUserEmail !== SUPER_ADMIN_EMAIL) {
-      alert("Permission Denied: Only the Super Admin can change authorization status.");
+      alert("Permiso denegado: Solo el Super Admin puede cambiar el estado de autorización.");
       return; 
     }
     if (targetUser.email === SUPER_ADMIN_EMAIL) {
-        alert("You cannot revoke your own super admin access.");
+        alert("No puede revocar su propio acceso de Super Admin.");
         return;
     }
 
@@ -82,26 +82,26 @@ export default function CMSManageUsers() {
         );
       } else {
         const errData = await response.json();
-        alert(`Failed: ${errData.error || "Unknown error"}`);
+        alert(`Fallo: ${errData.error || "Error desconocido"}`);
       }
     } catch (error) {
       console.error("Error updating user:", error);
-      alert("An error occurred connecting to the server.");
+      alert("Ocurrió un error al conectar con el servidor.");
     }
   };
 
   const handleDeleteUser = async (targetUser) => {
     if (currentUserEmail !== SUPER_ADMIN_EMAIL) {
-        alert("Permission Denied: Only the Super Admin can delete users.");
+        alert("Permiso denegado: Solo el Super Admin puede eliminar usuarios.");
         return; 
     }
     if (targetUser.email === SUPER_ADMIN_EMAIL) {
-        alert("CRITICAL: You cannot delete the Super Admin account.");
+        alert("CRÍTICO: No se puede eliminar la cuenta de Super Admin.");
         return;
     }
 
     const confirmDelete = window.confirm(
-        `Are you sure you want to permanently delete ${targetUser.email}? This action cannot be undone.`
+        `¿Está seguro de que desea eliminar permanentemente a ${targetUser.email}? Esta acción no se puede deshacer.`
     );
 
     if (!confirmDelete) return;
@@ -122,31 +122,31 @@ export default function CMSManageUsers() {
             setUsers((prevUsers) => prevUsers.filter((u) => u.admin_id !== adminId));
         } else {
             const errData = await response.json();
-            alert(`Failed to delete: ${errData.error || "Unknown error"}`);
+            alert(`Fallo al eliminar: ${errData.error || "Error desconocido"}`);
         }
     } catch (error) {
         console.error("Error deleting user:", error);
-        alert("An error occurred connecting to the server.");
+        alert("Ocurrió un error al conectar con el servidor.");
     }
   };
 
-  if (loading) return <div className="loading">Loading users...</div>;
+  if (loading) return <div className="loading">Cargando usuarios...</div>;
   if (error) return <div className="error-message">{error}</div>;
 
   return (
     <div className="cms-manage-users">
       <div className="header-row">
-        <h2>Manage Admin Access</h2>
-        <p>Logged in as: {currentUserEmail}</p>
+        <h2>Administrar Acceso</h2>
+        <p>Sesión iniciada como: {currentUserEmail}</p>
       </div>
 
       <div className="table-container">
         <table>
           <thead>
             <tr>
-              <th>Email</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>Correo Electrónico</th>
+              <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -159,7 +159,7 @@ export default function CMSManageUsers() {
                   <td>{user.email}</td>
                   <td>
                     <span className={`status-badge ${isAuth ? "Activo" : "Pendiente"}`}>
-                      {isAuth ? "Authorized" : "Pending"}
+                      {isAuth ? "Autorizado" : "Pendiente"}
                     </span>
                   </td>
                   <td>
@@ -185,7 +185,7 @@ export default function CMSManageUsers() {
                           }}
                           onClick={() => handleDeleteUser(user)}
                         >
-                          Delete
+                          Eliminar
                         </button>
                     </div>
                   </td>

@@ -49,7 +49,7 @@ export default function CMSLogin() {
         const adminId = payload?.sub;
 
         if (!adminId) {
-          alert("Error: Invalid token received.");
+          alert("Error: Token inválido recibido.");
           return;
         }
 
@@ -71,18 +71,18 @@ export default function CMSLogin() {
             localStorage.setItem('cmsAdmin', token);
             navigate('/cms');
           } else {
-            alert('Login Successful, but your account is pending authorization. Please contact an administrator.');
+            alert('Inicio de sesión exitoso, pero su cuenta está pendiente de autorización. Por favor contacte a un administrador.');
           }
         } else {
-          alert('Failed to verify authorization status.');
+          alert('Fallo al verificar el estado de autorización.');
         }
 
       } else {
-        alert(data.error || 'Login Failed: Please check your credentials.');
+        alert(data.error || 'Inicio de sesión fallido: Por favor verifique sus credenciales.');
       }
     } catch (error) {
         console.error('Login error:', error);
-        alert('An error occurred. Please try again later.');
+        alert('Ocurrió un error. Por favor intente más tarde.');
     }
   };
   
@@ -90,28 +90,29 @@ export default function CMSLogin() {
     <div className="cms-login">
       <div className="cms-login-box">
       <img src={logo} alt="Logo" className="cms-login-logo" />
-        <h1>Admin Login</h1>
+        <h1>Log In</h1>
         <form onSubmit={handleLogin}>
-          <label>Email</label>
+          
           <input
             type="text"
+            placeholder="Correo Electrónico"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
 
-          <label>Password</label>
           <input
             type="password"
+            placeholder="Contraseña"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
 
-          <button type="submit">Login</button>
+          <button type="submit">Iniciar Sesión</button>
           
           <Link to="/cms/signup" className="cms-signup-link">
-            Don't have an account? <span style={{ color: '#007bff', fontWeight: 'bold' }}>Sign Up</span>
+            ¿No tienes una cuenta? <span style={{ color: '#007bff', fontWeight: 'bold' }}>Regístrate</span>
           </Link>
         </form>
       </div>
