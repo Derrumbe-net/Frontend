@@ -20,7 +20,9 @@ export default function CMSPublicaciones() {
 
   const fetchPublications = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/publications");
+      // const response = await fetch("http://localhost:8080/api/publications");
+      const response = await fetch("https://derrumbe-test.derrumbe.net/api/publications");
+
       const data = await response.json();
       setPublications(data);
     } catch (error) {

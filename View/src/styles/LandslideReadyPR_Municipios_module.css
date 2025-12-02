@@ -78,3 +78,84 @@
   height: 905px;
   padding-left: 30px;
 }
+
+/* ============================================
+     MOBILE — LANDSLIDE READY GENERAL
+============================================ */
+@media screen and (max-width: 900px) {
+  .landslideReady {
+    padding: 1rem 1rem !important;
+  }
+
+  .landslideReady__municipios-left h2 {
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
+    text-align: left !important;
+    padding-left: 1rem !important;
+    padding-right: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .landslideReady__municipios-left p {
+    font-size: 0.95rem !important;
+    line-height: 1.45 !important;
+    text-align: justify !important;
+    padding-left: 1rem !important;
+    padding-right: 3rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .landslideReady__subheader {
+    font-size: 1.4rem !important;
+    margin-top: 1.5rem !important;
+    padding-right: 1.5rem !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+
+  .landslideReady__municipios-section {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    gap: 1.5rem !important;
+  }
+
+  .landslideReady__map {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 1rem 0 !important;
+    padding-left: 1rem !important;
+    padding-right: 3rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .landslideReady__cycle {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 1rem !important;
+    padding-right: 3rem !important;
+    margin: 1rem 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .landslideReady__municipios-right {
+    width: 100% !important;
+    justify-content: center !important;
+    padding-left: 1rem !important;
+    padding-right: 3rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .landslideReady__municipios-right img.landslideReady__group-pics {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    object-fit: contain !important;
+    padding-top: 0 !important;
+    padding-left: 0 !important;
+    height: auto !important;
+    margin-top: 1rem !important;
+    margin-bottom: 1rem !important;
+  }
+}

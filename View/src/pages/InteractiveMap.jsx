@@ -463,123 +463,124 @@ const PrecipLegend = () => (
     </div>
 );
 
-
 export default function InteractiveMap() {
-    const center = [18.220833, -66.420149];
-    const [showStations, setShowStations] = useState(true);
-    const [selectedYear, setSelectedYear] = useState("2025");
-    const [availableYears, setAvailableYears] = useState([]);
-    const [showPrecip, setShowPrecip] = useState(true);
-    const [showSusceptibility, setShowSusceptibility] = useState(false);
-    const [showSaturation, setShowSaturation] = useState(true);
-    const [showPrecip12hr, setShowPrecip12hr] = useState(false);
-    const [showSaturationLegend, setShowSaturationLegend] = useState(true);
-    const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
-    const [showPrecipLegend, setShowPrecipLegend] = useState(false);
+  const center = [18.220833, -66.420149];
+  const [showStations, setShowStations] = useState(true);
+  const [selectedYear, setSelectedYear] = useState("2025");
+  const [availableYears, setAvailableYears] = useState([]);
+  const [showPrecip, setShowPrecip] = useState(true);
+  const [showSusceptibility, setShowSusceptibility] = useState(false);
+  const [showSaturation, setShowSaturation] = useState(true);
+  const [showPrecip12hr, setShowPrecip12hr] = useState(false);
+  const [showSaturationLegend, setShowSaturationLegend] = useState(true);
+  const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
+  const [showPrecipLegend, setShowPrecipLegend] = useState(false);
 
+  const [showDisclaimer, setShowDisclaimer] = useState(
+    localStorage.getItem('disclaimerAccepted') !== 'true'
+  );
 
+  const handleAgree = () => {
+    localStorage.setItem('disclaimerAccepted', 'true');
+    setShowDisclaimer(false);
+  };
 
-    const [showDisclaimer, setShowDisclaimer] = useState(
-        localStorage.getItem('disclaimerAccepted') !== 'true'
-    );
+  const toggleStations = () => setShowStations(v => !v);
+  const togglePrecip = () => setShowPrecip(v => !v);
+  const toggleSusceptibility = () => setShowSusceptibility(v => !v);
+  const toggleSaturation = () => {
+    setShowSaturation(true);
+    setShowPrecip12hr(false);
+  };
+  const togglePrecip12hr = () => {
+    setShowPrecip12hr(true);
+    setShowSaturation(false);
+  };
+  const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
+  const toggleSusceptibilityLegend = () => setShowSusceptibilityLegend(v => !v);
+  const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
+  
+  // MERGE KEEP: Mobile logic from demo2
+  const isMobile = window.innerWidth < 768;
 
-    const handleAgree = () => {
-        localStorage.setItem('disclaimerAccepted', 'true');
-        setShowDisclaimer(false);
-    };
+  // MERGE KEEP: Dynamic label logic from demo2
+  const mapLabelText = showSaturation
+    ? "SOIL SATURATION PERCENTAGE"
+    : "PAST 12 HOUR PRECIPITATION (INCHES)";
 
-    const toggleStations = () => setShowStations(v => !v);
-    const togglePrecip = () => setShowPrecip(v => !v);
-    const toggleSusceptibility = () => setShowSusceptibility(v => !v);
-    const toggleSaturation = () => {
-        setShowSaturation(true);
-        setShowPrecip12hr(false);
-    };
-    const togglePrecip12hr = () => {
-        setShowPrecip12hr(true);
-        setShowSaturation(false);
-    };
-    const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
-    const toggleSusceptibilityLegend = () => setShowSusceptibilityLegend(v => !v);
-    const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
+  return (
+    <main>
+      {showDisclaimer && <Disclaimer onAgree={handleAgree} />}
+      
+      <MapContainer
+        id="map"
+        center={center}
+        // MERGE KEEP: Mobile zoom logic from demo2
+        zoom={isMobile ? 8 : 9}
+        // MERGE KEEP: Constraints from fix-soil-saturation-updates
+        minZoom={7}
+        maxZoom={18}
+        scrollWheelZoom={false}
+        zoomControl={false}
+        style={{ height: '100vh', width: '100%' }}
+      >
+        {/* MERGE KEEP: Dynamic label inside container from demo2 */}
+        <div className="map-label">{mapLabelText}</div>
+        
+        <TileLayer
+          url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          attribution="Tiles © Esri"
+        />
 
+        <MapMenu
+          showStations={showStations}
+          onToggleStations={toggleStations}
+          showPrecip={showPrecip}
+          onTogglePrecip={togglePrecip}
+          showSusceptibility={showSusceptibility}
+          onToggleSusceptibility={toggleSusceptibility}
+          showSaturation={showSaturation}
+          onToggleSaturation={toggleSaturation}
+          showPrecip12hr={showPrecip12hr}
+          onTogglePrecip12hr={togglePrecip12hr}
+          showSaturationLegend={showSaturationLegend}
+          onToggleSaturationLegend={toggleSaturationLegend}
+          showSusceptibilityLegend={showSusceptibilityLegend}
+          onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
+          showPrecipLegend={showPrecipLegend}
+          onTogglePrecipLegend={togglePrecipLegend}
+          availableYears={availableYears}
+          selectedYear={selectedYear}
+          onYearChange={setSelectedYear}
+        />
 
-    return (
-        <main>
-            {showDisclaimer && <Disclaimer onAgree={handleAgree} />}
-            <div className="map-label">SOIL SATURATION PERCENTAGE</div>
-            <MapContainer
-                id="map"
-                center={center}
-                zoom={9}
-                minZoom={7}
-                maxZoom={18}
-                scrollWheelZoom={false}
-                zoomControl={false}
-                style={{ height: '100vh', width: '100%' }}
-            >
-                <TileLayer
-                    url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                    attribution="Tiles © Esri"
-                />
+        <EsriOverlays
+          showPrecip={showPrecip}
+          showSusceptibility={showSusceptibility}
+        />
 
-                <MapMenu
-                    showStations={showStations}
-                    onToggleStations={toggleStations}
+        <ZoomControl position="topright" />
+        
+        {showStations && (
+          <PopulateStations
+            showSaturation={showSaturation}
+            showPrecip12hr={showPrecip12hr}
+          />
+        )}
 
-                    showPrecip={showPrecip}
-                    onTogglePrecip={togglePrecip}
+        <PopulateLandslides
+          selectedYear={selectedYear}
+          setAvailableYears={setAvailableYears}
+        />
 
-                    showSusceptibility={showSusceptibility}
-                    onToggleSusceptibility={toggleSusceptibility}
+        {showSaturationLegend && <SoilSaturationLegend />}
+        {showSusceptibilityLegend && <SusceptibilityLegend />}
+        {showPrecipLegend && <PrecipLegend />}
 
-                    showSaturation={showSaturation}
-                    onToggleSaturation={toggleSaturation}
-
-                    showPrecip12hr={showPrecip12hr}
-                    onTogglePrecip12hr={togglePrecip12hr}
-
-                    showSaturationLegend={showSaturationLegend}
-                    onToggleSaturationLegend={toggleSaturationLegend}
-
-                    showSusceptibilityLegend={showSusceptibilityLegend}
-                    onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
-
-                    showPrecipLegend={showPrecipLegend}
-                    onTogglePrecipLegend={togglePrecipLegend}
-
-                    availableYears={availableYears}
-                    selectedYear={selectedYear}
-                    onYearChange={setSelectedYear}
-                />
-
-                <EsriOverlays
-                    showPrecip={showPrecip}
-                    showSusceptibility={showSusceptibility}
-                />
-
-                <ZoomControl position="topright" />
-
-                {showStations && (
-                    <PopulateStations
-                        showSaturation={showSaturation}
-                        showPrecip12hr={showPrecip12hr}
-                    />
-                )}
-
-                <PopulateLandslides
-                    selectedYear={selectedYear}
-                    setAvailableYears={setAvailableYears}
-                />
-
-                {showSaturationLegend && <SoilSaturationLegend />}
-                {showSusceptibilityLegend && <SusceptibilityLegend />}
-                {showPrecipLegend && <PrecipLegend />}
-
-                <div className="logo-container">
-                    <img src={LandslideLogo} alt="Landslide Hazard Mitigation Logo" className="landslide-logo" />
-                </div>
-            </MapContainer>
-        </main>
-    );
+        <div className="logo-container">
+          <img src={LandslideLogo} alt="Landslide Hazard Mitigation Logo" className="landslide-logo" />
+        </div>
+      </MapContainer>
+    </main>
+  );
 }

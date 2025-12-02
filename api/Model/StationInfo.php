@@ -107,9 +107,8 @@ class StationInfo {
         $ftp_pass   = $_ENV['FTPS_PASS'];
         $ftp_port   = $_ENV['FTPS_PORT'];
 
-        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/network/data/latest/';
+        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
         $remote_file_path = rtrim($base_remote_path, '/') . '/' . ltrim($fileName, '/');
-
         $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
         if (!$conn_id) throw new Exception("Failed to connect to FTPS server: $ftp_server");
 
@@ -237,4 +236,41 @@ class StationInfo {
 
         return $result;
     }
+
+    public function getStationImageContent($fileName) {
+        $ftp_server = $_ENV['FTPS_SERVER'];
+        $ftp_user   = $_ENV['FTPS_USER'];
+        $ftp_pass   = $_ENV['FTPS_PASS'];
+        $ftp_port   = $_ENV['FTPS_PORT'];
+        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
+
+        $remote_file_path = rtrim($base_remote_path, '/') . '/' . ltrim($fileName, '/');
+
+        $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
+        if (!$conn_id) throw new \Exception("Failed to connect to FTPS server");
+
+        if (!@ftp_login($conn_id, $ftp_user, $ftp_pass)) {
+            ftp_close($conn_id);
+            throw new \Exception("FTPS login failed");
+        }
+
+        ftp_pasv($conn_id, true);
+
+        $tmpFile = tmpfile();
+
+        if (!ftp_fget($conn_id, $tmpFile, $remote_file_path, FTP_BINARY)) {
+            fclose($tmpFile);
+            ftp_close($conn_id);
+            throw new \Exception("Unable to download image: $remote_file_path");
+        }
+
+        rewind($tmpFile);
+        $content = stream_get_contents($tmpFile);
+
+        fclose($tmpFile);
+        ftp_close($conn_id);
+
+        return $content;
+    }
 }
+

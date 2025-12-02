@@ -15,6 +15,9 @@ return function (App $app, $db) {
     $app->get('/landslides', [$landslideController, 'getAllLandslides']);
     $app->get('/landslides/{id}', [$landslideController, 'getLandslide']);
 
+    $app->get('/landslides/{id}/images', [$landslideController, 'getLandslideImages']);
+    $app->get('/landslides/{id}/images/{filename}', [$landslideController, 'serveLandslideImage']);
+
     // ---- Protected routes ----
     $app->group('/landslides', function (RouteCollectorProxy $group) use ($landslideController) {
         $group->post('', [$landslideController, 'createLandslide']);

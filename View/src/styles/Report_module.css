@@ -176,14 +176,58 @@
   }
   .report-hero__logo { margin-bottom: 0.5rem; }
   .report-title { text-align: center; }
-  .report-description { max-width: 100%; }
+  .report-subtitle { text-align: justify; }
+  .report-description { 
+    max-width: 100%; 
+    text-align: justify !important;
+  }
 
   .form-row, .form-row--inline {
     grid-template-columns: 1fr;
   }
+
   .form-row--inline {
     grid-auto-flow: row;
     gap: 0.4rem;
   }
-  .report-divider { margin-top: 1rem; }
+
+  .report-divider { 
+    margin-top: 1rem;
+    margin-bottom: 2rem; 
+  }
+
+  .dropzone {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 1rem !important;
+    margin-right: 1.50rem !important;
+    box-sizing: border-box !important;
+    border-radius: 6px !important;
+    border: 2px dashed #9aa891 !important;
+    background: #f4f6f2 !important;
+  }
+
+  .dropzone__hint {
+    font-size: 0.9rem !important;
+    padding: 0 1rem !important;
+    text-align: center !important;
+  }
+
+  .form-row--inline input[type="checkbox"] {
+    margin-left: 0 !important;
+  }
+
+  .inline-label {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    line-height: 1.3 !important;
+  }
+
+  .coords-hint {
+    font-size: 0.85rem !important;
+    opacity: 0.75 !important;
+    text-align: left !important;
+    margin-top: -0.25rem !important;
+  }
 }
