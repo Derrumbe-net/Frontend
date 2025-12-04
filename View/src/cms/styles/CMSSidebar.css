@@ -1,0 +1,87 @@
+/* ===== Sidebar Base ===== */
+.cms-sidebar {
+  width: 240px;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  padding: 1rem 0;
+}
+
+/* ===== Header: Logo + Text Side-by-side ===== */
+.cms-sidebar__header {
+  display: flex;
+  align-items: center;   /* vertically align logo + text */
+  gap: 0.8rem;           /* spacing between logo and text */
+  padding: 0 1rem;
+}
+
+.cms-sidebar__logo {
+  width: 55px;           /* slightly smaller fits better horizontally */
+  height: auto;
+}
+
+.cms-sidebar__title {
+  font-size: 0.75rem;    /* shrink text to prevent wrapping too much */
+  font-weight: 300;
+  line-height: 1.1;
+}
+
+/* ===== Navigation (Menu stays fixed under header) ===== */
+.cms-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding-top: 2rem;
+}
+
+/* ===== Menu Links ===== */
+.cms-link {
+  text-decoration: none;
+  color: white;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.cms-link:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.cms-link--active {
+  background-color: #2f3230;
+}
+
+/* ===== Footer / Logout ===== */
+/* Push footer ONLY to bottom */
+.cms-sidebar__footer {
+  margin-top: auto;       /* ⭐ MAGIC: pushes footer down */
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  justify-content: flex-start;
+}
+
+.cms-logout {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.cms-logout__icon {
+  width: 18px;
+  height: 18px;
+}
+
+.cms-logout:hover {
+  opacity: 0.8;
+}

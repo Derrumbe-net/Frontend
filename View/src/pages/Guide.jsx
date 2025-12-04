@@ -27,7 +27,6 @@ import landslide from "../assets/landslide.png";
 function Guide() {
   const pages = [page1, page2, page3, page4, page5, page6, page7, page8, page9, page10, page11, page12, page13, page14, page15, page16];
 
-  //  Settings for carousel
   const carouselSettings = {
     dots: true,
     infinite: true,
@@ -89,7 +88,7 @@ function Guide() {
         <h2>Datos sobre Deslizamientos de Tierra</h2>
 
         <Slider {...carouselSettings} className="landslide__carousel">
-          {/* Slide 1 */}
+
           <div className="landslide__card">
             <h3>Los Deslizamientos de Tierra y sus Mitigaciones</h3>
             <em>
@@ -103,7 +102,6 @@ function Guide() {
             </ul>
           </div>
 
-          {/* Slide 2 */}
           <div className="landslide__card">
             <h3>Señales de la Naturaleza ante un Posible Deslizamiento</h3>
             <ul>
@@ -113,7 +111,6 @@ function Guide() {
             </ul>
           </div>
 
-          {/* Slide 3 */}
           <div className="landslide__card">
             <h3>Deslizamientos Comunes en Puerto Rico</h3>
             <ul>
@@ -129,16 +126,13 @@ function Guide() {
         <h2>Animaciones sobre Deslizamientos de Tierra</h2>
         
         <div className="landslide__video-grid">
-          {/* Spanish Version */}
+
           <div className="landslide__video-card">
             <div className="landslide__video-container">
               <iframe width="560" height="315" src="https://www.youtube.com/embed/2dS2Sisj4GQ?si=Wiu9Rr6NXIPaayEt" title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe>
             </div>
             <p>Versión en español</p>
           </div>
-
-          {/* English Version */}
-            {/* English Version */}
             <div className="landslide__video-card">
                 <div className="landslide__video-container">
                     <iframe

@@ -3,6 +3,8 @@
 namespace DerrumbeNet\Controller;
 
 use DerrumbeNet\Model\Admin;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 
 class AdminController {
     private Admin $adminModel;
@@ -55,6 +57,51 @@ class AdminController {
         return $this->jsonResponse($response, $admins);
     }
 
+        // Helper to decode token manually 
+        private function getRequestorEmail($request) {
+            $authHeader = $request->getHeaderLine('Authorization');
+            if (!$authHeader) return null;
+    
+            $token = str_replace('Bearer ', '', $authHeader);
+            
+            try {
+                // Use your stored secret key
+                $key = new Key($_ENV['JWT_SECRET'], 'HS256');
+                $decoded = JWT::decode($token, $key);
+                return $decoded->email ?? null;
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+    
+        // Update admin authorization
+        public function updateAuthorization($request, $response, $args) {
+            $targetAdminId = $args['id'];
+            $data = $request->getParsedBody();
+    
+            if (!isset($data['isAuthorized'])) {
+                return $this->jsonResponse($response, ['error' => 'isAuthorized field is required'], 400);
+            }
+    
+            $requesterEmail = $this->getRequestorEmail($request);
+    
+            if (!$requesterEmail || strtolower($requesterEmail) !== "slidespr@gmail.com") {
+                return $this->jsonResponse($response, [
+                    'error' => 'Forbidden: Only the Super Admin can change authorization status.'
+                ], 403);
+            }
+            
+            $isAuthorized = $data['isAuthorized'];
+            $updated = $this->adminModel->updateAuthorization($targetAdminId, $isAuthorized);
+    
+            if ($updated) {
+                $statusMsg = $isAuthorized ? 'authorized' : 'deauthorized';
+                return $this->jsonResponse($response, ['message' => "Admin Auth successfully $statusMsg"]);
+            }
+    
+            return $this->jsonResponse($response, ['error' => 'Failed to update authorization'], 500);
+        }
+
     // Update admin email
     public function updateEmail($request, $response, $args) {
         $id = $args['id'];
@@ -101,5 +148,57 @@ class AdminController {
         }
 
         return $this->jsonResponse($response, ['error' => 'Failed to delete admin'], 500);
+    }
+
+    // Sign up a new admin
+    public function signUpAdmin($request, $response) {
+        $data = $request->getParsedBody();
+        $email = $data['email'] ?? null;
+        $password = $data['password'] ?? null;
+
+        if (!$email || !$password) {
+            return $this->jsonResponse($response, ['error' => 'Email and Password are required'], 400);
+        }
+
+        $newId = $this->adminModel->createAdmin($email, $password);
+        if ($newId) {
+            return $this->jsonResponse($response, ['message' => 'Admin created', 'id' => $newId], 201);
+        }
+
+        return $this->jsonResponse($response, ['error' => 'Failed to create admin'], 500);
+    }
+
+    // Log in an admin and return JWT
+    public function loginAdmin($request, $response) {
+        $data = $request->getParsedBody();
+        $email = $data['email'];
+        $password = $data['password'];
+
+        if (!$email || !$password) {
+            return $this->jsonResponse($response, ['error' => 'Email and password are required'], 400);
+        }
+
+        $admin = $this->adminModel->verifyCredentials($email, $password);
+        if (!$admin) {
+            return $this->jsonResponse($response, ['error' => 'Invalid email or password'], 401);
+        }
+
+        // JWT secret key (store in env or config file)
+        $secretKey = $_ENV['JWT_SECRET'];
+
+        $payload = [
+            'iss' => 'derrumbenet', // issuer
+            'sub' => $admin['admin_id'], // subject (admin id)
+            'email' => $admin['email'],
+            'iat' => time(), // issued at
+            'exp' => time() + 3600 // expires in 1 hour
+        ];
+
+        $jwt = JWT::encode($payload, $secretKey, 'HS256');
+
+        return $this->jsonResponse($response, [
+            'message' => 'Login successful',
+            'token' => $jwt
+        ]);
     }
 }

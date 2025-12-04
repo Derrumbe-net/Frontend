@@ -28,18 +28,13 @@ function Home() {
 
           <div className="hero__buttons">
             <a href="#contact" className="btn btn--contact">Contáctenos</a>
-            <Link to="/solicitud" className="btn btn--outline">Solicitud de Charla</Link>
+            <Link to="/solicitud" className="btn btn--outline">Solicita una Charla</Link>
           </div>
         </div>
       </section>
 
       {/* SECTION: MAPA */}
       <section className="landing__map"> 
-        {/* <img
-          src={logo}
-          alt="PRLHMO Logo"
-          className="landing__map-logo"
-        /> */}
 
         <div className="landing__map-text">
           <h2>Explora nuestro Mapa Interactivo de Monitoreo de Deslizamientos</h2>
@@ -58,7 +53,7 @@ function Home() {
           alt="Mapa interactivo"
           loading="lazy"
         />
-      </section> 
+      </section>
 
 
       {/* SECTION: REPORTAR */}

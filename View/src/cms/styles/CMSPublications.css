@@ -1,0 +1,142 @@
+.cms-publications {
+  color: #222;
+}
+
+.cms-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #f4f6f3;
+  border: 1px solid #ccc;
+}
+
+.cms-table th,
+.cms-table td {
+  border: 1px solid #bbb;
+  padding: 0.6rem;
+  text-align: left;
+}
+
+.cms-table th {
+  background-color: #e0e7e0;
+  font-weight: 700;
+}
+
+.edit-btn {
+  border: none;
+  background: none;
+  color: #2f3230;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.edit-btn:hover {
+  color: #6fa174;
+}
+
+.add-btn-container {
+  margin-top: 1rem;
+}
+
+.add-btn-text {
+  background-color: #6fa174;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background 0.2s;
+  margin-top: 1rem;
+}
+
+.add-btn-text:hover {
+  background-color: #5a8a61;
+}
+
+/* INLINE FORM (NOT MODAL) */
+.inline-form-container {
+  margin-top: 2rem;
+  background-color: transparent;
+  padding: 2rem;
+  border-radius: 0px;
+}
+
+/* form styling */
+.cms-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.cms-form h2 {
+  margin-bottom: 1rem;
+  font-size: 1.8rem;
+  text-align: left;
+}
+
+.cms-form__actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: space-between; /* ⬅️ pushes buttons to opposite sides */
+  align-items: center;
+}
+
+.cms-form input,
+.cms-form select,
+.cms-form textarea {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #b5b5b5;
+  padding: 0.6rem 0.8rem;
+  width: 100%;
+}
+
+/* buttons */
+.submit-btn {
+  background-color: #6fa174;
+  color: white;
+  border: none;
+  padding: 0.7rem 1.3rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background-color: #999;
+  color: white;
+  border: none;
+  padding: 0.7rem 1.3rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pagination {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pagination button {
+  background: #6fa174;
+  border: none;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.pagination button:hover {
+  transform: scale(1.1);
+}
+
+.pagination span {
+  font-weight: 600;
+}

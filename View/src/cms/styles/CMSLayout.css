@@ -1,0 +1,16 @@
+/* ===== CMS Layout Container ===== */
+.cms-layout {
+  display: flex;              /* places sidebar and content side by side */
+  flex-direction: row;
+  width: 100%;
+  min-height: 100vh;              /* full viewport height */
+  height: auto;
+  background-color: #DFE8DA;  /* light green background like your design */
+}
+
+/* ===== Main Content ===== */
+.cms-content {
+  flex: 1;                    /* fill remaining space beside sidebar */
+  background-color: #DFE8DA;  /* match background tone */
+  padding: 2rem;
+}

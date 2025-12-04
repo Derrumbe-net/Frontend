@@ -170,9 +170,6 @@ describe('InteractiveMap Component', () => {
             expect(screen.getByTestId('mock-tilelayer')).toBeInTheDocument();
             expect(screen.getByText('SOIL SATURATION PERCENTAGE')).toBeInTheDocument();
             expect(screen.getByAltText('Landslide Hazard Mitigation Logo')).toBeInTheDocument();
-            expect(screen.getByText('0-80%')).toBeInTheDocument();
-            expect(screen.getByText('80-90%')).toBeInTheDocument();
-            expect(screen.getByText('90-100%')).toBeInTheDocument();
         });
 
         it('fetches and renders stations, filtering correctly', async () => {

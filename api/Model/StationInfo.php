@@ -4,6 +4,7 @@ namespace DerrumbeNet\Model;
 
 use PDO;
 use PDOException;
+use Exception;
 
 class StationInfo {
     private $conn;
@@ -34,7 +35,7 @@ class StationInfo {
             $stmt->bindParam(':wc2', $data['wc2'], PDO::PARAM_STR);
             $stmt->bindParam(':wc3', $data['wc3'], PDO::PARAM_STR);
             $stmt->bindParam(':wc4', $data['wc4'], PDO::PARAM_STR);
-            $stmt->execute();
+
             if ($stmt->execute()) {
                 return $this->conn->lastInsertId();
             } else {
@@ -106,9 +107,8 @@ class StationInfo {
         $ftp_pass   = $_ENV['FTPS_PASS'];
         $ftp_port   = $_ENV['FTPS_PORT'];
 
-        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/network/data/latest/';
+        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
         $remote_file_path = rtrim($base_remote_path, '/') . '/' . ltrim($fileName, '/');
-
         $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
         if (!$conn_id) throw new Exception("Failed to connect to FTPS server: $ftp_server");
 
@@ -119,7 +119,7 @@ class StationInfo {
 
         ftp_pasv($conn_id, true);
 
-        $files = ftp_nlist($conn_id, $base_remote_path);
+//        $files = ftp_nlist($conn_id, $base_remote_path);
 
         // Download to temporary file
         $tmpFile = tmpfile();
@@ -235,6 +235,42 @@ class StationInfo {
         $result = $this->updateStationInfo($stationId, $updateData);
 
         return $result;
+    }
+
+    public function getStationImageContent($fileName) {
+        $ftp_server = $_ENV['FTPS_SERVER'];
+        $ftp_user   = $_ENV['FTPS_USER'];
+        $ftp_pass   = $_ENV['FTPS_PASS'];
+        $ftp_port   = $_ENV['FTPS_PORT'];
+        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
+
+        $remote_file_path = rtrim($base_remote_path, '/') . '/' . ltrim($fileName, '/');
+
+        $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
+        if (!$conn_id) throw new \Exception("Failed to connect to FTPS server");
+
+        if (!@ftp_login($conn_id, $ftp_user, $ftp_pass)) {
+            ftp_close($conn_id);
+            throw new \Exception("FTPS login failed");
+        }
+
+        ftp_pasv($conn_id, true);
+
+        $tmpFile = tmpfile();
+
+        if (!ftp_fget($conn_id, $tmpFile, $remote_file_path, FTP_BINARY)) {
+            fclose($tmpFile);
+            ftp_close($conn_id);
+            throw new \Exception("Unable to download image: $remote_file_path");
+        }
+
+        rewind($tmpFile);
+        $content = stream_get_contents($tmpFile);
+
+        fclose($tmpFile);
+        ftp_close($conn_id);
+
+        return $content;
     }
 }
 

@@ -91,7 +91,6 @@ function Report() {
     if (name === "allowLocation") setShowMap(checked);
   };
 
-  // Initialize ArcGIS map
   useEffect(() => {
     if (!showMap) return;
 
