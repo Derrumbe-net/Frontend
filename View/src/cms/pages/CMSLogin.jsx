@@ -8,10 +8,9 @@ export default function CMSLogin() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const login_route = "https://derrumbe-test.derrumbe.net/api/admins/login";
-  const admins_base_route = "https://derrumbe-test.derrumbe.net/api/admins";
-  // const login_route = "http://localhost:8080/api/admins/login";
-  // const admins_base_route = "http://localhost:8080/api/admins";
+  const API_URL = `${import.meta.env.VITE_API_URL}`;
+  const login_route = `${API_URL}/admins/login`;
+  const admins_base_route = `${API_URL}/admins`;
 
   // Helper function to extract ID from JWT Token 
   const getPayloadFromToken = (token) => {

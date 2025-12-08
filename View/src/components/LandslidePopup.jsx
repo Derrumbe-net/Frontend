@@ -25,9 +25,7 @@ const LandslidePopup = ({ landslide }) => {
     const [loading, setLoading] = useState(false);
     const [hasLoaded, setHasLoaded] = useState(false); // New state to track if we tried fetching
 
-    const API_BASE_URL = window.location.hostname === "localhost"
-        ? "http://localhost:8080/api"
-        : "https://derrumbe-test.derrumbe.net/api";
+    const API_BASE_URL = `${import.meta.env.VITE_API_URL}`;
 
     if (!landslide) return null;
 

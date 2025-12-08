@@ -10,8 +10,7 @@ import GreenPinIcon from '../assets/green-location-pin.png';
 import L from 'leaflet';
 import MapMenu from "../components/MapMenu.jsx";
 
-const BASE_DOMAIN = "https://derrumbe-test.derrumbe.net";
-// const BASE_DOMAIN = "http://localhost:8080"; // Toggle for local dev
+const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 
 // $app->get('/stations', ...)
 const BASE_STATIONS_URL = `${BASE_DOMAIN}/api/stations`;
