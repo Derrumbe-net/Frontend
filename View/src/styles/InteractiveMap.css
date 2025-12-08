@@ -361,7 +361,6 @@
 
 /* Custom Range Input Styling */
 .time-slider-input {
-    -webkit-appearance: none;
     width: 100%;
     height: 4px;
     background: rgba(255,255,255,0.3);
@@ -371,7 +370,6 @@
 }
 
 .time-slider-input::-webkit-slider-thumb {
-    -webkit-appearance: none;
     width: 16px;
     height: 16px;
     background: #63b3ff;
@@ -385,6 +383,45 @@
 .time-slider-input::-webkit-slider-thumb:hover {
     transform: scale(1.2);
 }
+
+@media (max-width: 600px) {
+
+    .time-control-bar {
+        bottom: 55px;       /* Move it slightly lower */
+        padding: 8px 12px;  /* Reduce padding */
+        gap: 10px;          /* Smaller spacing */
+        width: 94%;         /* Slightly narrower */
+        max-width: 380px;   /* Shrink max size */
+        border-radius: 5px; 
+    }
+
+    .play-pause-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+        border-width: 1.5px;
+    }
+
+    .time-labels {
+        font-size: 10px;     /* Smaller text */
+        margin-bottom: 4px;
+    }
+
+    .current-time-label {
+        font-size: 12px;     /* Adjust highlight size */
+    }
+
+    .time-slider-input {
+        height: 3px;         /* Slim slider */
+    }
+
+    .time-slider-input::-webkit-slider-thumb {
+        width: 12px;
+        height: 12px;
+        border-width: 1.5px;
+    }
+}
+
 
 /* MOBILE — shrink legends */
 @media (max-width: 768px) {

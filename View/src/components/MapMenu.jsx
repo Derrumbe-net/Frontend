@@ -28,6 +28,9 @@ export default function MapMenu({
                                     availableYears,
                                     selectedYear,
                                     onYearChange,
+
+                                    resetLayers,
+                                    resetToDefault,
                                 }) {
     const [activeMenu, setActiveMenu] = useState(null);
 
@@ -157,7 +160,17 @@ export default function MapMenu({
                         <input
                             type="checkbox"
                             checked={selectedYear === "all"}
-                            onChange={() => onYearChange(selectedYear === "all" ? "" : "all")}
+                            onChange={() => {
+                                // If turning on: clear layers
+                                if (selectedYear !== "all") {
+                                    resetLayers();
+                                    onYearChange("all");
+                                } else {
+                                    // Turning off "all"
+                                    onYearChange("");
+                                    resetToDefault();
+                                }
+                            }}
                         />
                         All Years
                     </label>
@@ -167,11 +180,16 @@ export default function MapMenu({
                             <input
                                 type="checkbox"
                                 checked={selectedYear === String(year)}
-                                onChange={() =>
-                                    onYearChange(
-                                        selectedYear === String(year) ? "all" : String(year)
-                                    )
-                                }
+                                onChange={() => {
+                                    if (selectedYear !== String(year)) {
+                                        resetLayers();
+                                        onYearChange(String(year));
+                                    } else {
+                                        // Unchecking current year
+                                        onYearChange("");
+                                        resetToDefault();
+                                    }
+                                }}
                             />
                             {year}
                         </label>

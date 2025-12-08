@@ -578,6 +578,33 @@ export default function InteractiveMap() {
     const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
     const toggleForecast = () => setShowForecast(v => !v);
 
+    const resetLayers = () => {
+        setShowStations(false);
+        setShowPrecip(false);
+        setShowSusceptibility(false);
+        setShowForecast(false);
+        setShowSaturation(false);
+        setShowPrecip12hr(false);
+
+        // Reset legends
+        setShowSaturationLegend(false);
+        setShowSusceptibilityLegend(false);
+        setShowPrecipLegend(false);
+    };
+
+    const resetToDefault = () => {
+        setShowSaturation(true);
+        setShowStations(true); 
+        setShowPrecip(false);
+        setShowSusceptibility(false);
+        setShowForecast(true);
+        setShowPrecip12hr(false);
+
+        setShowSaturationLegend(true);
+        setShowSusceptibilityLegend(false);
+        setShowPrecipLegend(false);
+    };
+
     // --- MOBILE & LABEL LOGIC (From 'demo2' branch) ---
     const isMobile = window.innerWidth < 768;
 
@@ -620,6 +647,9 @@ export default function InteractiveMap() {
                     availableYears={availableYears} selectedYear={selectedYear} onYearChange={setSelectedYear}
                     // Added Forecast props from radar branch
                     showForecast={showForecast} onToggleForecast={toggleForecast}
+
+                    resetLayers={resetLayers}
+                    resetToDefault={resetToDefault}
                 />
 
                 <EsriOverlays
@@ -646,7 +676,7 @@ export default function InteractiveMap() {
                 {showForecast && (
                     <TimeControlBar
                         startTime={radarTimeRange.start}
-                        endTime={radarTimeRange.end}
+                        endTime={radarTimeRange.end} 
                         currentTime={currentTime}
                         isPlaying={isPlaying}
                         onTogglePlay={() => setIsPlaying(p => !p)}
