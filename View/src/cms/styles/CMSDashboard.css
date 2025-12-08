@@ -1,3 +1,7 @@
+.cms-content {
+  gap: 0px;
+}
+
 /* ----------------- Wrapper ----------------- */
 .cms-wrapper {
   padding: 32px;

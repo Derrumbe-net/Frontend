@@ -7,9 +7,10 @@
 
 /* --- title pill centered at top --- */
 .map-label {
-  position: relative;
+  position: absolute;
   top: 20px;
-  left: 550px;
+  left: 50%;
+  transform: translateX(-50%);
   background: rgba(0,0,0,.85);
   color: #fff;
   padding: 10px 18px;

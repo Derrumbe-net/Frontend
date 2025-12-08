@@ -504,7 +504,7 @@ export default function InteractiveMap() {
     
     // UI State
     const [showStations, setShowStations] = useState(true);
-    const [selectedYear, setSelectedYear] = useState("2025");
+    const [selectedYear, setSelectedYear] = useState("");
     const [availableYears, setAvailableYears] = useState([]);
     const [showPrecip, setShowPrecip] = useState(false); // Default from radar branch (false), check if you prefer true
     const [showSusceptibility, setShowSusceptibility] = useState(false);
@@ -568,15 +568,76 @@ export default function InteractiveMap() {
         setShowDisclaimer(false);
     };
 
-    const toggleStations = () => setShowStations(v => !v);
+    const toggleStations = () => {
+        const newValue = !showStations;
+        setShowStations(newValue);
+
+        if (newValue) {
+            // Turning stations ON → disable landslides
+            setSelectedYear(null);
+
+            // Default station metric is saturation
+            setShowSaturation(true);
+            setShowPrecip12hr(false);
+
+            // Legends
+            setShowSaturationLegend(true);
+            setShowPrecipLegend(false);
+        }
+    };
+
     const togglePrecip = () => setShowPrecip(v => !v);
     const toggleSusceptibility = () => setShowSusceptibility(v => !v);
-    const toggleSaturation = () => { setShowSaturation(true); setShowPrecip12hr(false); };
-    const togglePrecip12hr = () => { setShowPrecip12hr(true); setShowSaturation(false); };
+    const toggleSaturation = () => {
+        // If user selects a metric → enable stations
+        setShowStations(true);
+
+        // Disable landslides
+        setSelectedYear(null);
+
+        // Set metric
+        setShowSaturation(true);
+        setShowPrecip12hr(false);
+
+        // Legends
+        setShowSaturationLegend(true);
+        setShowPrecipLegend(false);
+    };
+
+    const togglePrecip12hr = () => {
+        // If user selects a metric → enable stations
+        setShowStations(true);
+
+        // Disable landslides
+        setSelectedYear(null);
+
+        // Set metric
+        setShowSaturation(false);
+        setShowPrecip12hr(true);
+
+        // Legends
+        setShowSaturationLegend(false);
+        setShowPrecipLegend(true);
+    };
+
     const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
     const toggleSusceptibilityLegend = () => setShowSusceptibilityLegend(v => !v);
     const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
     const toggleForecast = () => setShowForecast(v => !v);
+
+    const handleYearChange = (year) => {
+        setSelectedYear(year);
+
+        // If any landslide year is selected → disable all station layers
+        if (year) {
+            setShowStations(false);
+            setShowSaturation(false);
+            setShowPrecip12hr(false);
+
+            setShowSaturationLegend(false);
+            setShowPrecipLegend(false);
+        }
+    };
 
     const resetLayers = () => {
         setShowStations(false);
@@ -608,9 +669,18 @@ export default function InteractiveMap() {
     // --- MOBILE & LABEL LOGIC (From 'demo2' branch) ---
     const isMobile = window.innerWidth < 768;
 
-    const mapLabelText = showSaturation
-        ? "SOIL SATURATION PERCENTAGE"
-        : "PAST 12 HOUR PRECIPITATION (INCHES)";
+    let mapLabelText = "";
+
+    if (selectedYear) {
+        mapLabelText = "HISTORICAL LANDSLIDE DATA";
+    } else if (showSaturation) {
+        mapLabelText = "SOIL SATURATION PERCENTAGE";
+    } else if (showPrecip12hr) {
+        mapLabelText = "PAST 12 HOUR PRECIPITATION (INCHES)";
+    } else {
+        mapLabelText = ""; // fallback if needed
+    }
+
     // --------------------------------------------------
 
     return (
@@ -644,7 +714,8 @@ export default function InteractiveMap() {
                     showSaturationLegend={showSaturationLegend} onToggleSaturationLegend={toggleSaturationLegend}
                     showSusceptibilityLegend={showSusceptibilityLegend} onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
                     showPrecipLegend={showPrecipLegend} onTogglePrecipLegend={togglePrecipLegend}
-                    availableYears={availableYears} selectedYear={selectedYear} onYearChange={setSelectedYear}
+                    availableYears={availableYears} selectedYear={selectedYear} onYearChange={handleYearChange}
+
                     // Added Forecast props from radar branch
                     showForecast={showForecast} onToggleForecast={toggleForecast}
 
