@@ -14,10 +14,11 @@ return function (App $app, $db) {
     // ---- Public routes ----
     $app->get('/reports', [$controller, 'getAllReports']);
     $app->get('/reports/{id}', [$controller, 'getReport']);
+    $app->post('/reports', [$controller, 'createReport']);
+    $app->post('/reports/{id}/upload',[$controller, 'uploadReportImage']);
 
     // ---- Protected routes ----
     $app->group('/reports', function (RouteCollectorProxy $group) use ($controller) {
-        $group->post('', [$controller, 'createReport']);
         $group->put('/{id}', [$controller, 'updateReport']);
         $group->delete('/{id}', [$controller, 'deleteReport']);
     })->add($jwtMiddleware);
