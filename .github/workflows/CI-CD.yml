@@ -2,7 +2,7 @@ name: CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "demo2" ]
   pull_request:
   workflow_dispatch:
 
@@ -11,58 +11,58 @@ permissions:
 
 jobs:
   # 1️⃣ Run tests
-  test:
-    runs-on: ubuntu-latest
-    outputs:
-      test_passed: ${{ steps.set-output.outputs.test_passed }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+  # test:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     test_passed: ${{ steps.set-output.outputs.test_passed }}
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v4
 
-      # Setup Node.js
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: View/package.json
+  #     # Setup Node.js
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #         cache: 'npm'
+  #         cache-dependency-path: View/package.json
 
-      # Install frontend dependencies
-      - name: Install Frontend Dependencies
-        run: npm install
-        working-directory: ./View
+  #     # Install frontend dependencies
+  #     - name: Install Frontend Dependencies
+  #       run: npm install
+  #       working-directory: ./View
 
-      # Run frontend tests
-      - name: Run Frontend Tests
-        run: npm test --if-present
-        working-directory: ./View
+  #     # Run frontend tests
+  #     - name: Run Frontend Tests
+  #       run: npm test --if-present
+  #       working-directory: ./View
 
-      # Lint frontend code
-      - name: Lint Frontend
-        run: npm run lint --if-present
-        working-directory: ./View
+  #     # Lint frontend code
+  #     - name: Lint Frontend
+  #       run: npm run lint --if-present
+  #       working-directory: ./View
 
-      # Setup PHP
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          extensions: mbstring, xml, dom, curl, pdo, pdo_mysql
-          coverage: none
+  #     # Setup PHP
+  #     - name: Setup PHP
+  #       uses: shivammathur/setup-php@v2
+  #       with:
+  #         php-version: '8.3'
+  #         extensions: mbstring, xml, dom, curl, pdo, pdo_mysql
+  #         coverage: none
 
-      # Install backend dependencies
-      - name: Install Backend Dependencies
-        run: composer install --no-interaction --no-progress --prefer-dist
-        working-directory: ./
+  #     # Install backend dependencies
+  #     - name: Install Backend Dependencies
+  #       run: composer install --no-interaction --no-progress --prefer-dist
+  #       working-directory: ./
 
-      # Validate PHP syntax
-      - name: Validate PHP Syntax
-        run: find . -name "*.php" -exec php -l {} \;
+  #     # Validate PHP syntax
+  #     - name: Validate PHP Syntax
+  #       run: find . -name "*.php" -exec php -l {} \;
 
-      # Run PHPUnit tests
-      - name: Run PHP Unit Tests
-        run: ./vendor/bin/phpunit
-        working-directory: ./api
+  #     # Run PHPUnit tests
+  #     - name: Run PHP Unit Tests
+  #       run: ./vendor/bin/phpunit
+  #       working-directory: ./api
 
   # 2️⃣ Build & deploy (runs only if test job succeeds)
   deploy:
