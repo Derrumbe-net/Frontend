@@ -17,7 +17,10 @@ export default function MapMenu({
                                     onToggleSaturation,
                                     showPrecip12hr,
                                     onTogglePrecip12hr,
-
+                                    onToggleLandslideForecast,
+                                    showLandslideForecast,
+                                    showLandslideForecastLegend,
+                                    onToggleLandslideForecastLegend,
                                     showSaturationLegend,
                                     onToggleSaturationLegend,
                                     showSusceptibilityLegend,
@@ -28,6 +31,9 @@ export default function MapMenu({
                                     availableYears,
                                     selectedYear,
                                     onYearChange,
+
+                                    resetLayers,
+                                    resetToDefault,
                                 }) {
     const [activeMenu, setActiveMenu] = useState(null);
 
@@ -79,12 +85,10 @@ export default function MapMenu({
                         Precipitation Layer
                     </label>
 
-                    {}
                     <label>
                         <input type="checkbox" checked={showForecast} onChange={onToggleForecast} />
-                        Weather Forecast
+                        Weather Radar
                     </label>
-                    {}
 
                     <label>
                         <input type="checkbox" checked={showSusceptibility} onChange={onToggleSusceptibility} />
@@ -115,10 +119,26 @@ export default function MapMenu({
                         Precipitation (Last 12hr)
                     </label>
 
+                    <label>
+                        <input
+                            type="checkbox"
+                            checked={showLandslideForecast}
+                            onChange={onToggleLandslideForecast}
+                        />
+                        Landslide Forecast Probability
+                    </label>
+
                     <div className="filter-title" style={{ marginTop: "15px" }}>
                         Legends
                     </div>
-
+                    <label>
+                        <input
+                            type="checkbox"
+                            checked={showLandslideForecastLegend}
+                            onChange={onToggleLandslideForecastLegend}
+                        />
+                        Landslide Forecast Legend
+                    </label>
                     <label>
                         <input
                             type="checkbox"
@@ -157,7 +177,17 @@ export default function MapMenu({
                         <input
                             type="checkbox"
                             checked={selectedYear === "all"}
-                            onChange={() => onYearChange(selectedYear === "all" ? "" : "all")}
+                            onChange={() => {
+                                // If turning on: clear layers
+                                if (selectedYear !== "all") {
+                                    resetLayers();
+                                    onYearChange("all");
+                                } else {
+                                    // Turning off "all"
+                                    onYearChange("");
+                                    resetToDefault();
+                                }
+                            }}
                         />
                         All Years
                     </label>
@@ -167,11 +197,16 @@ export default function MapMenu({
                             <input
                                 type="checkbox"
                                 checked={selectedYear === String(year)}
-                                onChange={() =>
-                                    onYearChange(
-                                        selectedYear === String(year) ? "all" : String(year)
-                                    )
-                                }
+                                onChange={() => {
+                                    if (selectedYear !== String(year)) {
+                                        resetLayers();
+                                        onYearChange(String(year));
+                                    } else {
+                                        // Unchecking current year
+                                        onYearChange("");
+                                        resetToDefault();
+                                    }
+                                }}
                             />
                             {year}
                         </label>

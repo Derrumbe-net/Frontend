@@ -20,8 +20,8 @@ describe('Home Component', () => {
         expect(within(heroSection).getByAltText('PRLHMO Logo')).toBeInTheDocument();
         expect(within(heroSection).getByAltText('UPRM Logo')).toBeInTheDocument();
 
-        const contactBtn = within(heroSection).getByRole('link', { name: /Contáctenos/i });
-        expect(contactBtn).toHaveAttribute('href', '#contact');
+        const contactBtn = within(heroSection).getByRole('link', { name: /Haz tu Reporte/i });
+        expect(contactBtn).toHaveAttribute('href', '/reportar');
 
         const requestBtn = within(heroSection).getByRole('link', { name: /Solicita una Charla/i });
         expect(requestBtn).toHaveAttribute('href', '/solicitud');

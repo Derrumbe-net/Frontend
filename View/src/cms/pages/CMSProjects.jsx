@@ -15,14 +15,15 @@ export default function CMSProjects() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedProjects = projects.slice(startIndex, startIndex + itemsPerPage);
 
+  const API_URL = `${import.meta.env.VITE_API_URL}`;
+
   useEffect(() => {
     fetchProjects();
   }, []);
 
   const fetchProjects = async () => {
     try {
-      // const response = await fetch("http://localhost:8080/api/projects");
-      const response = await fetch("https://derrumbe-test.derrumbe.net/api/projects");
+      const response = await fetch(`${API_URL}/projects`);
 
       const data = await response.json();
       setProjects(data);
@@ -191,18 +192,29 @@ function ProjectForm({ project, onClose, refreshProjects }) {
 
     if (!confirm.isConfirmed) return; 
 
+    const API_URL = `${import.meta.env.VITE_API_URL}`;
     const method = isEdit ? "PUT" : "POST";
     const url = isEdit
-      ? `http://localhost:8080/api/projects/${project.project_id}`  // CHANGE 
-      : "http://localhost:8080/api/projects";                       // CHANGE 
+      ? `${API_URL}/projects/${project.project_id}`  // CHANGE
+      : `${API_URL}/projects`;                       // CHANGE
 
     try {
+      const token = localStorage.getItem("cmsAdmin");
+
+      if (!token) {
+        Swal.fire("Error", "No se encontró token. Inicie sesión nuevamente.", "error");
+        return;
+      }
+
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
         body: JSON.stringify({
           ...formData,
-          admin_id: 1 // TODO: replace with logged user
+          admin_id: 1, // TODO: replace with real admin id
         }),
       });
 

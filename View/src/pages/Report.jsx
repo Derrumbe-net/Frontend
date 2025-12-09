@@ -11,8 +11,7 @@ import Graphic from "@arcgis/core/Graphic";
 import Point from "@arcgis/core/geometry/Point";
 import CoordinateConversion from "@arcgis/core/widgets/CoordinateConversion";
 
-const BASE_REPORT_URL = "https://derrumbe-test.derrumbe.net/api/reports";
-// const BASE_REPORT_URL = "http://localhost:8080/api/reports"
+const BASE_REPORT_URL  = `${import.meta.env.VITE_API_URL}/api/reports`;
 
 function Report() {
   const [form, setForm] = useState({

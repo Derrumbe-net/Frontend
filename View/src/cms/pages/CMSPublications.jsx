@@ -14,14 +14,15 @@ export default function CMSPublicaciones() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginated = publications.slice(startIndex, startIndex + itemsPerPage);
 
+  const API_URL = `${import.meta.env.VITE_API_URL}`;
+
   useEffect(() => {
     fetchPublications();
   }, []);
 
   const fetchPublications = async () => {
     try {
-      // const response = await fetch("http://localhost:8080/api/publications");
-      const response = await fetch("https://derrumbe-test.derrumbe.net/api/publications");
+      const response = await fetch(`${API_URL}/publications`);
 
       const data = await response.json();
       setPublications(data);
@@ -186,10 +187,11 @@ function PublicationForm({ publication, onClose, refreshPublications }) {
 
     if (!confirm.isConfirmed) return;
 
+    const API_URL = `${import.meta.env.VITE_API_URL}`;
     const method = isEdit ? "PUT" : "POST";
     const url = isEdit
-      ? `http://localhost:8080/api/publications/${publication.publication_id}`
-      : "http://localhost:8080/api/publications";
+      ? `${API_URL}/publications/${publication.publication_id}`  // CHANGE
+      : `${API_URL}/publications`;                       // CHANGE
 
     const bodyData = {
       ...formData,
@@ -197,9 +199,19 @@ function PublicationForm({ publication, onClose, refreshPublications }) {
     };
 
     try {
+      const token = localStorage.getItem("cmsAdmin");
+
+      if (!token) {
+        Swal.fire("Error", "No se encontró token. Inicie sesión nuevamente.", "error");
+        return;
+      }
+
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
         body: JSON.stringify(bodyData),
       });
 

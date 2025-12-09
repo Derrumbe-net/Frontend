@@ -9,7 +9,7 @@ $app = AppFactory::create();
 
 // Middleware to parse JSON body
 $app->addBodyParsingMiddleware();
-
+ini_set('memory_limit', '512M');
 // Database connection
 $db = Database::getConnection();
 

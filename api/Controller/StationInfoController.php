@@ -18,7 +18,7 @@ class StationInfoController {
     public function createStation($request,$response){
         $id = $this->stationInfoModel->createStationInfo($request->getParsedBody());
         return $id ? $this->jsonResponse($response,['message'=>'Station created','id'=>$id],201)
-                   : $this->jsonResponse($response,['error'=>'Failed'],500);
+            : $this->jsonResponse($response,['error'=>'Failed'],500);
     }
 
     public function getAllStations($request,$response){
@@ -28,19 +28,19 @@ class StationInfoController {
     public function getStation($request,$response,$args){
         $station = $this->stationInfoModel->getStationInfoById($args['id']);
         return $station ? $this->jsonResponse($response,$station)
-                        : $this->jsonResponse($response,['error'=>'Not found'],404);
+            : $this->jsonResponse($response,['error'=>'Not found'],404);
     }
 
     public function updateStation($request,$response,$args){
         $updated = $this->stationInfoModel->updateStationInfo($args['id'],$request->getParsedBody());
         return $updated ? $this->jsonResponse($response,['message'=>'Updated'])
-                        : $this->jsonResponse($response,['error'=>'Failed'],500);
+            : $this->jsonResponse($response,['error'=>'Failed'],500);
     }
 
     public function deleteStation($request,$response,$args){
         $deleted = $this->stationInfoModel->deleteStationInfo($args['id']);
         return $deleted ? $this->jsonResponse($response,['message'=>'Deleted'])
-                        : $this->jsonResponse($response,['error'=>'Failed'],500);
+            : $this->jsonResponse($response,['error'=>'Failed'],500);
     }
 
     public function getAllStationFilesData($request, $response) {
@@ -171,6 +171,27 @@ class StationInfoController {
         } catch (\Exception $e) {
             error_log($e->getMessage());
             return $response->withStatus(500)->write('Error fetching image');
+        }
+    }
+    public function getStationWcHistory($request, $response, $args) {
+        $stationId = $args['id'] ?? null;
+        if (!$stationId) {
+            return $this->jsonResponse($response, ['error' => 'Station ID not provided'], 400);
+        }
+
+        try {
+            $data = $this->stationInfoModel->getStationWcHistoryData($stationId);
+
+            return $this->jsonResponse($response, [
+                'station_id' => $stationId,
+                'history'    => $data
+            ]);
+
+        } catch (Exception $e) {
+            return $this->jsonResponse($response, [
+                'error' => 'Failed to read station WC history',
+                'details' => $e->getMessage()
+            ], 500);
         }
     }
 
