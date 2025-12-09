@@ -47,6 +47,7 @@ function Report() {
     "Yabucoa","Yauco"
   ];
 
+  // --- Drag and Drop Logic ---
   useEffect(() => {
     const el = dropRef.current;
     if (!el) return;
@@ -90,6 +91,7 @@ function Report() {
     if (name === "allowLocation") setShowMap(checked);
   };
 
+  // --- Map Initialization ---
   useEffect(() => {
     if (!showMap) return;
 
@@ -138,12 +140,20 @@ function Report() {
       });
       view.graphics.add(marker);
       setCoords({ lat: latitude, lng: longitude });
+
+      view.goTo({
+        target: event.mapPoint,
+        zoom: 15
+      }, {
+        duration: 1000,
+        easing: "ease-in-out"
+      });
     });
 
     return () => view && view.destroy();
   }, [showMap]);
 
-  // Handle geolocation permission
+  // --- Geolocation with Zoom Animation ---
   useEffect(() => {
     const requestLocation = async () => {
       if (!form.allowLocation || !viewRef.current) return;
@@ -165,20 +175,35 @@ function Report() {
           const { latitude, longitude } = pos.coords;
           const view = viewRef.current;
 
-          view.goTo({ center: [longitude, latitude], zoom: 17 });
+          view.when(() => {
+            // Animate camera to user location
+            view.goTo(
+              {
+                center: [longitude, latitude],
+                zoom: 17, // Street level zoom
+              },
+              {
+                duration: 2500, // 2.5 seconds flight time
+                easing: "out-expo", // Starts fast, ends smooth
+              }
+            );
 
-          const marker = new Graphic({
-            geometry: new Point({ latitude, longitude }),
-            symbol: {
-              type: "simple-marker",
-              color: "#ff4f00",
-              size: 12,
-              outline: { color: "#fff", width: 1.5 },
-            },
+            // Remove old graphics to prevent duplicates
+            view.graphics.removeAll();
+
+            const marker = new Graphic({
+              geometry: new Point({ latitude, longitude }),
+              symbol: {
+                type: "simple-marker",
+                color: "#ff4f00",
+                size: 12,
+                outline: { color: "#fff", width: 1.5 },
+              },
+            });
+
+            view.graphics.add(marker);
+            setCoords({ lat: latitude, lng: longitude });
           });
-
-          view.graphics.add(marker);
-          setCoords({ lat: latitude, lng: longitude });
         },
         (err) => {
           console.error("Error al obtener ubicación:", err);
@@ -207,7 +232,7 @@ function Report() {
         type: 'error', 
         text: `Faltan campos requeridos: ${errors.join(", ")}` 
       });
-      window.scrollTo(0, 0); // Scroll up so user sees the error
+      window.scrollTo(0, 0);
       return;
     }
     
@@ -225,8 +250,6 @@ function Report() {
       reporter_phone: form.phone || "",
       reporter_email: form.email || "",
       
-      // Note: Handling real file uploads requires FormData. 
-      // For now, we are just sending the name of the first file as a string.
       image_url: files.length > 0 ? files[0].name : "" 
     };
 
@@ -245,7 +268,6 @@ function Report() {
             throw new Error(data.error || `Error ${response.status}`);
         }
 
-        // Success!
         setMessage({ type: 'success', text: "¡Reporte enviado exitosamente!" });
         
         // Reset Form
@@ -266,7 +288,6 @@ function Report() {
   };
 
   return (
-    
     <div className="report-page">
       <div className="report-hero">
         <img src={officeLogo} alt="PRLHMO" className="report-hero__logo" />
@@ -287,16 +308,16 @@ function Report() {
 
       <form className="report-form" onSubmit={onSubmit}>
       {message && (
-      <div style={{
-      padding: "1rem",
-      marginBottom: "1rem",
-      borderRadius: "5px",
-      backgroundColor: message.type === 'error' ? "#f8d7da" : "#d4edda",
-      color: message.type === 'error' ? "#721c24" : "#155724",
-      border: `1px solid ${message.type === 'error' ? "#f5c6cb" : "#c3e6cb"}`
-      }}>
-      {message.text}
-      </div>
+        <div style={{
+          padding: "1rem",
+          marginBottom: "1rem",
+          borderRadius: "5px",
+          backgroundColor: message.type === 'error' ? "#f8d7da" : "#d4edda",
+          color: message.type === 'error' ? "#721c24" : "#155724",
+          border: `1px solid ${message.type === 'error' ? "#f5c6cb" : "#c3e6cb"}`
+        }}>
+          {message.text}
+        </div>
       )}
         <div className="form-row">
           <label htmlFor="name">Nombre Completo:</label>
