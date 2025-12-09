@@ -29,7 +29,7 @@ const BASE_BATCH_UPDATE_URL = `${BASE_DOMAIN}/stations/batch-update`;
 // --- CONSTANTS FOR RADAR ---
 const STEP_SIZE = 5 * 60 * 1000; // 5 minutes
 const FRAME_SPEED = 1500; // 1.5 seconds per frame
-const HISTORY_DURATION = 60 * 60 * 1000 * 4; // 4 hour history
+const HISTORY_DURATION = 60 * 60 * 1000 * 1; // 1 hour history
 
 const Disclaimer = ({ onAgree }) => {
     return (
