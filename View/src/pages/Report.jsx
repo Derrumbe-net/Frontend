@@ -11,7 +11,7 @@ import Graphic from "@arcgis/core/Graphic";
 import Point from "@arcgis/core/geometry/Point";
 import CoordinateConversion from "@arcgis/core/widgets/CoordinateConversion";
 
-const BASE_REPORT_URL  = `${import.meta.env.VITE_API_URL}/api/reports`;
+const BASE_REPORT_URL = `${import.meta.env.VITE_API_URL}/reports`;
 
 function Report() {
   const [form, setForm] = useState({
@@ -36,15 +36,15 @@ function Report() {
   const viewRef = useRef(null);
 
   const pueblos = [
-    "Adjuntas","Aguada","Aguadilla","Aguas Buenas","Aibonito","Añasco","Arecibo","Arroyo","Barceloneta",
-    "Barranquitas","Bayamón","Cabo Rojo","Caguas","Camuy","Canóvanas","Carolina","Cataño","Cayey","Ceiba",
-    "Ciales","Cidra","Coamo","Comerío","Corozal","Culebra","Dorado","Fajardo","Florida","Guánica","Guayama",
-    "Guayanilla","Guaynabo","Gurabo","Hatillo","Hormigueros","Humacao","Isabela","Jayuya","Juana Díaz",
-    "Juncos","Lajas","Lares","Las Marías","Las Piedras","Loíza","Luquillo","Manatí","Maricao","Maunabo",
-    "Mayagüez","Moca","Morovis","Naguabo","Naranjito","Orocovis","Patillas","Peñuelas","Ponce","Quebradillas",
-    "Rincón","Río Grande","Sabana Grande","Salinas","San Germán","San Juan","San Lorenzo","San Sebastián",
-    "Santa Isabel","Toa Alta","Toa Baja","Trujillo Alto","Utuado","Vega Alta","Vega Baja","Vieques","Villalba",
-    "Yabucoa","Yauco"
+    "Adjuntas", "Aguada", "Aguadilla", "Aguas Buenas", "Aibonito", "Añasco", "Arecibo", "Arroyo", "Barceloneta",
+    "Barranquitas", "Bayamón", "Cabo Rojo", "Caguas", "Camuy", "Canóvanas", "Carolina", "Cataño", "Cayey", "Ceiba",
+    "Ciales", "Cidra", "Coamo", "Comerío", "Corozal", "Culebra", "Dorado", "Fajardo", "Florida", "Guánica", "Guayama",
+    "Guayanilla", "Guaynabo", "Guaynabo", "Gurabo", "Hatillo", "Hormigueros", "Humacao", "Isabela", "Jayuya", "Juana Díaz",
+    "Juncos", "Lajas", "Lares", "Las Marías", "Las Piedras", "Loíza", "Luquillo", "Manatí", "Maricao", "Maunabo",
+    "Mayagüez", "Moca", "Morovis", "Naguabo", "Naranjito", "Orocovis", "Patillas", "Peñuelas", "Ponce", "Quebradillas",
+    "Rincón", "Río Grande", "Sabana Grande", "Salinas", "San Germán", "San Juan", "San Lorenzo", "San Sebastián",
+    "Santa Isabel", "Toa Alta", "Toa Baja", "Trujillo Alto", "Utuado", "Vega Alta", "Vega Baja", "Vieques", "Villalba",
+    "Yabucoa", "Yauco"
   ];
 
   // --- Drag and Drop Logic ---
@@ -176,21 +176,17 @@ function Report() {
           const view = viewRef.current;
 
           view.when(() => {
-            // Animate camera to user location
             view.goTo(
               {
                 center: [longitude, latitude],
-                zoom: 17, // Street level zoom
+                zoom: 17,
               },
               {
-                duration: 2500, // 2.5 seconds flight time
-                easing: "out-expo", // Starts fast, ends smooth
+                duration: 2500,
+                easing: "out-expo",
               }
             );
-
-            // Remove old graphics to prevent duplicates
             view.graphics.removeAll();
-
             const marker = new Graphic({
               geometry: new Point({ latitude, longitude }),
               symbol: {
@@ -200,7 +196,6 @@ function Report() {
                 outline: { color: "#fff", width: 1.5 },
               },
             });
-
             view.graphics.add(marker);
             setCoords({ lat: latitude, lng: longitude });
           });
@@ -212,14 +207,14 @@ function Report() {
         { enableHighAccuracy: true, timeout: 10000 }
       );
     };
-
     requestLocation();
   }, [form.allowLocation]);
 
 
+  // --- SUBMIT LOGIC ---
   const onSubmit = async (e) => {
     e.preventDefault();
-    setMessage(null); 
+    setMessage(null);
 
     const errors = [];
     if (!form.pueblo) errors.push("Pueblo");
@@ -228,62 +223,96 @@ function Report() {
     if (!coords) errors.push("Ubicación (Coordenadas)");
 
     if (errors.length > 0) {
-      setMessage({ 
-        type: 'error', 
-        text: `Faltan campos requeridos: ${errors.join(", ")}` 
+      setMessage({
+        type: 'error',
+        text: `Faltan campos requeridos: ${errors.join(", ")}`
       });
       window.scrollTo(0, 0);
       return;
     }
-    
+
     setSubmitting(true);
 
     const dbPayload = {
-      city: form.pueblo,                  
-      latitude: coords.lat,             
-      longitude: coords.lng,          
-      reported_at: form.date, 
-      description: form.description,     
-
+      city: form.pueblo,
+      latitude: String(coords.lat),
+      longitude: String(coords.lng),
+      reported_at: form.date,
+      description: form.description,
       physical_address: form.carretera || "",
       reporter_name: form.name || "Anonymous",
       reporter_phone: form.phone || "",
       reporter_email: form.email || "",
-      
-      image_url: files.length > 0 ? files[0].name : "" 
+      image_url: "" // Will be updated by backend during upload step
     };
 
     try {
-        const response = await fetch(BASE_REPORT_URL, { 
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(dbPayload),
-        });
+      // --- STEP 1: Create Report Record ---
+      // We set Content-Type: application/json here
+      const response = await fetch(BASE_REPORT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dbPayload),
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (!response.ok) {
-            throw new Error(data.error || `Error ${response.status}`);
+      if (!response.ok) {
+        throw new Error(data.error || `Error ${response.status}`);
+      }
+
+      const reportId = data.report_id;
+
+      // --- STEP 2: Upload Images (Sequential) ---
+      if (files.length > 0 && reportId) {
+        let uploadedCount = 0;
+
+        // Use for...of to await each upload before starting the next one.
+        // This prevents flooding the FTP connection.
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append("image_file", file);
+
+          try {
+            const uploadRes = await fetch(`${BASE_REPORT_URL}/${reportId}/upload`, {
+              method: "POST",
+              // IMPORTANT: DO NOT set Content-Type header. 
+              // Browser sets it to multipart/form-data automatically.
+              body: formData,
+            });
+
+            if (uploadRes.ok) {
+              uploadedCount++;
+            } else {
+              console.error(`Failed to upload file: ${file.name}`);
+            }
+          } catch (uploadErr) {
+            console.error(`Network error uploading file: ${file.name}`, uploadErr);
+          }
         }
-
-        setMessage({ type: 'success', text: "¡Reporte enviado exitosamente!" });
         
-        // Reset Form
-        setForm({
-            name: "", phone: "", email: "", date: "", description: "",
-            pueblo: "", carretera: "", allowLocation: false,
-        });
-        setFiles([]);
-        setCoords(null);
-        setShowMap(false);
+        console.log(`Successfully uploaded ${uploadedCount} of ${files.length} images.`);
+      }
+
+      // --- Success State ---
+      setMessage({ type: 'success', text: "¡Reporte e imágenes enviados exitosamente!" });
+
+      // Reset Form
+      setForm({
+        name: "", phone: "", email: "", date: "", description: "",
+        pueblo: "", carretera: "", allowLocation: false,
+      });
+      setFiles([]);
+      setCoords(null);
+      setShowMap(false);
 
     } catch (error) {
-        console.error("Error submitting:", error);
-        setMessage({ type: 'error', text: `Error al enviar: ${error.message}` });
+      console.error("Error submitting:", error);
+      setMessage({ type: 'error', text: `Error al enviar: ${error.message}` });
     } finally {
-        setSubmitting(false);
+      setSubmitting(false);
     }
   };
 
@@ -307,18 +336,18 @@ function Report() {
       <hr className="report-divider" />
 
       <form className="report-form" onSubmit={onSubmit}>
-      {message && (
-        <div style={{
-          padding: "1rem",
-          marginBottom: "1rem",
-          borderRadius: "5px",
-          backgroundColor: message.type === 'error' ? "#f8d7da" : "#d4edda",
-          color: message.type === 'error' ? "#721c24" : "#155724",
-          border: `1px solid ${message.type === 'error' ? "#f5c6cb" : "#c3e6cb"}`
-        }}>
-          {message.text}
-        </div>
-      )}
+        {message && (
+          <div style={{
+            padding: "1rem",
+            marginBottom: "1rem",
+            borderRadius: "5px",
+            backgroundColor: message.type === 'error' ? "#f8d7da" : "#d4edda",
+            color: message.type === 'error' ? "#721c24" : "#155724",
+            border: `1px solid ${message.type === 'error' ? "#f5c6cb" : "#c3e6cb"}`
+          }}>
+            {message.text}
+          </div>
+        )}
         <div className="form-row">
           <label htmlFor="name">Nombre Completo:</label>
           <input id="name" name="name" type="text" placeholder="Opcional" value={form.name} onChange={onChange} />
@@ -349,9 +378,9 @@ function Report() {
           <div className="dropzone" ref={dropRef}>
             <div className="dropzone__hint">
               <span className="drop-cloud">☁️</span>
-              <p>Drag and drop files here to upload</p>
+              <p>Arrastra fotos aquí</p>
               <label className="pick-files">
-                or <input type="file" multiple onChange={onFilePick} /> Select Files to Upload
+                o <input type="file" multiple onChange={onFilePick} /> Seleccionar archivos
               </label>
             </div>
             {files.length > 0 && (
@@ -407,7 +436,7 @@ function Report() {
 
         <div className="form-actions">
           <button className="submit-btn" disabled={submitting}>
-            {submitting ? "Enviando…" : "Enviar Reporte"}
+            {submitting ? "Enviando..." : "Enviar Reporte"}
           </button>
         </div>
       </form>
