@@ -15,10 +15,16 @@ return function (App $app, $db) {
     $app->get('/projects', [$controller, 'getAllProjects']);
     $app->get('/projects/{id}', [$controller, 'getProject']);
 
+    // Serve Image
+    $app->get('/projects/{id}/image', [$controller, 'serveProjectImage']);
+
     // ---- Protected routes ----
     $app->group('/projects', function (RouteCollectorProxy $group) use ($controller) {
         $group->post('', [$controller, 'createProject']);
         $group->put('/{id}', [$controller, 'updateProject']);
         $group->delete('/{id}', [$controller, 'deleteProject']);
+
+        // Upload Image - Multipart/form-data
+        $group->post('/{id}/image', [$controller, 'uploadProjectImage']);
     })->add($jwtMiddleware);
 };

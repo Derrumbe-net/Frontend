@@ -81,4 +81,82 @@ class Project {
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
+
+    public function updateProjectImageColumn($id, $filename) {
+        try {
+            $stmt = $this->conn->prepare("UPDATE project SET image_url=:image_url WHERE project_id=:id");
+            $stmt->bindParam(':image_url', $filename, PDO::PARAM_STR);
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            return $stmt->execute();
+        } catch(PDOException $e) { error_log($e->getMessage()); return false; }
+    }
+
+    public function uploadImageToFtp($localFilePath, $remoteFileName)
+    {
+        $ftp_server = $_ENV['FTPS_SERVER'];
+        $ftp_user = $_ENV['FTPS_USER'];
+        $ftp_pass = $_ENV['FTPS_PASS'];
+        $ftp_port = $_ENV['FTPS_PORT'];
+
+        // Define specific folder for projects
+        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
+        $target_dir = rtrim($base_remote_path, '/') . '/projects/';
+        $remote_file_path = $target_dir . $remoteFileName;
+
+        $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
+        if (!$conn_id) throw new Exception("Failed to connect to FTPS server");
+
+        if (!@ftp_login($conn_id, $ftp_user, $ftp_pass)) {
+            ftp_close($conn_id);
+            throw new Exception("FTPS login failed");
+        }
+
+        ftp_pasv($conn_id, true);
+
+        if (!ftp_put($conn_id, $remote_file_path, $localFilePath, FTP_BINARY)) {
+            ftp_close($conn_id);
+            throw new Exception("Unable to upload image to: $remote_file_path");
+        }
+
+        ftp_close($conn_id);
+        return $remoteFileName;
+    }
+
+    public function getProjectImageContent($fileName)
+    {
+        $ftp_server = $_ENV['FTPS_SERVER'];
+        $ftp_user = $_ENV['FTPS_USER'];
+        $ftp_pass = $_ENV['FTPS_PASS'];
+        $ftp_port = $_ENV['FTPS_PORT'];
+
+        // Construct path for projects
+        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
+        $remote_file_path = rtrim($base_remote_path, '/') . '/projects/' . ltrim($fileName, '/');
+
+        $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
+        if (!$conn_id) throw new Exception("Failed to connect to FTPS server");
+
+        if (!@ftp_login($conn_id, $ftp_user, $ftp_pass)) {
+            ftp_close($conn_id);
+            throw new Exception("FTPS login failed");
+        }
+
+        ftp_pasv($conn_id, true);
+
+        $tmpFile = tmpfile();
+
+        if (!@ftp_fget($conn_id, $tmpFile, $remote_file_path, FTP_BINARY)) {
+            fclose($tmpFile);
+            ftp_close($conn_id);
+            throw new Exception("Unable to download image: $remote_file_path");
+        }
+
+        rewind($tmpFile);
+        $content = stream_get_contents($tmpFile);
+
+        fclose($tmpFile);
+        ftp_close($conn_id);
+
+        return $content;
+    }
 }
