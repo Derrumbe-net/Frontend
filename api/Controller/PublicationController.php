@@ -42,4 +42,96 @@ class PublicationController {
         if ($deleted) return $this->jsonResponse($response, ['message'=>'Deleted']);
         return $this->jsonResponse($response, ['error'=>'Failed'], 500);
     }
+
+    public function uploadPublicationImage($request, $response, $args) {
+        $publicationId = $args['id'];
+        $uploadedFiles = $request->getUploadedFiles();
+
+        if (empty($uploadedFiles['image'])) {
+            return $this->jsonResponse($response, ['error' => 'No image file provided'], 400);
+        }
+
+        /** @var UploadedFileInterface $uploadedFile */
+        $uploadedFile = $uploadedFiles['image'];
+
+        if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
+            return $this->jsonResponse($response, ['error' => 'File upload error'], 500);
+        }
+
+        try {
+            $pub = $this->publicationModel->getPublicationById($publicationId);
+            if (!$pub) {
+                return $this->jsonResponse($response, ['error' => 'Publication not found'], 404);
+            }
+
+            // --- CHANGE STARTS HERE ---
+
+            // Get original name
+            $originalName = $uploadedFile->getClientFilename();
+
+            // Sanitize filename: verify it only contains safe characters (alphanumeric, dot, underscore, dash)
+            // This prevents issues with spaces in URLs or malicious path traversal
+            $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
+
+            $tempPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $filename;
+            $uploadedFile->moveTo($tempPath);
+
+            // Upload to FTP
+            $this->publicationModel->uploadImageToFtp($tempPath, $filename);
+
+            // Update Database
+            $this->publicationModel->updatePublicationImageColumn($publicationId, $filename);
+
+            // Cleanup
+            if (file_exists($tempPath)) {
+                unlink($tempPath);
+            }
+
+            return $this->jsonResponse($response, [
+                'message' => 'Image uploaded successfully',
+                'image_url' => $filename
+            ]);
+
+        } catch (\Exception $e) {
+            return $this->jsonResponse($response, ['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function servePublicationImage($request, $response, $args) {
+        $publicationId = $args['id'];
+
+        try {
+            $pub = $this->publicationModel->getPublicationById($publicationId);
+
+            if (!$pub) {
+                return $response->withStatus(404)->write('Publication not found');
+            }
+
+            $fileName = $pub['image_url'] ?? null;
+
+            if (empty($fileName)) {
+                return $response->withStatus(404)->write('Image not defined for this publication');
+            }
+
+            // Fetch content from FTP
+            $imageContent = $this->publicationModel->getPublicationImageContent($fileName);
+
+            // Determine Mime Type
+            $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $mimeType = match ($extension) {
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                'svg' => 'image/svg+xml',
+                default => 'image/jpeg',
+            };
+
+            $response->getBody()->write($imageContent);
+            return $response->withHeader('Content-Type', $mimeType);
+
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+            return $response->withStatus(500)->write('Error fetching image');
+        }
+    }
 }
