@@ -339,7 +339,8 @@ class StationInfo
     }
 
 
-    public function updateStationSensorImage($id, $imagePath) {
+    public function updateStationSensorImage($id, $imagePath)
+    {
         try {
             $stmt = $this->conn->prepare("UPDATE station_info SET sensor_image_url=:url WHERE station_id=:id");
             $stmt->bindParam(':url', $imagePath, PDO::PARAM_STR);
@@ -352,7 +353,8 @@ class StationInfo
     }
 
     // Upload to FTP and return the relative path (e.g., "stations/filename.jpg")
-    public function uploadSensorImageToFtp($localFilePath, $filename) {
+    public function uploadSensorImageToFtp($localFilePath, $filename)
+    {
         $ftp_server = $_ENV['FTPS_SERVER'];
         $ftp_user = $_ENV['FTPS_USER'];
         $ftp_pass = $_ENV['FTPS_PASS'];
@@ -425,5 +427,48 @@ class StationInfo
         ftp_close($conn_id);
 
         return $content;
+    }
+
+    public function updateStationsBatch($stationsData)
+    {
+        try {
+            $this->conn->beginTransaction();
+
+            $sql = "UPDATE station_info SET 
+                    precipitation = :precip, 
+                    soil_saturation = :sat, 
+                    last_updated = NOW() 
+                    WHERE station_id = :id";
+
+            $stmt = $this->conn->prepare($sql);
+
+            $updatedCount = 0;
+
+            foreach ($stationsData as $station) {
+                if (!isset($station['station_id'])) continue;
+
+                $precip = $station['precipitation'] ?? 0;
+                $sat = $station['soil_saturation'] ?? 0;
+                $id = $station['station_id'];
+
+                $stmt->bindParam(':precip', $precip, PDO::PARAM_STR);
+                $stmt->bindParam(':sat', $sat, PDO::PARAM_STR);
+                $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+
+                if ($stmt->execute()) {
+                    $updatedCount++;
+                }
+            }
+
+            $this->conn->commit();
+            return $updatedCount;
+
+        } catch (PDOException $e) {
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
+            error_log("Batch Update Error: " . $e->getMessage());
+            throw new Exception("Database error during batch update.");
+        }
     }
 }

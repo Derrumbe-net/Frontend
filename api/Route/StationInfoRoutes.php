@@ -21,6 +21,7 @@ return function (App $app, $db) {
     $app->get('/stations/files/data', [$stationInfoController, 'getAllStationFilesData']);
     $app->get('/stations/files/data/{id}', [$stationInfoController, 'getStationFileData']);
     $app->put('/stations/files/data/{id}/update', [$stationInfoController, 'processStationFileAndUpdate']);
+     $app->post('/stations/batch-update', [$stationInfoController, 'batchUpdateStations']);
 
     $app->get('/stations/history/{id}/wc', [$stationInfoController, 'getStationWcHistory']);
 

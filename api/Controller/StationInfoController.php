@@ -247,5 +247,30 @@ class StationInfoController {
             ], 500);
         }
     }
+    public function batchUpdateStations($request, $response) {
+        $data = $request->getParsedBody();
 
+        if (!isset($data['stations']) || !is_array($data['stations'])) {
+            return $this->jsonResponse($response, ['error' => 'Invalid payload. "stations" array required.'], 400);
+        }
+
+        $stationsToUpdate = $data['stations'];
+
+        if (empty($stationsToUpdate)) {
+            return $this->jsonResponse($response, ['message' => 'No stations to update.']);
+        }
+
+        try {
+            $count = $this->stationInfoModel->updateStationsBatch($stationsToUpdate);
+            return $this->jsonResponse($response, [
+                'message' => 'Batch update successful',
+                'updated_count' => $count
+            ]);
+        } catch (Exception $e) {
+            return $this->jsonResponse($response, [
+                'error' => 'Batch update failed',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
