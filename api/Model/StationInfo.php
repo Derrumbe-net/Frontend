@@ -6,13 +6,19 @@ use PDO;
 use PDOException;
 use Exception;
 
-class StationInfo {
+class StationInfo
+{
     private $conn;
-    public function __construct($conn){ $this->conn = $conn; }
+
+    public function __construct($conn)
+    {
+        $this->conn = $conn;
+    }
 
     // CREATE STATION INFO
-    public function createStationInfo($data){
-        try{
+    public function createStationInfo($data)
+    {
+        try {
             $stmt = $this->conn->prepare(
                 "INSERT INTO station_info
                 (admin_id, soil_saturation, precipitation, sensor_image_url, data_image_url, city,
@@ -41,30 +47,33 @@ class StationInfo {
             } else {
                 return false;
             }
-        }catch(PDOException $e) {
+        } catch (PDOException $e) {
             error_log($e->getMessage());
             return false;
         }
     }
 
     // GET STATION INFO BY ID
-    public function getStationInfoById($id){
-        $stmt=$this->conn->prepare("SELECT * FROM station_info WHERE station_id=:id");
+    public function getStationInfoById($id)
+    {
+        $stmt = $this->conn->prepare("SELECT * FROM station_info WHERE station_id=:id");
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     // GET ALL STATIONS INFO
-    public function getAllStationInfos(){
-        $stmt=$this->conn->query("SELECT * FROM station_info");
+    public function getAllStationInfos()
+    {
+        $stmt = $this->conn->query("SELECT * FROM station_info");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     // UPDATE STATION INFO BY ID
-    public function updateStationInfo($id,$data){
-        try{
-            $stmt=$this->conn->prepare(
+    public function updateStationInfo($id, $data)
+    {
+        try {
+            $stmt = $this->conn->prepare(
                 "UPDATE station_info SET admin_id=:admin_id,soil_saturation=:soil_saturation,
                  precipitation=:precipitation,sensor_image_url=:sensor_image_url,data_image_url=:data_image_url,
                  city=:city,is_available=:is_available,last_updated=:last_updated,
@@ -88,24 +97,26 @@ class StationInfo {
             $stmt->bindParam(':wc4', $data['wc4'], PDO::PARAM_STR);
             $stmt->bindParam(':id', $id, PDO::PARAM_INT);
             return $stmt->execute();
-        }catch(PDOException $e){
+        } catch (PDOException $e) {
             error_log($e->getMessage());
             return false;
         }
     }
 
     // DELETE STATION BY ID
-    public function deleteStationInfo($id){
-        $stmt=$this->conn->prepare("DELETE FROM station_info WHERE station_id=:id");
+    public function deleteStationInfo($id)
+    {
+        $stmt = $this->conn->prepare("DELETE FROM station_info WHERE station_id=:id");
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
-    public function getStationHistoryFileData($fileName) {
+    public function getStationHistoryFileData($fileName)
+    {
         $ftp_server = $_ENV['FTPS_SERVER'];
-        $ftp_user   = $_ENV['FTPS_USER'];
-        $ftp_pass   = $_ENV['FTPS_PASS'];
-        $ftp_port   = $_ENV['FTPS_PORT'];
+        $ftp_user = $_ENV['FTPS_USER'];
+        $ftp_pass = $_ENV['FTPS_PASS'];
+        $ftp_port = $_ENV['FTPS_PORT'];
 
         $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
         $remote_file_path = rtrim($base_remote_path, '/') . '/' . ltrim($fileName, '/');
@@ -169,11 +180,12 @@ class StationInfo {
     }
 
 
-    public function getStationFileData($fileName) {
+    public function getStationFileData($fileName)
+    {
         $ftp_server = $_ENV['FTPS_SERVER'];
-        $ftp_user   = $_ENV['FTPS_USER'];
-        $ftp_pass   = $_ENV['FTPS_PASS'];
-        $ftp_port   = $_ENV['FTPS_PORT'];
+        $ftp_user = $_ENV['FTPS_USER'];
+        $ftp_pass = $_ENV['FTPS_PASS'];
+        $ftp_port = $_ENV['FTPS_PORT'];
 
         $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
         $remote_file_path = rtrim($base_remote_path, '/') . '/' . ltrim($fileName, '/');
@@ -226,7 +238,8 @@ class StationInfo {
         return $data;
     }
 
-    public function getStationWcHistoryData($stationId) {
+    public function getStationWcHistoryData($stationId)
+    {
         $stationInfo = $this->getStationInfoById($stationId);
         if (!$stationInfo) {
             throw new Exception("Station ID $stationId not found.");
@@ -314,10 +327,10 @@ class StationInfo {
             if ($data['count'] > 0) {
                 $history[] = [
                     'timestamp' => $date,
-                    'wc1'       => round($data['total_wc1'] / $data['count'], 2),
-                    'wc2'       => round($data['total_wc2'] / $data['count'], 2),
-                    'wc3'       => round($data['total_wc3'] / $data['count'], 2),
-                    'wc4'       => round($data['total_wc4'] / $data['count'], 2),
+                    'wc1' => round($data['total_wc1'] / $data['count'], 2),
+                    'wc2' => round($data['total_wc2'] / $data['count'], 2),
+                    'wc3' => round($data['total_wc3'] / $data['count'], 2),
+                    'wc4' => round($data['total_wc4'] / $data['count'], 2),
                 ];
             }
         }
@@ -325,48 +338,12 @@ class StationInfo {
         return $history;
     }
 
-    public function getStationImageContent($fileName) {
+    public function getStationImageContent($fileName)
+    {
         $ftp_server = $_ENV['FTPS_SERVER'];
-        $ftp_user   = $_ENV['FTPS_USER'];
-        $ftp_pass   = $_ENV['FTPS_PASS'];
-        $ftp_port   = $_ENV['FTPS_PORT'];
-        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
-
-        $remote_file_path = rtrim($base_remote_path, '/') . '/' . ltrim($fileName, '/');
-
-        $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
-        if (!$conn_id) throw new \Exception("Failed to connect to FTPS server");
-
-        if (!@ftp_login($conn_id, $ftp_user, $ftp_pass)) {
-            ftp_close($conn_id);
-            throw new \Exception("FTPS login failed");
-        }
-
-        ftp_pasv($conn_id, true);
-
-        $tmpFile = tmpfile();
-
-        if (!ftp_fget($conn_id, $tmpFile, $remote_file_path, FTP_BINARY)) {
-            fclose($tmpFile);
-            ftp_close($conn_id);
-            throw new \Exception("Unable to download image: $remote_file_path");
-        }
-
-        rewind($tmpFile);
-        $content = stream_get_contents($tmpFile);
-
-        fclose($tmpFile);
-        ftp_close($conn_id);
-
-        return $content;
-    }
-}
-
-    public function getStationImageContent($fileName) {
-        $ftp_server = $_ENV['FTPS_SERVER'];
-        $ftp_user   = $_ENV['FTPS_USER'];
-        $ftp_pass   = $_ENV['FTPS_PASS'];
-        $ftp_port   = $_ENV['FTPS_PORT'];
+        $ftp_user = $_ENV['FTPS_USER'];
+        $ftp_pass = $_ENV['FTPS_PASS'];
+        $ftp_port = $_ENV['FTPS_PORT'];
         $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
 
         $remote_file_path = rtrim($base_remote_path, '/') . '/' . ltrim($fileName, '/');

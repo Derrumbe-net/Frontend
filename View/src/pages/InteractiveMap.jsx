@@ -13,15 +13,15 @@ import MapMenu from "../components/MapMenu.jsx";
 const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 
 // $app->get('/stations', ...)
-const BASE_STATIONS_URL = `${BASE_DOMAIN}/api/stations`;
+const BASE_STATIONS_URL = `${BASE_DOMAIN}/stations`;
 
 // $app->get('/stations/files/data', ...)
-const BASE_FILES_DATA_URL = `${BASE_DOMAIN}/api/stations/files/data`;
+const BASE_FILES_DATA_URL = `${BASE_DOMAIN}/stations/files/data`;
 
 // $app->put('/stations/files/data/{id}/update', ...)
-const BASE_UPDATE_PREFIX = `${BASE_DOMAIN}/api/stations/files/data`;
+const BASE_UPDATE_PREFIX = `${BASE_DOMAIN}/stations/files/data`;
 
-const BASE_LANDSLIDES_URL = `${BASE_DOMAIN}/api/landslides`;
+const BASE_LANDSLIDES_URL = `${BASE_DOMAIN}/landslides`;
 
 
 // --- CONSTANTS FOR RADAR ---
@@ -706,22 +706,6 @@ export default function InteractiveMap() {
         setShowPrecipLegend(false);
     };
 
-    // --- MOBILE & LABEL LOGIC (From 'demo2' branch) ---
-    const isMobile = window.innerWidth < 768;
-
-    let mapLabelText = "";
-
-    if (selectedYear) {
-        mapLabelText = "HISTORICAL LANDSLIDE DATA";
-    } else if (showSaturation) {
-        mapLabelText = "SOIL SATURATION PERCENTAGE";
-    } else if (showPrecip12hr) {
-        mapLabelText = "PAST 12 HOUR PRECIPITATION (INCHES)";
-    } else {
-        mapLabelText = ""; // fallback if needed
-    }
-
-    // --------------------------------------------------
     const isMobile = window.innerWidth < 768;
 
     let mapLabelText = "";
