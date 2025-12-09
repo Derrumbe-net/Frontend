@@ -14,7 +14,7 @@ function SusceptibilityMap() {
                          target="_blank"
                          rel="noopener noreferrer"
             >
-                informe 2020-1022 del Servicio Geológico de los Estados Unidos
+                informe 2020-2022 del Servicio Geológico de los Estados Unidos
             </a>, se publicó un mapa moderno
                 y de alta resolución para mostrar la susceptibilidad a deslizamientos de tierra provocados por
                 lluvia intensa en la isla de Puerto Rico. A la izquierda puede ver los datos de susceptibilidad

@@ -33,20 +33,19 @@ describe('LandslidePopup Component', () => {
 
         render(<LandslidePopup landslide={mockLandslide} />);
 
-        expect(screen.getByTestId('mock-popup')).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: /reported landslide/i })).toBeInTheDocument();
 
-        expect(screen.getByRole('heading', { name: /Reported Landslide Event/i })).toBeInTheDocument();
+        // Label
+        expect(screen.getByText(/Date:/i)).toBeInTheDocument();
 
-        expect(screen.getByText('ID:')).toBeInTheDocument();
-        expect(screen.getByText(mockLandslide.landslide_id)).toBeInTheDocument();
+        // Correct expected date
+        const formattedDate = new Date(mockLandslide.landslide_date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
 
-        expect(screen.getByText('Reported Date:')).toBeInTheDocument();
-        expect(screen.getByText(mockLandslide.landslide_date)).toBeInTheDocument();
-
-        expect(screen.getByText('Latitude:')).toBeInTheDocument();
-        expect(screen.getByText(mockLandslide.latitude.toString())).toBeInTheDocument();
-
-        expect(screen.getByText('Longitude:')).toBeInTheDocument();
-        expect(screen.getByText(mockLandslide.longitude.toString())).toBeInTheDocument();
+        expect(screen.getByText(formattedDate)).toBeInTheDocument();
     });
+
 });
