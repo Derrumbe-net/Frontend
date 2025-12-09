@@ -14,14 +14,15 @@ export default function CMSStations() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedStations = stations.slice(startIndex, startIndex + itemsPerPage);
 
+  const API_URL = `${import.meta.env.VITE_API_URL}`;
+
   useEffect(() => {
     fetchStations();
   }, []);
 
   const fetchStations = async () => {
     try {
-      // const response = await fetch("http://localhost:8080/api/stations");
-      const response = await fetch("https://derrumbe-test.derrumbe.net/api/stations");
+      const response = await fetch(`${API_URL}/stations`);
 
       const data = await response.json();
       setStations(data);
@@ -230,15 +231,26 @@ function StationForm({ station, onClose, refreshStations }) {
 
     if (!confirm.isConfirmed) return;
 
+    const token = localStorage.getItem("cmsAdmin"); // get JWT token
+
+    if (!token) {
+      Swal.fire("Error", "No se encontró token de autenticación. Por favor inicie sesión.", "error");
+      return;
+    }
+
+    const API_URL = `${import.meta.env.VITE_API_URL}`;
     const method = isEdit ? "PUT" : "POST";
     const url = isEdit
-      ? `https://derrumbe-test.derrumbe.net/api/stations/${station.station_id}`
-      : "https://derrumbe-test.derrumbe.net/api/stations";
+      ? `${API_URL}/stations/${station.station_id}`
+      : `${API_URL}/stations`;
 
     try {
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`, // <-- Add JWT header
+        },
         body: JSON.stringify({
           ...formData,
           admin_id: 1, // TODO: connect logged user later

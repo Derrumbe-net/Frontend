@@ -56,8 +56,8 @@ function Publications() {
   useEffect(() => {
     const fetchPublications = async () => {
       try {
-        // const response = await fetch("http://localhost:8080/api/publications");
-        const response = await fetch("https://derrumbe-test.derrumbe.net/api/publications");
+        const API_URL = `${import.meta.env.VITE_API_URL}`;
+        const response = await fetch(`${API_URL}/publications`);
         
         if (!response.ok) throw new Error(`Error: ${response.status} ${response.statusText}`);
 
