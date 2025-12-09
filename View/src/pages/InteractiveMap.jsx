@@ -1,6 +1,6 @@
 import 'leaflet/dist/leaflet.css';
 import '../styles/InteractiveMap.css';
-import { useEffect, useState, useRef } from "react"; // Added useRef
+import { useEffect, useState, useRef } from "react";
 import { MapContainer, TileLayer, ZoomControl, useMap, Marker } from 'react-leaflet';
 import * as EL from 'esri-leaflet';
 import LandslideLogo from '../assets/PRLHMO_LOGO.svg';
@@ -27,7 +27,7 @@ const BASE_LANDSLIDES_URL = `${BASE_DOMAIN}/api/landslides`;
 // --- CONSTANTS FOR RADAR ---
 const STEP_SIZE = 5 * 60 * 1000; // 5 minutes
 const FRAME_SPEED = 1500; // 1.5 seconds per frame
-const HISTORY_DURATION = 60 * 60 * 1000; // 1 hour history
+const HISTORY_DURATION = 60 * 60 * 1000 * 4; // 4 hour history
 
 const Disclaimer = ({ onAgree }) => {
     return (
@@ -177,7 +177,7 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
     return null;
 };
 
-const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
+const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast }) => {
     const [stations, setStations] = useState([]);
     const [hasCheckedSync, setHasCheckedSync] = useState(false);
 
@@ -345,30 +345,65 @@ const PopulateStations = ({ showSaturation, showPrecip12hr }) => {
         });
     };
 
+    /** LANDSLIDE FORECAST ICON **/
+    const createForecastIcon = (probability) => {
+        // Standardized to match Precip/Saturation Design
+        // We reuse the 'precip-marker' class to get the exact same shape/size
+        // but inject our own colors.
+
+        let color = "#00FF00"; // Low (Green)
+        let textColor = "black";
+
+        if (probability >= 80) {
+            color = "#FF0000"; // High (Red)
+            textColor = "white"; // White text for better contrast on red
+        } else if (probability >= 50) {
+            color = "#FFA500"; // Medium (Orange)
+            textColor = "black";
+        }
+
+        const rounded = Math.round(probability);
+
+        return L.divIcon({
+            // Note: We use 'precip-marker' for the shape class, but override color
+            html: `<div class="precip-marker" style="background-color:${color}; color:${textColor}">${rounded}%</div>`,
+            className: "",
+            iconSize: [55, 30],
+            iconAnchor: [27, 15],
+        });
+    };
+
     return (
         <>
             {stations.map(station => {
                 if (station.is_available !== 1) return null;
                 let icon = null;
 
-                // PRIORITY LOGIC (always show one metric):
-                // Soil Saturation (default) OR Precipitation (if selected)
-                if (showSaturation && station.soil_saturation != null) {
+                // PRIORITY LOGIC:
+                // 1. Landslide Forecast
+                // 2. Soil Saturation
+                // 3. Precipitation
+
+                // Ensure strict types or non-null checks
+                if (showLandslideForecast && station.landslide_forecast != null) {
+                    icon = createForecastIcon(station.landslide_forecast);
+                }
+                else if (showSaturation && station.soil_saturation != null) {
                     icon = createSaturationIcon(station.soil_saturation);
                 }
                 else if (showPrecip12hr && station.precipitation != null) {
                     icon = createPrecipIcon(station.precipitation);
                 }
                 else {
-                    // If the selected metric has no value, fallback to the other metric
+                    // Fallback Priorities (default view)
                     if (station.soil_saturation != null) {
                         icon = createSaturationIcon(station.soil_saturation);
                     }
                     else if (station.precipitation != null) {
                         icon = createPrecipIcon(station.precipitation);
-                }
+                    }
                     else {
-                        return null; // Only if BOTH are missing (rare case)
+                        return null;
                     }
                 }
 
@@ -452,6 +487,15 @@ const SoilSaturationLegend = () => (
     </div>
 );
 
+const LandslideForecastLegend = () => (
+    <div className="legend-container legend-bottom-right">
+        <div className="legend-title">Landslide Forecast Probability</div>
+        <div className="legend-item"><span className="legend-color-box" style={{background:"#00FF00"}}></span><p>0–50% (Low)</p></div>
+        <div className="legend-item"><span className="legend-color-box" style={{background:"#FFA500"}}></span><p>50–80% (Medium)</p></div>
+        <div className="legend-item"><span className="legend-color-box" style={{background:"#FF0000"}}></span><p>80–100% (High)</p></div>
+    </div>
+);
+
 const SusceptibilityLegend = () => (
     <div className="legend-container legend-bottom-right-top">
         <div className="legend-title">Landslide Susceptibility</div>
@@ -500,36 +544,36 @@ const PrecipLegend = () => (
 
 export default function InteractiveMap() {
     const center = [18.220833, -66.420149];
-    
+
     // UI State
     const [showStations, setShowStations] = useState(true);
-    const [selectedYear, setSelectedYear] = useState("2025");
+    const [selectedYear, setSelectedYear] = useState("");
     const [availableYears, setAvailableYears] = useState([]);
-    const [showPrecip, setShowPrecip] = useState(false); // Default from radar branch (false), check if you prefer true
+    const [showPrecip, setShowPrecip] = useState(false);
     const [showSusceptibility, setShowSusceptibility] = useState(false);
-    const [showSaturation, setShowSaturation] = useState(true);
+
+    // Toggle State for Station Visualization Layers
+    const [showSaturation, setShowSaturation] = useState(false);
     const [showPrecip12hr, setShowPrecip12hr] = useState(false);
-    
+    const [showLandslideForecast, setShowLandslideForecast] = useState(false);
+
     // Legend State
-    const [showSaturationLegend, setShowSaturationLegend] = useState(true);
+    const [showSaturationLegend, setShowSaturationLegend] = useState(false);
     const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
     const [showPrecipLegend, setShowPrecipLegend] = useState(false);
+    const [showLandslideForecastLegend, setShowLandslideForecastLegend] = useState(false);
 
     // Disclaimer State
     const [showDisclaimer, setShowDisclaimer] = useState(
         localStorage.getItem('disclaimerAccepted') !== 'true'
     );
 
-    // --- RADAR / TIME LOGIC (From 'radar' branch) ---
-    const [showForecast, setShowForecast] = useState(true);
-    
-    // Define constants if they aren't imported (HISTORY_DURATION, STEP_SIZE, FRAME_SPEED)
-    // Assuming they are defined outside or imported. If not, define them here.
+    // --- RADAR / TIME LOGIC ---
+    const [showForecast, setShowForecast] = useState(false);
     const now = new Date();
     const coeff = 1000 * 60 * 5;
     const roundedEnd = new Date(Math.floor(now.getTime() / coeff) * coeff).getTime();
-    // Note: Ensure HISTORY_DURATION is defined, e.g., const HISTORY_DURATION = 2 * 60 * 60 * 1000;
-    const roundedStart = roundedEnd - (typeof HISTORY_DURATION !== 'undefined' ? HISTORY_DURATION : 7200000); 
+    const roundedStart = roundedEnd - (typeof HISTORY_DURATION !== 'undefined' ? HISTORY_DURATION : 7200000);
 
     const [radarTimeRange] = useState({ start: roundedStart, end: roundedEnd });
     const [currentTime, setCurrentTime] = useState(roundedStart);
@@ -537,7 +581,6 @@ export default function InteractiveMap() {
 
     useEffect(() => {
         let interval;
-        // Ensure STEP_SIZE and FRAME_SPEED are defined
         const step = typeof STEP_SIZE !== 'undefined' ? STEP_SIZE : 300000; // 5 mins
         const speed = typeof FRAME_SPEED !== 'undefined' ? FRAME_SPEED : 1000; // 1 sec
 
@@ -560,47 +603,147 @@ export default function InteractiveMap() {
         const snapped = Math.round((time - radarTimeRange.start) / step) * step + radarTimeRange.start;
         setCurrentTime(snapped);
     };
-    // -----------------------------------------------
 
     const handleAgree = () => {
         localStorage.setItem('disclaimerAccepted', 'true');
         setShowDisclaimer(false);
     };
 
-    const toggleStations = () => setShowStations(v => !v);
+    const toggleStations = () => {
+        const newValue = !showStations;
+        setShowStations(newValue);
+
+        if (newValue) {
+            // Turning stations ON → disable landslides
+            setSelectedYear(null);
+
+            // Default station metric is saturation
+            setShowSaturation(true);
+            setShowPrecip12hr(false);
+
+            // Legends
+            setShowSaturationLegend(true);
+            setShowPrecipLegend(false);
+        }
+    };
+
     const togglePrecip = () => setShowPrecip(v => !v);
     const toggleSusceptibility = () => setShowSusceptibility(v => !v);
-    const toggleSaturation = () => { setShowSaturation(true); setShowPrecip12hr(false); };
-    const togglePrecip12hr = () => { setShowPrecip12hr(true); setShowSaturation(false); };
+
+    // Mutually Exclusive Toggles for Station Data
+    const toggleSaturation = () => {
+        if (showSaturation) {
+            setShowSaturation(false);
+        } else {
+            setShowSaturation(true);
+            setShowPrecip12hr(false);
+            setShowLandslideForecast(false);
+        }
+    };
+    const togglePrecip12hr = () => {
+        if (showPrecip12hr) {
+            setShowPrecip12hr(false);
+        } else {
+            setShowPrecip12hr(true);
+            setShowSaturation(false);
+            setShowLandslideForecast(false);
+        }
+    };
+    const toggleLandslideForecast = () => {
+        if (showLandslideForecast) {
+            setShowLandslideForecast(false);
+        } else {
+            setShowLandslideForecast(true);
+            setShowSaturation(false);
+            setShowPrecip12hr(false);
+        }
+    }
+
     const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
     const toggleSusceptibilityLegend = () => setShowSusceptibilityLegend(v => !v);
     const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
+    const toggleLandslideForecastLegend = () => setShowLandslideForecastLegend(v => !v);
     const toggleForecast = () => setShowForecast(v => !v);
+
+    const handleYearChange = (year) => {
+        setSelectedYear(year);
+
+        // If any landslide year is selected → disable all station layers
+        if (year) {
+            setShowStations(false);
+            setShowSaturation(false);
+            setShowPrecip12hr(false);
+
+            setShowSaturationLegend(false);
+            setShowPrecipLegend(false);
+        }
+    };
+
+    const resetLayers = () => {
+        setShowStations(false);
+        setShowPrecip(false);
+        setShowSusceptibility(false);
+        setShowForecast(false);
+        setShowSaturation(false);
+        setShowPrecip12hr(false);
+
+        // Reset legends
+        setShowSaturationLegend(false);
+        setShowSusceptibilityLegend(false);
+        setShowPrecipLegend(false);
+    };
+
+    const resetToDefault = () => {
+        setShowSaturation(true);
+        setShowStations(true); 
+        setShowPrecip(false);
+        setShowSusceptibility(false);
+        setShowForecast(true);
+        setShowPrecip12hr(false);
+
+        setShowSaturationLegend(true);
+        setShowSusceptibilityLegend(false);
+        setShowPrecipLegend(false);
+    };
 
     // --- MOBILE & LABEL LOGIC (From 'demo2' branch) ---
     const isMobile = window.innerWidth < 768;
 
-    const mapLabelText = showSaturation
-        ? "SOIL SATURATION PERCENTAGE"
-        : "PAST 12 HOUR PRECIPITATION (INCHES)";
+    let mapLabelText = "";
+
+    if (selectedYear) {
+        mapLabelText = "HISTORICAL LANDSLIDE DATA";
+    } else if (showSaturation) {
+        mapLabelText = "SOIL SATURATION PERCENTAGE";
+    } else if (showPrecip12hr) {
+        mapLabelText = "PAST 12 HOUR PRECIPITATION (INCHES)";
+    } else {
+        mapLabelText = ""; // fallback if needed
+    }
+
     // --------------------------------------------------
+    const isMobile = window.innerWidth < 768;
+
+    let mapLabelText = "";
+    if (showSaturation) mapLabelText = "SOIL SATURATION PERCENTAGE";
+    else if (showPrecip12hr) mapLabelText = "PAST 12 HOUR PRECIPITATION (INCHES)";
+    else if (showLandslideForecast) mapLabelText = "LANDSLIDE FORECAST PROBABILITY";
 
     return (
         <main>
             {showDisclaimer && <Disclaimer onAgree={handleAgree} />}
-            
+
             <MapContainer
                 id="map"
                 center={center}
-                zoom={isMobile ? 8 : 9} // Mobile logic from demo2
+                zoom={isMobile ? 8 : 9}
                 minZoom={7}
                 maxZoom={18}
                 scrollWheelZoom={false}
                 zoomControl={false}
                 style={{ height: '100vh', width: '100%' }}
             >
-                {/* Dynamic Label from demo2 */}
-                <div className="map-label">{mapLabelText}</div>
+                {mapLabelText && <div className="map-label">{mapLabelText}</div>}
 
                 <TileLayer
                     url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
@@ -611,20 +754,26 @@ export default function InteractiveMap() {
                     showStations={showStations} onToggleStations={toggleStations}
                     showPrecip={showPrecip} onTogglePrecip={togglePrecip}
                     showSusceptibility={showSusceptibility} onToggleSusceptibility={toggleSusceptibility}
+
                     showSaturation={showSaturation} onToggleSaturation={toggleSaturation}
                     showPrecip12hr={showPrecip12hr} onTogglePrecip12hr={togglePrecip12hr}
+                    showLandslideForecast={showLandslideForecast} onToggleLandslideForecast={toggleLandslideForecast}
+
                     showSaturationLegend={showSaturationLegend} onToggleSaturationLegend={toggleSaturationLegend}
                     showSusceptibilityLegend={showSusceptibilityLegend} onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
                     showPrecipLegend={showPrecipLegend} onTogglePrecipLegend={togglePrecipLegend}
+                    showLandslideForecastLegend={showLandslideForecastLegend} onToggleLandslideForecastLegend={toggleLandslideForecastLegend}
+
                     availableYears={availableYears} selectedYear={selectedYear} onYearChange={setSelectedYear}
-                    // Added Forecast props from radar branch
                     showForecast={showForecast} onToggleForecast={toggleForecast}
+
+                    resetLayers={resetLayers}
+                    resetToDefault={resetToDefault}
                 />
 
                 <EsriOverlays
                     showPrecip={showPrecip}
                     showSusceptibility={showSusceptibility}
-                    // Added Forecast/Time props from radar branch
                     showForecast={showForecast}
                     currentTime={currentTime}
                 />
@@ -632,7 +781,11 @@ export default function InteractiveMap() {
                 <ZoomControl position="topright" />
 
                 {showStations && (
-                    <PopulateStations showSaturation={showSaturation} showPrecip12hr={showPrecip12hr} />
+                    <PopulateStations
+                        showSaturation={showSaturation}
+                        showPrecip12hr={showPrecip12hr}
+                        showLandslideForecast={showLandslideForecast}
+                    />
                 )}
 
                 <PopulateLandslides selectedYear={selectedYear} setAvailableYears={setAvailableYears} />
@@ -640,12 +793,12 @@ export default function InteractiveMap() {
                 {showSaturationLegend && <SoilSaturationLegend />}
                 {showSusceptibilityLegend && <SusceptibilityLegend />}
                 {showPrecipLegend && <PrecipLegend />}
+                {showLandslideForecastLegend && <LandslideForecastLegend />}
 
-                {/* --- RENDER TIME CONTROL BAR IF FORECAST IS ON (From radar branch) --- */}
                 {showForecast && (
                     <TimeControlBar
                         startTime={radarTimeRange.start}
-                        endTime={radarTimeRange.end}
+                        endTime={radarTimeRange.end} 
                         currentTime={currentTime}
                         isPlaying={isPlaying}
                         onTogglePlay={() => setIsPlaying(p => !p)}

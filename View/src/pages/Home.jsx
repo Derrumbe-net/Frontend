@@ -1,7 +1,7 @@
 import "../styles/Home_module.css";
 import { Link } from "react-router-dom";
 import heroImage from '../assets/landing_page_background.webp';
-import mapPreview from '../assets/interactive_map_preview.webp';
+import mapPreview from '../assets/InteractiveMapGIF.gif';
 import landslidePhoto from '../assets/landslide_landing_page.webp';
 import newsImage from '../assets/alturas_de_belgica.gif';
 import officeImage from '../assets/office_door.webp';
@@ -27,7 +27,7 @@ function Home() {
           </div>
 
           <div className="hero__buttons">
-            <a href="#contact" className="btn btn--contact">Contáctenos</a>
+            <Link to="/reportar" className="btn btn--report">Haz tu Reporte</Link>
             <Link to="/solicitud" className="btn btn--outline">Solicita una Charla</Link>
           </div>
         </div>
@@ -47,12 +47,14 @@ function Home() {
           </a>
         </div>
 
-        <img
-          className="landing__map-image"
-          src={mapPreview}
-          alt="Mapa interactivo"
-          loading="lazy"
-        />
+        <Link to="/mapa-interactivo">
+          <img
+            className="landing__map-image"
+            src={mapPreview}
+            alt="Mapa interactivo"
+            loading="lazy"
+          />
+        </Link>
       </section>
 
 
