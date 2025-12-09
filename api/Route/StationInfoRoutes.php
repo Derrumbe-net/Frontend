@@ -15,7 +15,7 @@ return function (App $app, $db) {
     $app->get('/stations', [$stationInfoController, 'getAllStations']);
     $app->get('/stations/{id}', [$stationInfoController, 'getStation']);
 
-    // Route to serve images from FTP via the Controller
+    // Serve images
     $app->get('/stations/{id}/image/{type}', [$stationInfoController, 'serveStationImage']);
 
     $app->get('/stations/files/data', [$stationInfoController, 'getAllStationFilesData']);
@@ -29,5 +29,9 @@ return function (App $app, $db) {
         $group->post('', [$stationInfoController, 'createStation']);
         $group->put('/{id}', [$stationInfoController, 'updateStation']);
         $group->delete('/{id}', [$stationInfoController, 'deleteStation']);
+
+        // Upload Sensor Image - Multipart/form-data
+        $group->post('/{id}/image/sensor', [$stationInfoController, 'uploadStationSensorImage']);
+
     })->add($jwtMiddleware);
 };

@@ -133,6 +133,58 @@ class StationInfoController {
         }
     }
 
+    public function uploadStationSensorImage($request, $response, $args) {
+        $stationId = $args['id'];
+        $uploadedFiles = $request->getUploadedFiles();
+
+        if (empty($uploadedFiles['image'])) {
+            return $this->jsonResponse($response, ['error' => 'No image file provided'], 400);
+        }
+
+        /** @var UploadedFileInterface $uploadedFile */
+        $uploadedFile = $uploadedFiles['image'];
+
+        if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
+            return $this->jsonResponse($response, ['error' => 'File upload error'], 500);
+        }
+
+        try {
+            // Validate station exists
+            $station = $this->stationInfoModel->getStationInfoById($stationId);
+            if (!$station) {
+                return $this->jsonResponse($response, ['error' => 'Station not found'], 404);
+            }
+
+            // Get original filename
+            $originalName = $uploadedFile->getClientFilename();
+
+            // Sanitize filename: replace unsafe chars with underscore
+            $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
+
+            $tempPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $filename;
+            $uploadedFile->moveTo($tempPath);
+
+            // Upload to FTP (target: files/stations/)
+            $relativePath = $this->stationInfoModel->uploadSensorImageToFtp($tempPath, $filename);
+
+            // Update Database with the relative path
+            $this->stationInfoModel->updateStationSensorImage($stationId, $relativePath);
+
+            // Cleanup local temp file
+            if (file_exists($tempPath)) {
+                unlink($tempPath);
+            }
+
+            return $this->jsonResponse($response, [
+                'message' => 'Sensor image uploaded successfully',
+                'sensor_image_url' => $relativePath
+            ]);
+
+        } catch (Exception $e) {
+            return $this->jsonResponse($response, ['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function serveStationImage($request, $response, $args) {
         $stationId = $args['id'];
         $type = $args['type']; // 'sensor' or 'data'
@@ -144,24 +196,24 @@ class StationInfoController {
                 return $response->withStatus(404)->write('Station not found');
             }
 
-            // Determine which column to look at
             $column = ($type === 'sensor') ? 'sensor_image_url' : 'data_image_url';
             $fileName = $station[$column] ?? null;
 
             if (empty($fileName)) {
-                // Return a 404 or a placeholder if no image defined
                 return $response->withStatus(404)->write('Image not defined for this station');
             }
 
-            // Fetch binary content
+            // Fetch binary content.
+            // Note: $fileName here will be "stations/filename.jpg" (for sensor)
+            // The model simply appends this to "files/", resulting in "files/stations/filename.jpg"
             $imageContent = $this->stationInfoModel->getStationImageContent($fileName);
 
-            // Determine Mime Type (Simple check based on extension, or default to jpeg)
             $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
             $mimeType = match ($extension) {
                 'png' => 'image/png',
                 'gif' => 'image/gif',
                 'webp' => 'image/webp',
+                'svg' => 'image/svg+xml',
                 default => 'image/jpeg',
             };
 
@@ -173,6 +225,7 @@ class StationInfoController {
             return $response->withStatus(500)->write('Error fetching image');
         }
     }
+
     public function getStationWcHistory($request, $response, $args) {
         $stationId = $args['id'] ?? null;
         if (!$stationId) {

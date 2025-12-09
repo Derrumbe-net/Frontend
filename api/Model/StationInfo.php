@@ -338,6 +338,57 @@ class StationInfo
         return $history;
     }
 
+
+    public function updateStationSensorImage($id, $imagePath) {
+        try {
+            $stmt = $this->conn->prepare("UPDATE station_info SET sensor_image_url=:url WHERE station_id=:id");
+            $stmt->bindParam(':url', $imagePath, PDO::PARAM_STR);
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            error_log($e->getMessage());
+            return false;
+        }
+    }
+
+    // Upload to FTP and return the relative path (e.g., "stations/filename.jpg")
+    public function uploadSensorImageToFtp($localFilePath, $filename) {
+        $ftp_server = $_ENV['FTPS_SERVER'];
+        $ftp_user = $_ENV['FTPS_USER'];
+        $ftp_pass = $_ENV['FTPS_PASS'];
+        $ftp_port = $_ENV['FTPS_PORT'];
+
+        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
+
+        // Target specifically the stations subfolder
+        $target_folder = 'stations/';
+        $full_remote_dir = rtrim($base_remote_path, '/') . '/' . $target_folder;
+        $remote_file_path = $full_remote_dir . $filename;
+
+        $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
+        if (!$conn_id) throw new Exception("Failed to connect to FTPS server");
+
+        if (!@ftp_login($conn_id, $ftp_user, $ftp_pass)) {
+            ftp_close($conn_id);
+            throw new Exception("FTPS login failed");
+        }
+
+        ftp_pasv($conn_id, true);
+
+        // Ensure directory exists (optional safety)
+        // @ftp_mkdir($conn_id, $full_remote_dir);
+
+        if (!ftp_put($conn_id, $remote_file_path, $localFilePath, FTP_BINARY)) {
+            ftp_close($conn_id);
+            throw new Exception("Unable to upload image to: $remote_file_path");
+        }
+
+        ftp_close($conn_id);
+
+        // Return the relative path "stations/filename" so getStationImageContent finds it easily
+        return $target_folder . $filename;
+    }
+
     public function getStationImageContent($fileName)
     {
         $ftp_server = $_ENV['FTPS_SERVER'];
@@ -346,6 +397,7 @@ class StationInfo
         $ftp_port = $_ENV['FTPS_PORT'];
         $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
 
+        // This joins base path (files/) with the DB value (stations/filename.jpg)
         $remote_file_path = rtrim($base_remote_path, '/') . '/' . ltrim($fileName, '/');
 
         $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
@@ -360,7 +412,7 @@ class StationInfo
 
         $tmpFile = tmpfile();
 
-        if (!ftp_fget($conn_id, $tmpFile, $remote_file_path, FTP_BINARY)) {
+        if (!@ftp_fget($conn_id, $tmpFile, $remote_file_path, FTP_BINARY)) {
             fclose($tmpFile);
             ftp_close($conn_id);
             throw new \Exception("Unable to download image: $remote_file_path");
