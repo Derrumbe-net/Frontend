@@ -68,7 +68,7 @@
   z-index: 2;
 }
 
-.btn.btn--contact,
+.btn.btn--report,
 .btn.btn--outline {
   font-size: clamp(0.7rem, 1vw, 0.85rem);
   padding: 0.45rem 1rem;
@@ -79,10 +79,11 @@
   white-space: nowrap;
 }
 
-.btn.btn--contact {
+.btn.btn--report {
   background-color: #3B7D23;
   color: white;
   border: 2px solid #3B7D23;
+  text-decoration: none;
 }
 
 .btn.btn--outline {
@@ -91,7 +92,7 @@
   border: 2px solid white;
 }
 
-.btn.btn--contact:hover,
+.btn.btn--report:hover,
 .btn.btn--outline:hover {
   transform: scale(1.05);
 }
@@ -109,7 +110,7 @@
     font-size: clamp(0.75rem, 3vw, 1rem);
   }
 
-  .btn.btn--contact,
+  .btn.btn--report,
   .btn.btn--outline {
     font-size: 0.5rem;
     padding: 0.2rem 0.5rem;

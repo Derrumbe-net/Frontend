@@ -28,7 +28,7 @@ const BASE_LANDSLIDES_URL = `${BASE_DOMAIN}/api/landslides`;
 // --- CONSTANTS FOR RADAR ---
 const STEP_SIZE = 5 * 60 * 1000; // 5 minutes
 const FRAME_SPEED = 1500; // 1.5 seconds per frame
-const HISTORY_DURATION = 60 * 60 * 1000; // 1 hour history
+const HISTORY_DURATION = 60 * 60 * 1000 * 4; // 4 hour history
 
 const Disclaimer = ({ onAgree }) => {
     return (
@@ -548,7 +548,7 @@ export default function InteractiveMap() {
 
     // UI State
     const [showStations, setShowStations] = useState(true);
-    const [selectedYear, setSelectedYear] = useState("2025");
+    const [selectedYear, setSelectedYear] = useState("");
     const [availableYears, setAvailableYears] = useState([]);
     const [showPrecip, setShowPrecip] = useState(false);
     const [showSusceptibility, setShowSusceptibility] = useState(false);
@@ -610,7 +610,24 @@ export default function InteractiveMap() {
         setShowDisclaimer(false);
     };
 
-    const toggleStations = () => setShowStations(v => !v);
+    const toggleStations = () => {
+        const newValue = !showStations;
+        setShowStations(newValue);
+
+        if (newValue) {
+            // Turning stations ON → disable landslides
+            setSelectedYear(null);
+
+            // Default station metric is saturation
+            setShowSaturation(true);
+            setShowPrecip12hr(false);
+
+            // Legends
+            setShowSaturationLegend(true);
+            setShowPrecipLegend(false);
+        }
+    };
+
     const togglePrecip = () => setShowPrecip(v => !v);
     const toggleSusceptibility = () => setShowSusceptibility(v => !v);
 
@@ -649,6 +666,63 @@ export default function InteractiveMap() {
     const toggleLandslideForecastLegend = () => setShowLandslideForecastLegend(v => !v);
     const toggleForecast = () => setShowForecast(v => !v);
 
+    const handleYearChange = (year) => {
+        setSelectedYear(year);
+
+        // If any landslide year is selected → disable all station layers
+        if (year) {
+            setShowStations(false);
+            setShowSaturation(false);
+            setShowPrecip12hr(false);
+
+            setShowSaturationLegend(false);
+            setShowPrecipLegend(false);
+        }
+    };
+
+    const resetLayers = () => {
+        setShowStations(false);
+        setShowPrecip(false);
+        setShowSusceptibility(false);
+        setShowForecast(false);
+        setShowSaturation(false);
+        setShowPrecip12hr(false);
+
+        // Reset legends
+        setShowSaturationLegend(false);
+        setShowSusceptibilityLegend(false);
+        setShowPrecipLegend(false);
+    };
+
+    const resetToDefault = () => {
+        setShowSaturation(true);
+        setShowStations(true); 
+        setShowPrecip(false);
+        setShowSusceptibility(false);
+        setShowForecast(true);
+        setShowPrecip12hr(false);
+
+        setShowSaturationLegend(true);
+        setShowSusceptibilityLegend(false);
+        setShowPrecipLegend(false);
+    };
+
+    // --- MOBILE & LABEL LOGIC (From 'demo2' branch) ---
+    const isMobile = window.innerWidth < 768;
+
+    let mapLabelText = "";
+
+    if (selectedYear) {
+        mapLabelText = "HISTORICAL LANDSLIDE DATA";
+    } else if (showSaturation) {
+        mapLabelText = "SOIL SATURATION PERCENTAGE";
+    } else if (showPrecip12hr) {
+        mapLabelText = "PAST 12 HOUR PRECIPITATION (INCHES)";
+    } else {
+        mapLabelText = ""; // fallback if needed
+    }
+
+    // --------------------------------------------------
     const isMobile = window.innerWidth < 768;
 
     let mapLabelText = "";
@@ -693,6 +767,9 @@ export default function InteractiveMap() {
 
                     availableYears={availableYears} selectedYear={selectedYear} onYearChange={setSelectedYear}
                     showForecast={showForecast} onToggleForecast={toggleForecast}
+
+                    resetLayers={resetLayers}
+                    resetToDefault={resetToDefault}
                 />
 
                 <EsriOverlays
@@ -722,7 +799,7 @@ export default function InteractiveMap() {
                 {showForecast && (
                     <TimeControlBar
                         startTime={radarTimeRange.start}
-                        endTime={radarTimeRange.end}
+                        endTime={radarTimeRange.end} 
                         currentTime={currentTime}
                         isPlaying={isPlaying}
                         onTogglePlay={() => setIsPlaying(p => !p)}

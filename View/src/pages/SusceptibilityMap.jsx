@@ -1,4 +1,4 @@
-import "../styles/SusceptibilityMunicipalitiesMap.css";
+import "../styles/SusceptibilityMap.css";
 
 const MAP_URL = "https://www.arcgis.com/apps/mapviewer/index.html?configurableview=true&webmap=8928a7fafc2c4a13864f505ed07c9e29&theme=light&center=-66.45005,18.2352&scale=1155581.108577"
 const FULL_SCREEN_URL = "https://www.arcgis.com/home/webmap/viewer.html?webmap=8928a7fafc2c4a13864f505ed07c9e29&extent=-67.4642,17.7278,-65.4359,18.7426";
@@ -29,20 +29,14 @@ function SusceptibilityMap() {
                 ).
             </p>
 
-            <iframe
-                title="Embedded ArcGIS Map"
-                src={MAP_URL}
-                style={{
-                    height: "600px",
-                    width: "73%",
-                    borderRadius: "10px",
-                    border: "none",
-                    display: "block",
-                    margin: "0 auto"
-                }}
-                allowFullScreen
-            />
-
+            <div className="municipality-map-wrapper">
+                <iframe
+                    title="Embedded ArcGIS Map"
+                    src={MAP_URL}
+                    className="municipality-map"
+                    allowFullScreen
+                />
+            </div>
         </div>
     );
 }
