@@ -7,8 +7,8 @@ import HighchartsReact from "highcharts-react-official";
 import "leaflet/dist/leaflet.css";
 import "../styles/Stations.css";
 
-const BASE_STATIONS_URL = "http://localhost:8080/api/stations";
-// const BASE_STATIONS_URL = "https://derrumbe-test.derrumbe.net/api/stations";
+// const BASE_STATIONS_URL = "http://localhost:8080/api/stations";
+const BASE_STATIONS_URL = "https://derrumbe-test.derrumbe.net/api/stations";
 
 const getHistoryUrl = (stationId) => `${BASE_STATIONS_URL}/history/${stationId}/wc`;
 
