@@ -105,6 +105,62 @@ select:focus {
     color: #000;
 }
 
+/* --- START: Marker Styles for Saturation and Precipitation --- */
+
+/* Base style for the Saturation marker */
+.saturation-marker {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 55px;
+    height: 30px;
+    border-radius: 0;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    line-height: 1;
+    text-align: center;
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    background-color: #888; /* Fallback/Default color */
+}
+
+/* Color classes based on saturation ranges (low: 0-80%) */
+.saturation-marker.low {
+    background-color: rgb(175, 152, 0, 0.9);
+}
+
+/* Color classes based on saturation ranges (medium: 80-90%) */
+.saturation-marker.medium {
+    background-color: rgba(0, 179, 255, 0.9);
+}
+
+/* Color classes based on saturation ranges (high: 90-100%) */
+.saturation-marker.high {
+    background-color: rgb(0, 28, 104, 0.9);
+}
+
+/* Style for the Precipitation marker */
+.precip-marker {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 55px;
+    height: 30px;
+    border-radius: 0;
+    color: white; /* Text color is set to white */
+    font-weight: bold;
+    font-size: 14px;
+    line-height: 1;
+    text-align: center;
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    /* Background color is set dynamically via inline style in JS */
+}
+
+/* --- END: Marker Styles --- */
+
+
 /* Responsive Design */
 @media (max-width: 900px) {
     .stations-container {

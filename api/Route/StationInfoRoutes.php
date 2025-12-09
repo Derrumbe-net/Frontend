@@ -18,6 +18,8 @@ return function (App $app, $db) {
     $app->get('/stations/files/data/{id}', [$stationInfoController, 'getStationFileData']);
     $app->put('/stations/files/data/{id}/update', [$stationInfoController, 'processStationFileAndUpdate']);
 
+    $app->get('/stations/history/{id}/wc', [$stationInfoController, 'getStationWcHistory']);
+
     // ---- Protected routes ----
     $app->group('/stations', function (RouteCollectorProxy $group) use ($stationInfoController) {
         $group->post('', [$stationInfoController, 'createStation']);
