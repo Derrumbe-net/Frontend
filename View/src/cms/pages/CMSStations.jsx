@@ -232,8 +232,8 @@ function StationForm({ station, onClose, refreshStations }) {
 
     const method = isEdit ? "PUT" : "POST";
     const url = isEdit
-      ? `http://localhost:8080/api/stations/${station.station_id}`
-      : "http://localhost:8080/api/stations";
+      ? `https://derrumbe-test.derrumbe.net/api/stations/${station.station_id}`
+      : "https://derrumbe-test.derrumbe.net/api/stations";
 
     try {
       const response = await fetch(url, {

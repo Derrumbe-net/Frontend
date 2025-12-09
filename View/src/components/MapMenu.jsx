@@ -17,7 +17,10 @@ export default function MapMenu({
                                     onToggleSaturation,
                                     showPrecip12hr,
                                     onTogglePrecip12hr,
-
+                                    onToggleLandslideForecast,
+                                    showLandslideForecast,
+                                    showLandslideForecastLegend,
+                                    onToggleLandslideForecastLegend,
                                     showSaturationLegend,
                                     onToggleSaturationLegend,
                                     showSusceptibilityLegend,
@@ -82,12 +85,10 @@ export default function MapMenu({
                         Precipitation Layer
                     </label>
 
-                    {}
                     <label>
                         <input type="checkbox" checked={showForecast} onChange={onToggleForecast} />
-                        Weather Forecast
+                        Weather Radar
                     </label>
-                    {}
 
                     <label>
                         <input type="checkbox" checked={showSusceptibility} onChange={onToggleSusceptibility} />
@@ -118,10 +119,26 @@ export default function MapMenu({
                         Precipitation (Last 12hr)
                     </label>
 
+                    <label>
+                        <input
+                            type="checkbox"
+                            checked={showLandslideForecast}
+                            onChange={onToggleLandslideForecast}
+                        />
+                        Landslide Forecast Probability
+                    </label>
+
                     <div className="filter-title" style={{ marginTop: "15px" }}>
                         Legends
                     </div>
-
+                    <label>
+                        <input
+                            type="checkbox"
+                            checked={showLandslideForecastLegend}
+                            onChange={onToggleLandslideForecastLegend}
+                        />
+                        Landslide Forecast Legend
+                    </label>
                     <label>
                         <input
                             type="checkbox"

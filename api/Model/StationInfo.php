@@ -101,6 +101,74 @@ class StationInfo {
         return $stmt->execute();
     }
 
+    public function getStationHistoryFileData($fileName) {
+        $ftp_server = $_ENV['FTPS_SERVER'];
+        $ftp_user   = $_ENV['FTPS_USER'];
+        $ftp_pass   = $_ENV['FTPS_PASS'];
+        $ftp_port   = $_ENV['FTPS_PORT'];
+
+        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
+        $remote_file_path = rtrim($base_remote_path, '/') . '/' . ltrim($fileName, '/');
+        $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
+        if (!$conn_id) throw new Exception("Failed to connect to FTPS server: $ftp_server");
+
+        if (!@ftp_login($conn_id, $ftp_user, $ftp_pass)) {
+            ftp_close($conn_id);
+            throw new Exception("FTPS login failed for user: $ftp_user");
+        }
+
+        ftp_pasv($conn_id, true);
+
+        // Download to temporary file
+        $tmpFile = tmpfile();
+        $meta = stream_get_meta_data($tmpFile);
+        $tmpFilePath = $meta['uri'];
+
+        if (!ftp_fget($conn_id, $tmpFile, $remote_file_path, FTP_ASCII)) {
+            fclose($tmpFile);
+            ftp_close($conn_id);
+            throw new Exception("Unable to download file: $remote_file_path via FTPS");
+        }
+
+        rewind($tmpFile);
+
+        $headers = fgetcsv($tmpFile, 0, ',', '"', '\\');
+        if (!$headers) {
+            fclose($tmpFile);
+            ftp_close($conn_id);
+            throw new Exception("Invalid or missing headers in file: $remote_file_path");
+        }
+
+        $trimmedHeaders = array_map('trim', $headers);
+
+        if (end($trimmedHeaders) === '') {
+            array_pop($trimmedHeaders);
+        }
+        $headerCount = count($trimmedHeaders);
+
+
+        $data = [];
+        while (($row = fgetcsv($tmpFile, 0, ',', '"', '\\')) !== false) {
+            if (!$row) continue;
+
+            $rowCount = count($row);
+
+            if ($rowCount < $headerCount) continue;
+
+            if ($rowCount > $headerCount) {
+                $row = array_slice($row, 0, $headerCount);
+            }
+
+            $data[] = array_combine($trimmedHeaders, $row);
+        }
+
+        fclose($tmpFile);
+        ftp_close($conn_id);
+
+        return $data;
+    }
+
+
     public function getStationFileData($fileName) {
         $ftp_server = $_ENV['FTPS_SERVER'];
         $ftp_user   = $_ENV['FTPS_USER'];
@@ -119,9 +187,6 @@ class StationInfo {
 
         ftp_pasv($conn_id, true);
 
-//        $files = ftp_nlist($conn_id, $base_remote_path);
-
-        // Download to temporary file
         $tmpFile = tmpfile();
         $meta = stream_get_meta_data($tmpFile);
         $tmpFilePath = $meta['uri'];
@@ -134,10 +199,8 @@ class StationInfo {
 
         rewind($tmpFile);
 
-        // Skip first metadata line
         fgetcsv($tmpFile, 0, ',', '"', '\\');
 
-        // Header line (column names)
         $headers = fgetcsv($tmpFile, 0, ',', '"', '\\');
         if (!$headers) {
             fclose($tmpFile);
@@ -145,14 +208,16 @@ class StationInfo {
             throw new Exception("Invalid or missing headers in .dat file: $remote_file_path");
         }
 
-        // Skip the next 2 lines (technical row + units)
+        $trimmedHeaders = array_map('trim', $headers);
+        $headerCount = count($trimmedHeaders);
+
         fgetcsv($tmpFile, 0, ',', '"', '\\');
         fgetcsv($tmpFile, 0, ',', '"', '\\');
 
         $data = [];
         while (($row = fgetcsv($tmpFile, 0, ',', '"', '\\')) !== false) {
-            if (!$row || count($row) !== count($headers)) continue;
-            $data[] = array_combine($headers, $row);
+            if (!$row || count($row) !== $headerCount) continue;
+            $data[] = array_combine($trimmedHeaders, $row);
         }
 
         fclose($tmpFile);
@@ -161,80 +226,103 @@ class StationInfo {
         return $data;
     }
 
-    // PROCESS FILE AND UPDATE STATION INFO
-    public function processStationFileAndUpdate($stationId) {
+    public function getStationWcHistoryData($stationId) {
         $stationInfo = $this->getStationInfoById($stationId);
         if (!$stationInfo) {
-            echo "[ERROR] Station ID $stationId not found.\n";
-            return false;
+            throw new Exception("Station ID $stationId not found.");
         }
 
-        // Get file name from station info
-        if (empty($stationInfo['ftp_file_path'])) {
-            echo "[ERROR] No file_name found for station ID $stationId.\n";
-            return false;
+        if (empty($stationInfo['history_data_url'])) {
+            throw new Exception("No ftp_file_path found for station ID $stationId.");
         }
-        $fileName = $stationInfo['ftp_file_path'];
+        $fileName = $stationInfo['history_data_url'];
 
-        // Load data from FTPS file
-        $dataRows = $this->getStationFileData($fileName);
+        $dataRows = $this->getStationHistoryFileData($fileName);
         if (empty($dataRows)) {
-            echo "[WARN] No data loaded from file: $fileName\n";
-            return false;
+            return [];
         }
 
-        // 12-hour rain total
-        $last12Rows = array_slice($dataRows, -12);
-        $rainValues = array_map(fn($row) => isset($row['Rain_mm_Tot']) ? (float)$row['Rain_mm_Tot'] : 0.0, $last12Rows);
-        $totalRain = array_sum($rainValues);
+        $wcColumns = [];
+        $timestampColumn = null;
 
-        $lastRow = end($dataRows);
-        $wcValues = [];
+        if (!empty($dataRows)) {
+            $headers = array_keys(reset($dataRows));
 
-        foreach ($lastRow as $col => $value) {
-            $normalizedCol = strtolower(trim($col));
-            if (str_starts_with($normalizedCol, 'wc')) {
-                $baseKey = explode('_', $normalizedCol)[0];
-                $wcValues[$baseKey] = (float)$value;
+            foreach ($headers as $header) {
+                $normalizedHeader = strtolower($header);
+
+                if (str_contains($normalizedHeader, 'timestamp') || str_contains($normalizedHeader, 'timestmp')) {
+                    $timestampColumn = $header;
+                }
+
+                if (preg_match('/^wc[1-4]_/', $normalizedHeader)) {
+                    $baseWcKey = substr($normalizedHeader, 0, 3);
+                    if (!isset($wcColumns[$baseWcKey])) {
+                        $wcColumns[$baseWcKey] = $header;
+                    }
+                }
             }
         }
 
-        $wcMaxValues = [
-            'wc1' => (float)$stationInfo['wc1'],
-            'wc2' => (float)$stationInfo['wc2'],
-            'wc3' => (float)$stationInfo['wc3'],
-            'wc4' => (float)$stationInfo['wc4']
-        ];
+        if (!$timestampColumn || count($wcColumns) < 4) {
+            $missingWc = [];
+            for ($i = 1; $i <= 4; $i++) {
+                if (!isset($wcColumns["wc$i"])) {
+                    $missingWc[] = "wc$i";
+                }
+            }
+            $errorDetail = (!$timestampColumn ? "Timestamp column missing. " : "") .
+                (count($missingWc) > 0 ? "Missing WC columns: " . implode(', ', $missingWc) : "");
 
-        $avgVWC = null;
-        if ($wcMaxValues && count($wcMaxValues) === count($wcValues)) {
-            $vwcRatios = [];
-            foreach ($wcValues as $i => $wc) $vwcRatios[] = $wc / $wcMaxValues[$i];
-            $avgVWC = array_sum($vwcRatios) / count($vwcRatios) * 100;
-        } else {
-            echo "[WARN] WC max values missing or mismatch for station ID: $stationId\n";
+            throw new Exception("Required columns not found in file: $fileName. Details: " . $errorDetail);
         }
 
-        $updateData = [
-            'admin_id'        => $stationInfo['admin_id'],
-            'soil_saturation' => $avgVWC !== null ? number_format($avgVWC, 0) : null,
-            'precipitation'   => number_format($totalRain, 2),
-            'sensor_image_url'=> $stationInfo['sensor_image_url'],
-            'data_image_url'  => $stationInfo['data_image_url'],
-            'city'            => $stationInfo['city'],
-            'is_available'    => true,
-            'last_updated'    => date('Y-m-d H:i:s'),
-            'latitude'        => $stationInfo['latitude'],
-            'longitude'       => $stationInfo['longitude'],
-            'wc1'         => $stationInfo['wc1'],
-            'wc2'         => $stationInfo['wc2'],
-            'wc3'         => $stationInfo['wc3'],
-            'wc4'         => $stationInfo['wc4'],
-        ];
+        $dailyData = [];
+        $dateFormat = 'Y-m-d';
 
-        $result = $this->updateStationInfo($stationId, $updateData);
+        foreach ($dataRows as $row) {
+            $timestamp = $row[$timestampColumn] ?? null;
 
-        return $result;
+            if (!$timestamp) continue;
+
+            try {
+                $date = date($dateFormat, strtotime($timestamp));
+            } catch (\Throwable $e) {
+                error_log("Invalid timestamp format: $timestamp");
+                continue;
+            }
+
+            if (!isset($dailyData[$date])) {
+                $dailyData[$date] = [
+                    'count' => 0,
+                    'total_wc1' => 0.0,
+                    'total_wc2' => 0.0,
+                    'total_wc3' => 0.0,
+                    'total_wc4' => 0.0,
+                ];
+            }
+
+            $dailyData[$date]['count']++;
+            $dailyData[$date]['total_wc1'] += (float)($row[$wcColumns['wc1']] ?? 0.0);
+            $dailyData[$date]['total_wc2'] += (float)($row[$wcColumns['wc2']] ?? 0.0);
+            $dailyData[$date]['total_wc3'] += (float)($row[$wcColumns['wc3']] ?? 0.0);
+            $dailyData[$date]['total_wc4'] += (float)($row[$wcColumns['wc4']] ?? 0.0);
+        }
+
+        $history = [];
+        foreach ($dailyData as $date => $data) {
+            if ($data['count'] > 0) {
+                $history[] = [
+                    'timestamp' => $date,
+                    'wc1'       => round($data['total_wc1'] / $data['count'], 2),
+                    'wc2'       => round($data['total_wc2'] / $data['count'], 2),
+                    'wc3'       => round($data['total_wc3'] / $data['count'], 2),
+                    'wc4'       => round($data['total_wc4'] / $data['count'], 2),
+                ];
+            }
+        }
+
+        return $history;
     }
 
     public function getStationImageContent($fileName) {
@@ -274,3 +362,39 @@ class StationInfo {
     }
 }
 
+    public function getStationImageContent($fileName) {
+        $ftp_server = $_ENV['FTPS_SERVER'];
+        $ftp_user   = $_ENV['FTPS_USER'];
+        $ftp_pass   = $_ENV['FTPS_PASS'];
+        $ftp_port   = $_ENV['FTPS_PORT'];
+        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
+
+        $remote_file_path = rtrim($base_remote_path, '/') . '/' . ltrim($fileName, '/');
+
+        $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
+        if (!$conn_id) throw new \Exception("Failed to connect to FTPS server");
+
+        if (!@ftp_login($conn_id, $ftp_user, $ftp_pass)) {
+            ftp_close($conn_id);
+            throw new \Exception("FTPS login failed");
+        }
+
+        ftp_pasv($conn_id, true);
+
+        $tmpFile = tmpfile();
+
+        if (!ftp_fget($conn_id, $tmpFile, $remote_file_path, FTP_BINARY)) {
+            fclose($tmpFile);
+            ftp_close($conn_id);
+            throw new \Exception("Unable to download image: $remote_file_path");
+        }
+
+        rewind($tmpFile);
+        $content = stream_get_contents($tmpFile);
+
+        fclose($tmpFile);
+        ftp_close($conn_id);
+
+        return $content;
+    }
+}

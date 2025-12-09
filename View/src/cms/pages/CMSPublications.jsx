@@ -188,8 +188,8 @@ function PublicationForm({ publication, onClose, refreshPublications }) {
 
     const method = isEdit ? "PUT" : "POST";
     const url = isEdit
-      ? `http://localhost:8080/api/publications/${publication.publication_id}`
-      : "http://localhost:8080/api/publications";
+      ? `https://derrumbe-test.derrumbe.net/api/publications/${publication.publication_id}`
+      : "https://derrumbe-test.derrumbe.net/api/publications";
 
     const bodyData = {
       ...formData,

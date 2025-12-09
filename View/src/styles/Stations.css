@@ -1,0 +1,184 @@
+/* Apply the font globally to this component */
+.stations-container {
+    font-family: 'Inter', sans-serif;
+    background-color: #DFE8DA; /* Matches landing__map background */
+    min-height: 100vh;
+    padding: 3rem 2rem; /* Matches landing section padding */
+    color: #000;
+    box-sizing: border-box;
+}
+
+/* Title Styling - Matches your bold section headers */
+.stations-container h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    color: #000;
+    margin-top: 0;
+}
+
+/* Description Styling - Matches landing__map-text p */
+.stations-container p {
+    font-weight: 300;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    max-width: 800px;
+}
+
+/* Grid Layout */
+.stations-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem; /* Matches gap in landing__map */
+    height: 55vh; /* Fixed height for dashboard feel */
+    min-height: 450px;
+}
+
+/* Common Card Styling for Columns */
+/* Similar to directory__card but for full panels */
+.map-column,
+.chart-column {
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Matches directory__card shadow */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Ensures corners stay rounded */
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* Control Bars (Top of Map/Chart) */
+.map-controls,
+.chart-controls {
+    background-color: #A4BC9B; /* Matches landing__report background */
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 2px solid #3B7D23; /* Matches button/accent color */
+}
+
+.map-controls label,
+.chart-controls label {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+/* Styled Select Inputs */
+/* mimicking the btn--black and btn--contact aesthetic */
+select {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    border: 1px solid #000;
+    background-color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+select:hover {
+    border-color: #3B7D23;
+    color: #3B7D23;
+}
+
+select:focus {
+    outline: none;
+    border-color: #3B7D23;
+    box-shadow: 0 0 0 2px rgba(59, 125, 35, 0.2);
+}
+
+/* Map Wrapper */
+.stations-map-wrapper {
+    flex-grow: 1;
+    position: relative;
+    height: 100%; /* Important */
+    min-height: 0; /* Allows flex child to shrink properly */
+}
+
+/* Chart Information Text */
+.chart-controls span {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #000;
+}
+
+/* --- START: Marker Styles for Saturation and Precipitation --- */
+
+/* Base style for the Saturation marker */
+.saturation-marker {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 55px;
+    height: 30px;
+    border-radius: 0;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+    line-height: 1;
+    text-align: center;
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    background-color: #888; /* Fallback/Default color */
+}
+
+/* Color classes based on saturation ranges (low: 0-80%) */
+.saturation-marker.low {
+    background-color: rgb(175, 152, 0, 0.9);
+}
+
+/* Color classes based on saturation ranges (medium: 80-90%) */
+.saturation-marker.medium {
+    background-color: rgba(0, 179, 255, 0.9);
+}
+
+/* Color classes based on saturation ranges (high: 90-100%) */
+.saturation-marker.high {
+    background-color: rgb(0, 28, 104, 0.9);
+}
+
+/* Style for the Precipitation marker */
+.precip-marker {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 55px;
+    height: 30px;
+    border-radius: 0;
+    color: white; /* Text color is set to white */
+    font-weight: bold;
+    font-size: 14px;
+    line-height: 1;
+    text-align: center;
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    /* Background color is set dynamically via inline style in JS */
+}
+
+/* --- END: Marker Styles --- */
+
+
+/* Responsive Design */
+@media (max-width: 900px) {
+    .stations-container {
+        padding: 1.5rem 1rem;
+    }
+
+    .stations-layout {
+        grid-template-columns: 1fr;
+        height: 500px;
+        gap: 2rem;
+    }
+
+    /* Define height for mobile map so it doesn't collapse */
+    .stations-map-wrapper {
+        height: 400px;
+    }
+
+    .chart-column {
+        min-height: 100%;
+    }
+}

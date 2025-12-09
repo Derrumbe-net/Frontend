@@ -193,8 +193,8 @@ function ProjectForm({ project, onClose, refreshProjects }) {
 
     const method = isEdit ? "PUT" : "POST";
     const url = isEdit
-      ? `http://localhost:8080/api/projects/${project.project_id}`  // CHANGE 
-      : "http://localhost:8080/api/projects";                       // CHANGE 
+      ? `https://derrumbe-test.derrumbe.net/api/projects/${project.project_id}`  // CHANGE
+      : "https://derrumbe-test.derrumbe.net/api/projects";                       // CHANGE
 
     try {
       const response = await fetch(url, {
