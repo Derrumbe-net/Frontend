@@ -22,6 +22,7 @@ return function (App $app, $db) {
         $group->get('/{id}', [$adminController, 'getAdmin']);
         $group->put('/{id}/email', [$adminController, 'updateEmail']);
         $group->put('/{id}/password', [$adminController, 'updatePassword']);
+        $group->put('/{id}/isAuthorized', [$adminController, 'updateAuthorization']);
         $group->delete('/{id}', [$adminController, 'deleteAdmin']);
     })->add($jwtMiddleware);
 };

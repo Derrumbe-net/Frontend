@@ -8,7 +8,7 @@ export default function Sidebar() {
 
   const handleLogout = () => {
     localStorage.removeItem("cmsAdmin");
-    navigate("/");
+    navigate("/cms/login/");
   };
 
   return (
@@ -67,6 +67,14 @@ export default function Sidebar() {
           }
         >
           Estaciones
+        </NavLink>
+        <NavLink
+          to="/cms/usuarios"
+          className={({ isActive }) =>
+            `cms-link ${isActive ? "cms-link--active" : ""}`
+          }
+        >
+          Usuarios
         </NavLink>
       </nav>
 

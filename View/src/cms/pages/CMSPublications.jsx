@@ -20,7 +20,9 @@ export default function CMSPublicaciones() {
 
   const fetchPublications = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/publications");
+      // const response = await fetch("http://localhost:8080/api/publications");
+      const response = await fetch("https://derrumbe-test.derrumbe.net/api/publications");
+
       const data = await response.json();
       setPublications(data);
     } catch (error) {
@@ -186,8 +188,8 @@ function PublicationForm({ publication, onClose, refreshPublications }) {
 
     const method = isEdit ? "PUT" : "POST";
     const url = isEdit
-      ? `http://localhost:8080/api/publications/${publication.publication_id}`
-      : "http://localhost:8080/api/publications";
+      ? `https://derrumbe-test.derrumbe.net/api/publications/${publication.publication_id}`
+      : "https://derrumbe-test.derrumbe.net/api/publications";
 
     const bodyData = {
       ...formData,

@@ -21,7 +21,9 @@ export default function CMSProjects() {
 
   const fetchProjects = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/projects"); // CHANGE
+      // const response = await fetch("http://localhost:8080/api/projects");
+      const response = await fetch("https://derrumbe-test.derrumbe.net/api/projects");
+
       const data = await response.json();
       setProjects(data);
     } catch (error) {
@@ -32,7 +34,6 @@ export default function CMSProjects() {
   const handleOpenForm = (project = null) => {
     setEditProject(project);
     setShowForm(true);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   };
 
   const handleCloseForm = () => {
@@ -192,8 +193,8 @@ function ProjectForm({ project, onClose, refreshProjects }) {
 
     const method = isEdit ? "PUT" : "POST";
     const url = isEdit
-      ? `http://localhost:8080/api/projects/${project.project_id}`  // CHANGE 
-      : "http://localhost:8080/api/projects";                       // CHANGE 
+      ? `https://derrumbe-test.derrumbe.net/api/projects/${project.project_id}`  // CHANGE
+      : "https://derrumbe-test.derrumbe.net/api/projects";                       // CHANGE
 
     try {
       const response = await fetch(url, {

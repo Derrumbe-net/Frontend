@@ -11,6 +11,8 @@ import Graphic from "@arcgis/core/Graphic";
 import Point from "@arcgis/core/geometry/Point";
 import CoordinateConversion from "@arcgis/core/widgets/CoordinateConversion";
 
+const BASE_REPORT_URL = "https://derrumbe-test.derrumbe.net/api/reports"
+// const BASE_REPORT_URL = "http://localhost:8080/api/reports"
 
 function Report() {
   const [form, setForm] = useState({
@@ -24,6 +26,7 @@ function Report() {
     allowLocation: false,
   });
 
+  const [message, setMessage] = useState(null);
   const [files, setFiles] = useState([]);
   const [coords, setCoords] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -192,28 +195,79 @@ function Report() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    setMessage(null); 
+
+    const errors = [];
+    if (!form.pueblo) errors.push("Pueblo");
+    if (!form.date) errors.push("Fecha");
+    if (!form.description) errors.push("Descripción Breve");
+    if (!coords) errors.push("Ubicación (Coordenadas)");
+
+    if (errors.length > 0) {
+      setMessage({ 
+        type: 'error', 
+        text: `Faltan campos requeridos: ${errors.join(", ")}` 
+      });
+      window.scrollTo(0, 0); // Scroll up so user sees the error
+      return;
+    }
+    
     setSubmitting(true);
 
-    // Build payload (ready for backend)
-    const payload = {
-      ...form,
-      coordinates: coords,
-      files: files.map((f) => ({
-        name: f.name,
-        type: f.type,
-        size: f.size,
-      })),
-      submittedAt: new Date().toISOString(),
+    const dbPayload = {
+      city: form.pueblo,                  
+      latitude: coords.lat,             
+      longitude: coords.lng,          
+      reported_at: form.date, 
+      description: form.description,     
+
+      physical_address: form.carretera || "",
+      reporter_name: form.name || "Anonymous",
+      reporter_phone: form.phone || "",
+      reporter_email: form.email || "",
+      
+      // Note: Handling real file uploads requires FormData. 
+      // For now, we are just sending the name of the first file as a string.
+      image_url: files.length > 0 ? files[0].name : "" 
     };
 
-    // TODO: replace with real POST
+    try {
+        const response = await fetch(BASE_REPORT_URL, { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dbPayload),
+        });
 
-    console.log("Report payload (preview):", payload);
-    alert("¡Reporte preparado! (Actualmente en modo demo)");
-    setSubmitting(false);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || `Error ${response.status}`);
+        }
+
+        // Success!
+        setMessage({ type: 'success', text: "¡Reporte enviado exitosamente!" });
+        
+        // Reset Form
+        setForm({
+            name: "", phone: "", email: "", date: "", description: "",
+            pueblo: "", carretera: "", allowLocation: false,
+        });
+        setFiles([]);
+        setCoords(null);
+        setShowMap(false);
+
+    } catch (error) {
+        console.error("Error submitting:", error);
+        setMessage({ type: 'error', text: `Error al enviar: ${error.message}` });
+    } finally {
+        setSubmitting(false);
+    }
   };
 
   return (
+    
     <div className="report-page">
       <div className="report-hero">
         <img src={officeLogo} alt="PRLHMO" className="report-hero__logo" />
@@ -233,6 +287,18 @@ function Report() {
       <hr className="report-divider" />
 
       <form className="report-form" onSubmit={onSubmit}>
+      {message && (
+      <div style={{
+      padding: "1rem",
+      marginBottom: "1rem",
+      borderRadius: "5px",
+      backgroundColor: message.type === 'error' ? "#f8d7da" : "#d4edda",
+      color: message.type === 'error' ? "#721c24" : "#155724",
+      border: `1px solid ${message.type === 'error' ? "#f5c6cb" : "#c3e6cb"}`
+      }}>
+      {message.text}
+      </div>
+      )}
         <div className="form-row">
           <label htmlFor="name">Nombre Completo:</label>
           <input id="name" name="name" type="text" placeholder="Opcional" value={form.name} onChange={onChange} />
