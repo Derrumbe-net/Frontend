@@ -5,12 +5,17 @@ namespace DerrumbeNet\Controller;
 use DerrumbeNet\Model\Admin;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+use DerrumbeNet\Helpers\EmailService;
 
 class AdminController {
     private Admin $adminModel;
+    private EmailService $emailService;
 
     public function __construct($db) {
         $this->adminModel = new Admin($db);
+        $this->emailService = new EmailService();
     }
 
     private function jsonResponse($response, $data, $status = 200) {
@@ -33,6 +38,7 @@ class AdminController {
 
         $newId = $this->adminModel->createAdmin($email, $password);
         if ($newId) {
+
             return $this->jsonResponse($response, ['message' => 'Admin created', 'id' => $newId], 201);
         }
 
@@ -162,6 +168,21 @@ class AdminController {
 
         $newId = $this->adminModel->createAdmin($email, $password);
         if ($newId) {
+            try {
+                // Load and send email
+                $body = $this->emailService->renderTemplate('new_admin', [
+                    'email' => $email
+                ]);
+
+                $this->emailService->sendEmail(
+                    $_ENV['SUPERADMIN_EMAIL'],
+                    "New Admin Signup Request",
+                    $body
+                );
+            } catch (\Exception $e) {
+                error_log("Email error: " . $e->getMessage());
+            }
+
             return $this->jsonResponse($response, ['message' => 'Admin created', 'id' => $newId], 201);
         }
 
