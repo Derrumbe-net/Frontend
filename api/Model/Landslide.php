@@ -11,26 +11,28 @@ class Landslide {
     public function __construct($conn) { $this->conn = $conn; }
 
     // CREATE LANDSLIDE
-    public function createLandslide($data) {
-        try {
-            $stmt = $this->conn->prepare(
-                "INSERT INTO landslide (admin_id, landslide_date, latitude, longitude) 
-                 VALUES (:admin_id, :landslide_date, :latitude, :longitude)"
-            );
+public function createLandslide($data) {
+    try {
+        $stmt = $this->conn->prepare(
+            "INSERT INTO landslide (admin_id, landslide_date, latitude, longitude, image_url) 
+             VALUES (:admin_id, :landslide_date, :latitude, :longitude, :image_url)"
+        );
 
-            $stmt->bindParam(':admin_id', $data['admin_id'], PDO::PARAM_INT);
-            $stmt->bindParam(':landslide_date', $data['landslide_date'], PDO::PARAM_STR);
-            $stmt->bindParam(':latitude', $data['latitude'], PDO::PARAM_STR);
-            $stmt->bindParam(':longitude', $data['longitude'], PDO::PARAM_STR);
+        $stmt->bindParam(':admin_id', $data['admin_id'], PDO::PARAM_INT);
+        $stmt->bindParam(':landslide_date', $data['landslide_date'], PDO::PARAM_STR);
+        $stmt->bindParam(':latitude', $data['latitude'], PDO::PARAM_STR);
+        $stmt->bindParam(':longitude', $data['longitude'], PDO::PARAM_STR);
+        
+        // Added the binding for image_url
+        $stmt->bindParam(':image_url', $data['image_url'], PDO::PARAM_STR);
 
-            if ($stmt->execute()) {
-                return $this->conn->lastInsertId();
-            }
-            return false;
+        if ($stmt->execute()) {
+            return $this->conn->lastInsertId();
+        }
+        return false;
 
-        } catch(PDOException $e){ error_log($e->getMessage()); return false; }
-    }
-    
+    } catch(PDOException $e){ error_log($e->getMessage()); return false; }
+}
     // GET LANSLIDE BY ID
     public function getLandslideById($id) {
         $stmt = $this->conn->prepare("SELECT * FROM landslide WHERE landslide_id = :id");

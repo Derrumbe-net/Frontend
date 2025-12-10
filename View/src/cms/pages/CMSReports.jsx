@@ -282,6 +282,13 @@ function ReportForm({ report, onClose, refreshReports }) {
         const missing = [];
         if (!formData.reported_at) missing.push("Fecha");
         if (!formData.city) missing.push("Pueblo");
+
+        // Safety check for validation
+        if (formData.is_validated === 1) {
+            if (!formData.latitude) missing.push("Latitud");
+            if (!formData.longitude) missing.push("Longitud");
+        }
+
         if (missing.length > 0) {
             Swal.fire("Campos faltantes", `Complete: ${missing.join(", ")}`, "warning");
             return false;
@@ -306,17 +313,78 @@ function ReportForm({ report, onClose, refreshReports }) {
 
         try {
             const token = localStorage.getItem("cmsAdmin");
-            if(!token) { Swal.fire("Error", "Sesión expirada", "error"); return; }
+            if (!token) { Swal.fire("Error", "Sesión expirada", "error"); return; }
 
-            await fetch(`${API_URL}/reports/${report.report_id}`, {
+            let adminId = 1; // Default
+            try {
+                // Decode the payload part of the JWT 
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                // Checks for 'data.id' (based on your PHP middleware) or standard 'sub'/'id'
+                adminId = payload.data?.id || payload.id || payload.sub || 1;
+            } catch (err) {
+                console.warn("Could not parse Admin ID from token, defaulting to 1");
+            }
+
+            // Determine Folder Name (Existing or Generated)
+            let sharedFolder = report.image_url;
+            if (!sharedFolder && formData.reported_at) {
+                const datePart = formData.reported_at.slice(0, 10);
+                sharedFolder = `${datePart}_${report.report_id}`;
+            }
+
+            // Determine if we are promoting to Validated
+            let finalLandslideId = report.landslide_id; 
+            const isValidating = report.is_validated === 0 && formData.is_validated === 1;
+
+            if (isValidating) {
+                // Create Landslide Record First
+                const landslidePayload = {
+                    admin_id: adminId, // Uses the decoded ID
+                    landslide_date: formData.reported_at,
+                    latitude: formData.latitude,
+                    longitude: formData.longitude,
+                    image_url: sharedFolder // Explicitly send folder name
+                };
+
+                const lsRes = await fetch(`${API_URL}/landslides`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify(landslidePayload)
+                });
+
+                if (!lsRes.ok) {
+                    const errData = await lsRes.json();
+                    throw new Error("Error creando deslizamiento: " + (errData.error || "Datos inválidos (Fecha/Lat/Long)"));
+                }
+
+                const lsData = await lsRes.json();
+                finalLandslideId = lsData.id || lsData.landslide_id; 
+            }
+
+            // 4. Update Report with new Data AND Link the Landslide ID
+            const reportPayload = {
+                ...formData,
+                landslide_id: finalLandslideId,
+                image_url: sharedFolder // Ensure report gets the folder name too
+            };
+
+            const repRes = await fetch(`${API_URL}/reports/${report.report_id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(reportPayload)
             });
 
+            if (!repRes.ok) {
+                throw new Error("Error actualizando el reporte.");
+            }
+
+            // Upload any NEW images
             if (newFiles.length > 0) {
                 for (const file of newFiles) {
                     const uploadForm = new FormData();
@@ -335,7 +403,7 @@ function ReportForm({ report, onClose, refreshReports }) {
 
         } catch (error) {
             console.error(error);
-            Swal.fire("Error", "No se pudo actualizar el reporte.", "error");
+            Swal.fire("Error", error.message, "error");
         }
     };
 
