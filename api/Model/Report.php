@@ -223,4 +223,36 @@ class Report {
             ftp_close($conn_id);
         }
     }
+
+    public function deleteImageFile($folderName, $fileName) {
+        $conn_id = $this->getFtpConnection();
+
+        try {
+            $base = $_ENV['FTPS_BASE_PATH_REPORTS'] ?? 'files/landslides/';
+            $basePath = rtrim($base, '/') . '/';
+
+            // Full path to the specific file
+            $fullPath = $basePath . $folderName . '/' . $fileName;
+
+            // Attempt deletion
+            if (@ftp_delete($conn_id, $fullPath)) {
+                return true;
+            }
+
+            // Optional: Check if we need to navigate first (some servers are strict)
+            if (@ftp_chdir($conn_id, $basePath . $folderName)) {
+                if (@ftp_delete($conn_id, $fileName)) {
+                    return true;
+                }
+            }
+
+            return false;
+
+        } catch (\Exception $e) {
+            error_log("FTP Delete Error: " . $e->getMessage());
+            return false;
+        } finally {
+            if ($conn_id) ftp_close($conn_id);
+        }
+    }
 }
