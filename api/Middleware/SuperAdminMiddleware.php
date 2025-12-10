@@ -20,7 +20,7 @@ class SuperAdminMiddleware implements MiddlewareInterface {
         if (!$user || !isset($user['email']) || $user['email'] !== $this->superAdminEmail) {
             $response = new SlimResponse();
             $response->getBody()->write(json_encode([
-                'error' => 'Permiso denegado: Solo el Super Admin puede realizar esta acción.'
+                'error' => 'Permission denied: Only Super Admin can do this action'
             ]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(403);
         }
