@@ -50,6 +50,28 @@ class ReportController {
             'target_folder' => $folderName
         ], 201);
     }
+
+    public function updateReport(Request $request, Response $response, $args){
+        $id = $args['id'];
+        $data = $request->getParsedBody();
+
+        if (!$data) {
+            return $this->jsonResponse($response, ['error' => 'No data provided'], 400);
+        }
+
+        // Default values if frontend didn’t send them
+        $data['is_validated'] = isset($data['is_validated']) ? (int)$data['is_validated'] : 0;
+        $data['internal_notes'] = $data['internal_notes'] ?? null;
+
+        $updated = $this->reportModel->updateReport($id, $data);
+
+        if ($updated) {
+            return $this->jsonResponse($response, ['message' => 'Report updated']);
+        }
+
+        return $this->jsonResponse($response, ['error' => 'Failed to update report'], 500);
+    }
+
     public function uploadReportImage(Request $request, Response $response, $args)
     {
         $reportId = $args['id'];
@@ -105,5 +127,17 @@ class ReportController {
     public function getAllReports(Request $request, Response $response){
         return $this->jsonResponse($response, $this->reportModel->getAllReports());
     }
+
+    public function getReport(Request $request, Response $response, $args){
+        $id = $args['id'];
+        $report = $this->reportModel->getReportById($id);
+
+        if (!$report) {
+            return $this->jsonResponse($response, ['error' => 'Report not found'], 404);
+        }
+
+        return $this->jsonResponse($response, $report);
+    }
+
     // (Add updateReport/deleteReport/getReport as needed)
 }

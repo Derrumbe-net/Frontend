@@ -422,9 +422,9 @@ class StationInfo
     public function getStationImageContent($fileName)
     {
         $ftp_server = $_ENV['FTPS_SERVER'];
-        $ftp_user = $_ENV['FTPS_USER'];
-        $ftp_pass = $_ENV['FTPS_PASS'];
-        $ftp_port = $_ENV['FTPS_PORT'];
+        $ftp_user   = $_ENV['FTPS_USER'];
+        $ftp_pass   = $_ENV['FTPS_PASS'];
+        $ftp_port   = $_ENV['FTPS_PORT'];
         $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
 
         // This joins base path (files/) with the DB value (stations/filename.jpg)
