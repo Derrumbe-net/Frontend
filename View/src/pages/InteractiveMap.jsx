@@ -9,6 +9,7 @@ import LandslidePopup from '../components/LandslidePopup';
 import GreenPinIcon from '../assets/green-location-pin.png';
 import L from 'leaflet';
 import MapMenu from "../components/MapMenu.jsx";
+import Cookies from 'js-cookie';
 
 const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 
@@ -558,31 +559,76 @@ const PrecipLegend = () => (
 export default function InteractiveMap() {
     const center = [18.220833, -66.420149];
 
-    // UI State
-    const [showStations, setShowStations] = useState(true);
-    const [selectedYear, setSelectedYear] = useState("");
-    const [availableYears, setAvailableYears] = useState([]);
-    const [showPrecip, setShowPrecip] = useState(false);
-    const [showSusceptibility, setShowSusceptibility] = useState(false);
+    // --- COOKIE / STATE INITIALIZATION LOGIC ---
+    const COOKIE_NAME = 'landslide_map_filters';
+
+    // Helper: Safely retrieve and parse the cookie
+    const getSavedSettings = () => {
+        try {
+            const saved = Cookies.get(COOKIE_NAME);
+            return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+            console.warn("Failed to parse map settings cookie", e);
+            return {};
+        }
+    };
+
+    const savedSettings = getSavedSettings();
+
+    // UI State: Initialize with cookie value if it exists, otherwise default
+    const [showStations, setShowStations] = useState(savedSettings.showStations ?? true);
+    const [selectedYear, setSelectedYear] = useState(savedSettings.selectedYear ?? "");
+    const [availableYears, setAvailableYears] = useState([]); // Derived from API, not saved
+    const [showPrecip, setShowPrecip] = useState(savedSettings.showPrecip ?? false);
+    const [showSusceptibility, setShowSusceptibility] = useState(savedSettings.showSusceptibility ?? false);
 
     // Toggle State for Station Visualization Layers
-    const [showSaturation, setShowSaturation] = useState(false);
-    const [showPrecip12hr, setShowPrecip12hr] = useState(false);
-    const [showLandslideForecast, setShowLandslideForecast] = useState(false);
+    const [showSaturation, setShowSaturation] = useState(savedSettings.showSaturation ?? false);
+    const [showPrecip12hr, setShowPrecip12hr] = useState(savedSettings.showPrecip12hr ?? false);
+    const [showLandslideForecast, setShowLandslideForecast] = useState(savedSettings.showLandslideForecast ?? false);
 
     // Legend State
-    const [showSaturationLegend, setShowSaturationLegend] = useState(false);
-    const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
-    const [showPrecipLegend, setShowPrecipLegend] = useState(false);
-    const [showLandslideForecastLegend, setShowLandslideForecastLegend] = useState(false);
+    const [showSaturationLegend, setShowSaturationLegend] = useState(savedSettings.showSaturationLegend ?? false);
+    const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(savedSettings.showSusceptibilityLegend ?? false);
+    const [showPrecipLegend, setShowPrecipLegend] = useState(savedSettings.showPrecipLegend ?? false);
+    const [showLandslideForecastLegend, setShowLandslideForecastLegend] = useState(savedSettings.showLandslideForecastLegend ?? false);
+    
+    // --- RADAR / TIME LOGIC ---
+    const [showForecast, setShowForecast] = useState(savedSettings.showForecast ?? false);
 
     // Disclaimer State
     const [showDisclaimer, setShowDisclaimer] = useState(
         localStorage.getItem('disclaimerAccepted') !== 'true'
     );
+    
+    // --- EFFECT: PERSIST SETTINGS TO COOKIE ---
+    useEffect(() => {
+        const settingsToSave = {
+            showStations,
+            selectedYear,
+            showPrecip,
+            showSusceptibility,
+            showSaturation,
+            showPrecip12hr,
+            showLandslideForecast,
+            showSaturationLegend,
+            showSusceptibilityLegend,
+            showPrecipLegend,
+            showLandslideForecastLegend,
+            showForecast
+        };
 
-    // --- RADAR / TIME LOGIC ---
-    const [showForecast, setShowForecast] = useState(false);
+        // Save cookie with 30-day expiration
+        Cookies.set(COOKIE_NAME, JSON.stringify(settingsToSave), { expires: 30 });
+    }, [
+        showStations, selectedYear, showPrecip, showSusceptibility, 
+        showSaturation, showPrecip12hr, showLandslideForecast,
+        showSaturationLegend, showSusceptibilityLegend, showPrecipLegend, 
+        showLandslideForecastLegend, showForecast
+    ]);
+
+
+    // --- RADAR TIME VARIABLES ---
     const now = new Date();
     const coeff = 1000 * 60 * 5;
     const roundedEnd = new Date(Math.floor(now.getTime() / coeff) * coeff).getTime();
