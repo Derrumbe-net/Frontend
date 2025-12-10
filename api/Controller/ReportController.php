@@ -3,15 +3,18 @@
 namespace DerrumbeNet\Controller;
 
 use DerrumbeNet\Model\Report;
+use DerrumbeNet\Helpers\EmailService;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\UploadedFileInterface;
 
 class ReportController {
     private Report $reportModel;
-    
-    public function __construct($db){ 
-        $this->reportModel = new Report($db); 
+    private EmailService $emailService;
+
+    public function __construct($db){
+        $this->reportModel = new Report($db);
+        $this->emailService      = new EmailService();
     }
 
     private function jsonResponse(Response $response, $data, $status = 200){
@@ -34,6 +37,36 @@ class ReportController {
             return $this->jsonResponse($response, ['error' => 'Failed to create report'], 500);
         }
 
+        try {
+            // Build email using a template (you can create report_submitted.html)
+            $body = $this->emailService->renderTemplate('report_submitted', [
+                'id'               => $reportId,
+                'reported_at'      => $data['reported_at'] ?? 'N/A',
+                'city'             => $data['city'] ?? 'N/A',
+                'latitude'         => $data['latitude'] ?? 'N/A',
+                'longitude'        => $data['longitude'] ?? 'N/A',
+                'physical_address' => $data['physical_address'] ?: 'N/A',
+                'description'      => $data['description'] ?? 'N/A',
+                'reporter_name'    => $data['reporter_name'] ?? 'N/A',
+                'reporter_phone'   => $data['reporter_phone'] ?: 'N/A',
+                'reporter_email'   => $data['reporter_email'] ?: 'N/A',
+            ]);
+
+            $this->emailService->sendEmail(
+                $_ENV['SUPERADMIN_EMAIL'],
+                "New Report Submitted (#{$reportId})",
+                $body
+            );
+
+        } catch (\Exception $e) {
+            error_log("Report email error: " . $e->getMessage());
+        }
+
+        // Generate Folder Name: {id}_{reported_at}
+        // Example: "15_2025-12-07"
+        $reportedAt = $data['reported_at'] ?? date('Y-m-d');
+        $safeDate = str_replace([':', ' '], ['-', '_'], $reportedAt);
+        $folderName = "{$reportId}_{$safeDate}";
         $rawDate = $data['reported_at'] ?? date('Y-m-d');
         
         // YYYY-MM-DD format 
