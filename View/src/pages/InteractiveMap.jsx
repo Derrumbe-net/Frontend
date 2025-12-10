@@ -9,6 +9,7 @@ import LandslidePopup from '../components/LandslidePopup';
 import GreenPinIcon from '../assets/green-location-pin.png';
 import L from 'leaflet';
 import MapMenu from "../components/MapMenu.jsx";
+import Cookies from 'js-cookie';
 
 const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 
@@ -23,11 +24,13 @@ const BASE_UPDATE_PREFIX = `${BASE_DOMAIN}/stations/files/data`;
 
 const BASE_LANDSLIDES_URL = `${BASE_DOMAIN}/landslides`;
 
+const BASE_BATCH_UPDATE_URL = `${BASE_DOMAIN}/stations/batch-update`;
+
 
 // --- CONSTANTS FOR RADAR ---
 const STEP_SIZE = 5 * 60 * 1000; // 5 minutes
 const FRAME_SPEED = 1500; // 1.5 seconds per frame
-const HISTORY_DURATION = 60 * 60 * 1000 * 4; // 4 hour history
+const HISTORY_DURATION = 60 * 60 * 1000 * 1; // 1 hour history
 
 const Disclaimer = ({ onAgree }) => {
     return (
@@ -179,14 +182,12 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
 
 const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast }) => {
     const [stations, setStations] = useState([]);
-    const [hasCheckedSync, setHasCheckedSync] = useState(false);
+    const initialSyncDone = useRef(false);
 
     const fetchStations = () => {
         fetch(BASE_STATIONS_URL)
             .then((response) => {
-                if (!response.ok) {
-                    throw new Error(`Error: ${response.status} ${response.statusText}`);
-                }
+                if (!response.ok) throw new Error(`Error: ${response.status}`);
                 return response.json();
             })
             .then((data) => setStations(data))
@@ -208,16 +209,11 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 
         const lastRow = rows[rows.length - 1];
         const wcRatios = [];
-
-        const getValue = (keyPrefix) => {
-            const key = Object.keys(lastRow).find(k => k.toLowerCase().startsWith(keyPrefix));
-            return key ? parseFloat(lastRow[key]) : null;
-        };
-
         const limits = [stationInfo.wc1, stationInfo.wc2, stationInfo.wc3, stationInfo.wc4];
 
         limits.forEach((limit, index) => {
-            const val = getValue(`wc${index + 1}`); // looks for wc1, wc2...
+            const key = Object.keys(lastRow).find(k => k.toLowerCase().startsWith(`wc${index + 1}`));
+            const val = key ? parseFloat(lastRow[key]) : null;
             const max = parseFloat(limit);
             if (!isNaN(val) && !isNaN(max) && max !== 0) {
                 wcRatios.push(val / max);
@@ -236,58 +232,76 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         };
     };
 
+    // --- HEARTBEAT LOGIC ---
     useEffect(() => {
-        if (stations.length > 0 && !hasCheckedSync) {
-            const checkDataConsistency = async () => {
-                try {
-                    const response = await fetch(BASE_FILES_DATA_URL);
-                    if (!response.ok) return;
+        if (stations.length === 0) return;
 
-                    const filesData = await response.json();
-                    const updatesNeeded = [];
+        const checkDataConsistency = async () => {
+            console.log("Heartbeat: Checking data consistency...");
+            try {
+                const response = await fetch(BASE_FILES_DATA_URL);
+                if (!response.ok) return;
 
-                    filesData.forEach(fileRecord => {
-                        const station = stations.find(s => s.station_id === fileRecord.station_id);
+                const filesData = await response.json();
+                const batchPayload = [];
 
-                        if (station && fileRecord.data) {
-                            const metrics = calculateMetricsFromRawData(fileRecord.data, station);
+                const localUpdates = {};
 
-                            if (metrics) {
-                                const dbSat = parseFloat(station.soil_saturation || 0);
-                                const dbPrecip = parseFloat(station.precipitation || 0);
+                filesData.forEach(fileRecord => {
+                    const station = stations.find(s => s.station_id === fileRecord.station_id);
 
-                                const calcSat = metrics.calculatedSaturation;
-                                const calcPrecip = metrics.calculatedPrecip;
+                    if (station && fileRecord.data) {
+                        const metrics = calculateMetricsFromRawData(fileRecord.data, station);
 
-                                const satDiff = Math.abs(dbSat - calcSat);
-                                const precipDiff = Math.abs(dbPrecip - calcPrecip);
+                        if (metrics) {
+                            batchPayload.push({
+                                station_id: station.station_id,
+                                precipitation: metrics.calculatedPrecip,
+                                soil_saturation: metrics.calculatedSaturation
+                            });
 
-                                if (satDiff > 1.0 || precipDiff > 0.05) {
-                                    console.log(`Update needed for Station ${station.station_id}. Diff - Sat: ${satDiff.toFixed(2)}, Precip: ${precipDiff.toFixed(2)}`);
-                                    updatesNeeded.push(station.station_id);
-                                }
-                            }
+                            localUpdates[station.station_id] = {
+                                precipitation: metrics.calculatedPrecip,
+                                soil_saturation: metrics.calculatedSaturation
+                            };
                         }
-                    });
-
-                    if (updatesNeeded.length > 0) {
-                        await Promise.all(updatesNeeded.map(id =>
-                            fetch(`${BASE_UPDATE_PREFIX}/${id}/update`, { method: 'PUT' })
-                        ));
-
-                        fetchStations();
                     }
+                });
 
-                } catch (error) {
-                    console.error("Error checking station consistency:", error);
-                } finally {
-                    setHasCheckedSync(true);
+                if (batchPayload.length > 0) {
+                    await fetch(BASE_BATCH_UPDATE_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ stations: batchPayload })
+                    });
+                    console.log(`Heartbeat: Updated ${batchPayload.length} stations.`);
+
+                    setStations(prevStations => prevStations.map(s => {
+                        if (localUpdates[s.station_id]) {
+                            return {
+                                ...s,
+                                ...localUpdates[s.station_id],
+                                last_updated: new Date().toISOString() // Update timestamp locally
+                            };
+                        }
+                        return s;
+                    }));
                 }
-            };
 
+            } catch (error) {
+                console.error("Error performing batch update:", error);
+            }
+        };
+
+        if (!initialSyncDone.current) {
             checkDataConsistency();
+            initialSyncDone.current = true;
         }
-    }, [stations, hasCheckedSync]);
+
+        const interval = setInterval(checkDataConsistency, 300000); // 300,000 ms = 5 mins
+
+        return () => clearInterval(interval);
+    }, [stations]);
 
     /** SOIL SATURATION ICON **/
     const createSaturationIcon = (saturation) => {
@@ -545,31 +559,76 @@ const PrecipLegend = () => (
 export default function InteractiveMap() {
     const center = [18.220833, -66.420149];
 
-    // UI State
-    const [showStations, setShowStations] = useState(true);
-    const [selectedYear, setSelectedYear] = useState("");
-    const [availableYears, setAvailableYears] = useState([]);
-    const [showPrecip, setShowPrecip] = useState(false);
-    const [showSusceptibility, setShowSusceptibility] = useState(false);
+    // --- COOKIE / STATE INITIALIZATION LOGIC ---
+    const COOKIE_NAME = 'landslide_map_filters';
+
+    // Helper: Safely retrieve and parse the cookie
+    const getSavedSettings = () => {
+        try {
+            const saved = Cookies.get(COOKIE_NAME);
+            return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+            console.warn("Failed to parse map settings cookie", e);
+            return {};
+        }
+    };
+
+    const savedSettings = getSavedSettings();
+
+    // UI State: Initialize with cookie value if it exists, otherwise default
+    const [showStations, setShowStations] = useState(savedSettings.showStations ?? true);
+    const [selectedYear, setSelectedYear] = useState(savedSettings.selectedYear ?? "");
+    const [availableYears, setAvailableYears] = useState([]); // Derived from API, not saved
+    const [showPrecip, setShowPrecip] = useState(savedSettings.showPrecip ?? false);
+    const [showSusceptibility, setShowSusceptibility] = useState(savedSettings.showSusceptibility ?? false);
 
     // Toggle State for Station Visualization Layers
-    const [showSaturation, setShowSaturation] = useState(false);
-    const [showPrecip12hr, setShowPrecip12hr] = useState(false);
-    const [showLandslideForecast, setShowLandslideForecast] = useState(false);
+    const [showSaturation, setShowSaturation] = useState(savedSettings.showSaturation ?? false);
+    const [showPrecip12hr, setShowPrecip12hr] = useState(savedSettings.showPrecip12hr ?? false);
+    const [showLandslideForecast, setShowLandslideForecast] = useState(savedSettings.showLandslideForecast ?? false);
 
     // Legend State
-    const [showSaturationLegend, setShowSaturationLegend] = useState(false);
-    const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
-    const [showPrecipLegend, setShowPrecipLegend] = useState(false);
-    const [showLandslideForecastLegend, setShowLandslideForecastLegend] = useState(false);
+    const [showSaturationLegend, setShowSaturationLegend] = useState(savedSettings.showSaturationLegend ?? false);
+    const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(savedSettings.showSusceptibilityLegend ?? false);
+    const [showPrecipLegend, setShowPrecipLegend] = useState(savedSettings.showPrecipLegend ?? false);
+    const [showLandslideForecastLegend, setShowLandslideForecastLegend] = useState(savedSettings.showLandslideForecastLegend ?? false);
+    
+    // --- RADAR / TIME LOGIC ---
+    const [showForecast, setShowForecast] = useState(savedSettings.showForecast ?? false);
 
     // Disclaimer State
     const [showDisclaimer, setShowDisclaimer] = useState(
         localStorage.getItem('disclaimerAccepted') !== 'true'
     );
+    
+    // --- EFFECT: PERSIST SETTINGS TO COOKIE ---
+    useEffect(() => {
+        const settingsToSave = {
+            showStations,
+            selectedYear,
+            showPrecip,
+            showSusceptibility,
+            showSaturation,
+            showPrecip12hr,
+            showLandslideForecast,
+            showSaturationLegend,
+            showSusceptibilityLegend,
+            showPrecipLegend,
+            showLandslideForecastLegend,
+            showForecast
+        };
 
-    // --- RADAR / TIME LOGIC ---
-    const [showForecast, setShowForecast] = useState(false);
+        // Save cookie with 30-day expiration
+        Cookies.set(COOKIE_NAME, JSON.stringify(settingsToSave), { expires: 30 });
+    }, [
+        showStations, selectedYear, showPrecip, showSusceptibility, 
+        showSaturation, showPrecip12hr, showLandslideForecast,
+        showSaturationLegend, showSusceptibilityLegend, showPrecipLegend, 
+        showLandslideForecastLegend, showForecast
+    ]);
+
+
+    // --- RADAR TIME VARIABLES ---
     const now = new Date();
     const coeff = 1000 * 60 * 5;
     const roundedEnd = new Date(Math.floor(now.getTime() / coeff) * coeff).getTime();

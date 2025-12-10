@@ -6,7 +6,7 @@ import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import "leaflet/dist/leaflet.css";
 import "../styles/Stations.css";
-
+import Cookies from 'js-cookie'; 
 const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 const BASE_STATIONS_URL = BASE_DOMAIN + "/stations";
 
@@ -21,7 +21,6 @@ const createSaturationIcon = (saturation) => {
     const rounded = Math.round(saturation);
 
     return L.divIcon({
-        // The HTML structure is changed to match the .saturation-marker CSS from InteractiveMap.css
         html: `<div class="${className}">${rounded}%</div>`,
         className: "", // Clear the default L.divIcon class name
         iconSize: [55, 30], // Increased size to match the new style
@@ -64,9 +63,9 @@ const createStatusIcon = (color) => {
         box-shadow: 0 0 4px rgba(0,0,0,0.4);
       "></div>
     `,
-        iconSize: [22, 22],   // Size of the div
-        iconAnchor: [11, 11], // Center the circle (half of size)
-        popupAnchor: [0, -12] // Popup appears slightly above
+        iconSize: [22, 22],   
+        iconAnchor: [11, 11], 
+        popupAnchor: [0, -12] 
     });
 };
 
@@ -189,37 +188,28 @@ const StationChart = ({ station, sensorIndex }) => {
 
                 const seriesData = historyData.map(item => {
                     const date = new Date(item.timestamp);
-                    // Ensure the value exists and is a number
                     const value = item[wcKey] !== undefined ? parseFloat(item[wcKey]) : null;
                     return [date.getTime(), value];
                 }).filter(item => item[1] !== null);
 
-                // --- MODIFICATIONS START HERE ---
                 let dataMin = 0;
                 let dataMax = 1;
 
                 if (seriesData.length > 0) {
-                    // Extract all Y-values (water content percentages)
                     const yValues = seriesData.map(item => item[1]);
-
-                    // Calculate the minimum and maximum data points
                     const min = Math.min(...yValues);
                     const max = Math.max(...yValues);
-
-                    // Determine chart min/max with padding (e.g., 5% buffer)
                     const range = max - min;
-                    const padding = range * 0.05; // 5% buffer on each side
+                    const padding = range * 0.05; 
 
-                    // If the range is zero (all values are the same), use a fixed buffer
                     if (range === 0) {
-                        dataMin = Math.max(0, min - 0.05); // Min is 0 or value - 0.05
-                        dataMax = Math.min(1, max + 0.05); // Max is 1 or value + 0.05
+                        dataMin = Math.max(0, min - 0.05); 
+                        dataMax = Math.min(1, max + 0.05); 
                     } else {
-                        dataMin = Math.max(0, min - padding); // Ensure min is not below 0
-                        dataMax = Math.min(1, max + padding); // Ensure max is not above 1
+                        dataMin = Math.max(0, min - padding); 
+                        dataMax = Math.min(1, max + padding); 
                     }
                 }
-                // --- MODIFICATIONS END HERE ---
 
                 setChartOptions({
                     title: {
@@ -234,7 +224,6 @@ const StationChart = ({ station, sensorIndex }) => {
                     },
                     yAxis: {
                         title: { text: 'Contenido de Agua (%)' },
-                        // Use calculated min/max values
                         min: dataMin,
                         max: dataMax
                     },
@@ -299,9 +288,38 @@ const StationChart = ({ station, sensorIndex }) => {
 };
 
 function Stations() {
-    const [mapMetric, setMapMetric] = useState("status");
-    const [selectedStation, setSelectedStation] = useState(null);
-    const [selectedSensor, setSelectedSensor] = useState(1);
+    // --- COOKIE CONFIGURATION ---
+    const COOKIE_NAME = 'stations_dashboard_settings';
+
+    // Helper: Safely get cookie
+    const getSavedSettings = () => {
+        try {
+            const saved = Cookies.get(COOKIE_NAME);
+            return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+            console.warn("Error parsing station cookies", e);
+            return {};
+        }
+    };
+
+    const savedSettings = getSavedSettings();
+
+    // UI State: Load from cookie or use default
+    // We persist the metric, the selected station object, and the sensor index.
+    const [mapMetric, setMapMetric] = useState(savedSettings.mapMetric ?? "status");
+    const [selectedStation, setSelectedStation] = useState(savedSettings.selectedStation ?? null);
+    const [selectedSensor, setSelectedSensor] = useState(savedSettings.selectedSensor ?? 1);
+
+    // --- EFFECT: SAVE TO COOKIES ON CHANGE ---
+    useEffect(() => {
+        const settingsToSave = {
+            mapMetric,
+            selectedStation,
+            selectedSensor
+        };
+        // Save to cookie (Expires in 30 days)
+        Cookies.set(COOKIE_NAME, JSON.stringify(settingsToSave), { expires: 30 });
+    }, [mapMetric, selectedStation, selectedSensor]);
 
     return (
         <div className="stations-container">
