@@ -6,7 +6,9 @@ use DerrumbeNet\Model\Publication;
 
 class PublicationController {
     private Publication $publicationModel;
-    public function __construct($db) { $this->publicationModel = new Publication($db); }
+    public function __construct(Publication $publicationModel) {
+        $this->publicationModel = $publicationModel;
+    }
 
     private function jsonResponse($response, $data, $status = 200) {
         $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
@@ -32,9 +34,19 @@ class PublicationController {
     }
 
     public function updatePublication($request, $response, $args) {
-        $updated = $this->publicationModel->updatePublication($args['id'], $request->getParsedBody());
-        if ($updated) return $this->jsonResponse($response, ['message'=>'Updated']);
-        return $this->jsonResponse($response, ['error'=>'Failed'], 500);
+        $data = $request->getParsedBody();
+
+        if (empty($data) || !is_array($data)) {
+            return $this->jsonResponse($response, ['message'=>'No data provided for update'], 400);
+        }
+
+        $updated = $this->publicationModel->updatePublication($args['id'], $data);
+
+        if ($updated) {
+            return $this->jsonResponse($response, ['message'=>'Updated successfully']);
+        }
+
+        return $this->jsonResponse($response, ['error'=>'Failed to update'], 500);
     }
 
     public function deletePublication($request, $response, $args) {

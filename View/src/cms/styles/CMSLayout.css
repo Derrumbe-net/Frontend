@@ -1,16 +1,20 @@
 /* ===== CMS Layout Container ===== */
 .cms-layout {
-  display: flex;              /* places sidebar and content side by side */
+  display: flex;
   flex-direction: row;
   width: 100%;
-  min-height: 100vh;              /* full viewport height */
+  min-height: 100vh;
   height: auto;
-  background-color: #DFE8DA;  /* light green background like your design */
+  background-color: #DFE8DA;
 }
 
 /* ===== Main Content ===== */
 .cms-content {
-  flex: 1;                    /* fill remaining space beside sidebar */
-  background-color: #DFE8DA;  /* match background tone */
+  margin-left: 300px;
   padding: 2rem;
+  background-color: #DFE8DA;
+  min-height: 100vh;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
+

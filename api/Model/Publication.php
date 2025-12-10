@@ -60,18 +60,35 @@ class Publication {
     // UPDATE PUBLICATION
     public function updatePublication($id, $data) {
         try {
-            $stmt = $this->conn->prepare(
-                "UPDATE publication SET admin_id=:admin_id, title=:title, publication_url=:publication_url,
-                 image_url=:image_url, description=:description WHERE publication_id=:id"
-            );
-            $stmt->bindParam(':admin_id', $data['admin_id'], PDO::PARAM_INT);
-            $stmt->bindParam(':title', $data['title'], PDO::PARAM_STR);
-            $stmt->bindParam(':publication_url', $data['publication_url'], PDO::PARAM_STR);
-            $stmt->bindParam(':image_url', $data['image_url'], PDO::PARAM_STR);
-            $stmt->bindParam(':description', $data['description'], PDO::PARAM_STR);
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-            return $stmt->execute();
-        } catch(PDOException $e) { error_log($e->getMessage()); return false; }
+            $allowedColumns = ['admin_id', 'title', 'publication_url', 'image_url', 'description'];
+
+            $setClauses = [];
+            $params = [':id' => $id];
+
+            foreach ($allowedColumns as $column) {
+                if (array_key_exists($column, $data)) {
+                    $value = $data[$column];
+
+                    if ($value !== null && $value !== '') {
+                        $setClauses[] = "$column = :$column";
+                        $params[":$column"] = $value;
+                    }
+                }
+            }
+
+            if (empty($setClauses)) {
+                return true;
+            }
+
+            $sql = "UPDATE publication SET " . implode(', ', $setClauses) . " WHERE publication_id = :id";
+
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute($params);
+
+        } catch(PDOException $e) {
+            error_log($e->getMessage());
+            return false;
+        }
     }
     
     // DELETE PUBLICATION BY ID

@@ -31,6 +31,6 @@ return function (App $app, $db) {
         $group->put('/{id}/isAuthorized', [$adminController, 'updateAuthorization'])
             ->add($superAdminMiddleware);
         $group->delete('/{id}', [$adminController, 'deleteAdmin'])
-            ->add($superAdminMiddleware);;
+            ->add($superAdminMiddleware);
     })->add($jwtMiddleware);
 };

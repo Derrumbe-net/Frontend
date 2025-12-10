@@ -2,10 +2,14 @@
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 use DerrumbeNet\Controller\PublicationController;
+use DerrumbeNet\Model\Publication; // Import Model
 use DerrumbeNet\Middleware\JwtMiddleware;
 
 return function (App $app, $db) {
-    $publicationController = new PublicationController($db);
+    // 1. Instantiate Model
+    $publicationModel = new Publication($db);
+    // 2. Inject Model into Controller
+    $publicationController = new PublicationController($publicationModel);
 
     // Load JWT secret and create middleware
     $jwtSecret = $_ENV['JWT_SECRET'];

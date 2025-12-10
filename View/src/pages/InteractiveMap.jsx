@@ -11,6 +11,8 @@ import L from 'leaflet';
 import MapMenu from "../components/MapMenu.jsx";
 import Cookies from 'js-cookie';
 
+const COOKIE_NAME = 'landslide_map_filters';
+
 const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 
 // $app->get('/stations', ...)
@@ -95,7 +97,7 @@ const TimeControlBar = ({
     );
 };
 
-const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTime }) => {
+const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTime}) => {
     const map = useMap();
     const radarLayerRef = useRef(null);
 
@@ -103,6 +105,9 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
         const hillshade = EL.tiledMapLayer({
             url: 'https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Hillshade_Puerto_Rico/MapServer',
             opacity: 0.5,
+            minZoom: 7,  // Prevents requesting tiles when zoomed too far out
+            maxZoom: 16, // Prevents requesting tiles when zoomed too far in (Adjust if layer supports deeper zoom)
+            errorTileUrl: '', // Optional: hides the broken image icon if a tile is missing
         }).addTo(map);
 
         const municipalities = EL.featureLayer({
@@ -150,13 +155,14 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
         }
     }, [currentTime, showForecast]);
 
+
     useEffect(() => {
         let precipLayer;
         if (showPrecip) {
             precipLayer = EL.imageMapLayer({
                 url: 'https://mapservices.weather.noaa.gov/raster/rest/services/obs/mrms_qpe/ImageServer',
                 opacity: 0.5,
-                renderingRule: { rasterFunction: 'rft_12hr' },
+                // renderingRule: { rasterFunction: 'rft_12hr' },
             }).addTo(map);
         }
         return () => {
@@ -170,6 +176,8 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
             susceptibilityLayer = EL.tiledMapLayer({
                 url: "https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Susceptibilidad_Derrumbe_PR/MapServer",
                 opacity: 0.5,
+                minZoom: 7, 
+                maxZoom: 16
             }).addTo(map);
         }
         return () => {
@@ -359,44 +367,11 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         });
     };
 
-    /** LANDSLIDE FORECAST ICON **/
-    const createForecastIcon = (probability) => {
-        // Standardized to match Precip/Saturation Design
-        // We reuse the 'precip-marker' class to get the exact same shape/size
-        // but inject our own colors.
-
-        let color = "#00FF00"; // Low (Green)
-        let textColor = "black";
-
-        if (probability >= 80) {
-            color = "#FF0000"; // High (Red)
-            textColor = "white"; // White text for better contrast on red
-        } else if (probability >= 50) {
-            color = "#FFA500"; // Medium (Orange)
-            textColor = "black";
-        }
-
-        const rounded = Math.round(probability);
-
-        return L.divIcon({
-            // Note: We use 'precip-marker' for the shape class, but override color
-            html: `<div class="precip-marker" style="background-color:${color}; color:${textColor}">${rounded}%</div>`,
-            className: "",
-            iconSize: [55, 30],
-            iconAnchor: [27, 15],
-        });
-    };
-
     return (
         <>
             {stations.map(station => {
                 if (station.is_available !== 1) return null;
                 let icon = null;
-
-                // PRIORITY LOGIC:
-                // 1. Landslide Forecast
-                // 2. Soil Saturation
-                // 3. Precipitation
 
                 // Ensure strict types or non-null checks
                 if (showLandslideForecast && station.landslide_forecast != null) {
@@ -501,15 +476,6 @@ const SoilSaturationLegend = () => (
     </div>
 );
 
-const LandslideForecastLegend = () => (
-    <div className="legend-container legend-bottom-right">
-        <div className="legend-title">Landslide Forecast Probability</div>
-        <div className="legend-item"><span className="legend-color-box" style={{background:"#00FF00"}}></span><p>0–50% (Low)</p></div>
-        <div className="legend-item"><span className="legend-color-box" style={{background:"#FFA500"}}></span><p>50–80% (Medium)</p></div>
-        <div className="legend-item"><span className="legend-color-box" style={{background:"#FF0000"}}></span><p>80–100% (High)</p></div>
-    </div>
-);
-
 const SusceptibilityLegend = () => (
     <div className="legend-container legend-bottom-right-top">
         <div className="legend-title">Landslide Susceptibility</div>
@@ -560,46 +526,86 @@ export default function InteractiveMap() {
     const center = [18.220833, -66.420149];
 
     // --- COOKIE / STATE INITIALIZATION LOGIC ---
-    const COOKIE_NAME = 'landslide_map_filters';
+    // const COOKIE_NAME = 'landslide_map_filters';
 
     // Helper: Safely retrieve and parse the cookie
-    const getSavedSettings = () => {
-        try {
-            const saved = Cookies.get(COOKIE_NAME);
-            return saved ? JSON.parse(saved) : {};
-        } catch (e) {
-            console.warn("Failed to parse map settings cookie", e);
-            return {};
-        }
-    };
+    // const getSavedSettings = () => {
+    //     try {
+    //         const saved = Cookies.get(COOKIE_NAME);
+    //         return saved ? JSON.parse(saved) : {};
+    //     } catch (e) {
+    //         console.warn("Failed to parse map settings cookie", e);
+    //         return {};
+    //     }
+    // };
 
-    const savedSettings = getSavedSettings();
+    // const savedSettings = getSavedSettings();
 
     // UI State: Initialize with cookie value if it exists, otherwise default
-    const [showStations, setShowStations] = useState(savedSettings.showStations ?? true);
-    const [selectedYear, setSelectedYear] = useState(savedSettings.selectedYear ?? "");
-    const [availableYears, setAvailableYears] = useState([]); // Derived from API, not saved
-    const [showPrecip, setShowPrecip] = useState(savedSettings.showPrecip ?? false);
-    const [showSusceptibility, setShowSusceptibility] = useState(savedSettings.showSusceptibility ?? false);
+    // const [showStations, setShowStations] = useState(savedSettings.showStations ?? true);
+    // const [selectedYear, setSelectedYear] = useState(savedSettings.selectedYear ?? "");
+    // const [availableYears, setAvailableYears] = useState([]); // Derived from API, not saved
+    // const [showPrecip, setShowPrecip] = useState(savedSettings.showPrecip ?? false);
+    // const [showSusceptibility, setShowSusceptibility] = useState(savedSettings.showSusceptibility ?? false);
 
     // Toggle State for Station Visualization Layers
-    const [showSaturation, setShowSaturation] = useState(savedSettings.showSaturation ?? false);
-    const [showPrecip12hr, setShowPrecip12hr] = useState(savedSettings.showPrecip12hr ?? false);
-    const [showLandslideForecast, setShowLandslideForecast] = useState(savedSettings.showLandslideForecast ?? false);
+    // const [showSaturation, setShowSaturation] = useState(savedSettings.showSaturation ?? false);
+    // const [showPrecip12hr, setShowPrecip12hr] = useState(savedSettings.showPrecip12hr ?? false);
 
     // Legend State
-    const [showSaturationLegend, setShowSaturationLegend] = useState(savedSettings.showSaturationLegend ?? false);
-    const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(savedSettings.showSusceptibilityLegend ?? false);
-    const [showPrecipLegend, setShowPrecipLegend] = useState(savedSettings.showPrecipLegend ?? false);
-    const [showLandslideForecastLegend, setShowLandslideForecastLegend] = useState(savedSettings.showLandslideForecastLegend ?? false);
-    
-    // --- RADAR / TIME LOGIC ---
-    const [showForecast, setShowForecast] = useState(savedSettings.showForecast ?? false);
+    // const [showSaturationLegend, setShowSaturationLegend] = useState(savedSettings.showSaturationLegend ?? false);
+    // const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(savedSettings.showSusceptibilityLegend ?? false);
+    // const [showPrecipLegend, setShowPrecipLegend] = useState(savedSettings.showPrecipLegend ?? false);
 
+    const [showStations, setShowStations] = useState(true);
+    const [selectedYear, setSelectedYear] = useState("");
+    const [availableYears, setAvailableYears] = useState([]);
+
+    const [showPrecip, setShowPrecip] = useState(false);
+    const [showSusceptibility, setShowSusceptibility] = useState(false);
+
+    const [showSaturation, setShowSaturation] = useState(true);
+    const [showPrecip12hr, setShowPrecip12hr] = useState(false);
+
+    const [showSaturationLegend, setShowSaturationLegend] = useState(true);
+    const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
+    const [showPrecipLegend, setShowPrecipLegend] = useState(false);
+
+
+    // --- RADAR / TIME LOGIC ---
+    const [showForecast, setShowForecast] = useState(true);
     // Disclaimer State
     const [showDisclaimer, setShowDisclaimer] = useState(
         localStorage.getItem('disclaimerAccepted') !== 'true'
     );
+
+    // Load cookie AFTER first render to avoid breaking initial logic
+    useEffect(() => {
+        try {
+            const saved = Cookies.get(COOKIE_NAME);
+            if (!saved) return;
+
+            const settings = JSON.parse(saved);
+
+            // Apply only the settings that make sense
+            if (typeof settings.showStations === 'boolean') setShowStations(settings.showStations);
+            if (typeof settings.selectedYear === 'string') setSelectedYear(settings.selectedYear);
+
+            if (typeof settings.showPrecip === 'boolean') setShowPrecip(settings.showPrecip);
+            if (typeof settings.showSusceptibility === 'boolean') setShowSusceptibility(settings.showSusceptibility);
+
+            if (typeof settings.showSaturation === 'boolean') setShowSaturation(settings.showSaturation);
+            if (typeof settings.showPrecip12hr === 'boolean') setShowPrecip12hr(settings.showPrecip12hr);
+
+            if (typeof settings.showSaturationLegend === 'boolean') setShowSaturationLegend(settings.showSaturationLegend);
+            if (typeof settings.showSusceptibilityLegend === 'boolean') setShowSusceptibilityLegend(settings.showSusceptibilityLegend);
+            if (typeof settings.showPrecipLegend === 'boolean') setShowPrecipLegend(settings.showPrecipLegend);
+
+        } catch (e) {
+            console.warn("Failed to load settings cookie", e);
+        }
+    }, []);
+
     
     // --- EFFECT: PERSIST SETTINGS TO COOKIE ---
     useEffect(() => {
@@ -610,23 +616,24 @@ export default function InteractiveMap() {
             showSusceptibility,
             showSaturation,
             showPrecip12hr,
-            showLandslideForecast,
             showSaturationLegend,
             showSusceptibilityLegend,
             showPrecipLegend,
-            showLandslideForecastLegend,
-            showForecast
         };
 
         // Save cookie with 30-day expiration
         Cookies.set(COOKIE_NAME, JSON.stringify(settingsToSave), { expires: 30 });
     }, [
-        showStations, selectedYear, showPrecip, showSusceptibility, 
-        showSaturation, showPrecip12hr, showLandslideForecast,
-        showSaturationLegend, showSusceptibilityLegend, showPrecipLegend, 
-        showLandslideForecastLegend, showForecast
+        showStations,
+        selectedYear,
+        showPrecip,
+        showSusceptibility,
+        showSaturation,
+        showPrecip12hr,
+        showSaturationLegend,
+        showSusceptibilityLegend,
+        showPrecipLegend
     ]);
-
 
     // --- RADAR TIME VARIABLES ---
     const now = new Date();
@@ -673,18 +680,24 @@ export default function InteractiveMap() {
         setShowStations(newValue);
 
         if (newValue) {
-            // Turning stations ON → disable landslides
+            // Stations turned ON → Landslides OFF
             setSelectedYear(null);
 
-            // Default station metric is saturation
+            // Default station display
             setShowSaturation(true);
             setShowPrecip12hr(false);
 
             // Legends
             setShowSaturationLegend(true);
             setShowPrecipLegend(false);
+            setShowSusceptibilityLegend(false);
+
+            // Disable other overlays
+            setShowPrecip(false);
+            setShowSusceptibility(false);
         }
     };
+
 
     const togglePrecip = () => setShowPrecip(v => !v);
     const toggleSusceptibility = () => setShowSusceptibility(v => !v);
@@ -696,7 +709,6 @@ export default function InteractiveMap() {
         } else {
             setShowSaturation(true);
             setShowPrecip12hr(false);
-            setShowLandslideForecast(false);
         }
     };
     const togglePrecip12hr = () => {
@@ -705,38 +717,44 @@ export default function InteractiveMap() {
         } else {
             setShowPrecip12hr(true);
             setShowSaturation(false);
-            setShowLandslideForecast(false);
         }
     };
-    const toggleLandslideForecast = () => {
-        if (showLandslideForecast) {
-            setShowLandslideForecast(false);
-        } else {
-            setShowLandslideForecast(true);
-            setShowSaturation(false);
-            setShowPrecip12hr(false);
-        }
-    }
 
     const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
     const toggleSusceptibilityLegend = () => setShowSusceptibilityLegend(v => !v);
     const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
-    const toggleLandslideForecastLegend = () => setShowLandslideForecastLegend(v => !v);
     const toggleForecast = () => setShowForecast(v => !v);
 
-    const handleYearChange = (year) => {
+   const handleYearChange = (year) => {
         setSelectedYear(year);
 
-        // If any landslide year is selected → disable all station layers
         if (year) {
+            // Disable station layers
             setShowStations(false);
             setShowSaturation(false);
             setShowPrecip12hr(false);
 
+            // Disable station legends
             setShowSaturationLegend(false);
+            setShowPrecipLegend(false);
+
+            // Disable overlays irrelevant to Landslide mode
+            setShowPrecip(false);
+            setShowSusceptibility(false);
+            setShowSusceptibilityLegend(false);
+
+        } else {
+            // Return to default station mode
+            setShowStations(true);
+            setShowSaturation(true);
+            setShowPrecip12hr(true);
+
+            setShowSaturationLegend(true);
+            setShowSusceptibilityLegend(false);
             setShowPrecipLegend(false);
         }
     };
+
 
     const resetLayers = () => {
         setShowStations(false);
@@ -758,7 +776,7 @@ export default function InteractiveMap() {
         setShowPrecip(false);
         setShowSusceptibility(false);
         setShowForecast(true);
-        setShowPrecip12hr(false);
+        setShowPrecip12hr(true);
 
         setShowSaturationLegend(true);
         setShowSusceptibilityLegend(false);
@@ -776,10 +794,8 @@ export default function InteractiveMap() {
         mapLabelText = "SOIL SATURATION PERCENTAGE";
     } else if (showPrecip12hr) {
         mapLabelText = "PAST 12 HOUR PRECIPITATION (INCHES)";
-    } else if (showLandslideForecast) { 
-        mapLabelText = "LANDSLIDE FORECAST PROBABILITY";
     } else {
-        mapLabelText = ""; // fallback if needed
+        mapLabelText = "SOIL SATURATION PERCENTAGE"; // fallback if needed
     }
 
     return (
@@ -789,7 +805,7 @@ export default function InteractiveMap() {
             <MapContainer
                 id="map"
                 center={center}
-                zoom={isMobile ? 8 : 9}
+                zoom={isMobile ? 9 : 10}
                 minZoom={7}
                 maxZoom={18}
                 scrollWheelZoom={false}
@@ -810,14 +826,12 @@ export default function InteractiveMap() {
 
                     showSaturation={showSaturation} onToggleSaturation={toggleSaturation}
                     showPrecip12hr={showPrecip12hr} onTogglePrecip12hr={togglePrecip12hr}
-                    showLandslideForecast={showLandslideForecast} onToggleLandslideForecast={toggleLandslideForecast}
-
+        
                     showSaturationLegend={showSaturationLegend} onToggleSaturationLegend={toggleSaturationLegend}
                     showSusceptibilityLegend={showSusceptibilityLegend} onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
                     showPrecipLegend={showPrecipLegend} onTogglePrecipLegend={togglePrecipLegend}
-                    showLandslideForecastLegend={showLandslideForecastLegend} onToggleLandslideForecastLegend={toggleLandslideForecastLegend}
 
-                    availableYears={availableYears} selectedYear={selectedYear} onYearChange={setSelectedYear}
+                    availableYears={availableYears} selectedYear={selectedYear} onYearChange={handleYearChange}
                     showForecast={showForecast} onToggleForecast={toggleForecast}
 
                     resetLayers={resetLayers}
@@ -837,7 +851,6 @@ export default function InteractiveMap() {
                     <PopulateStations
                         showSaturation={showSaturation}
                         showPrecip12hr={showPrecip12hr}
-                        showLandslideForecast={showLandslideForecast}
                     />
                 )}
 
@@ -846,7 +859,6 @@ export default function InteractiveMap() {
                 {showSaturationLegend && <SoilSaturationLegend />}
                 {showSusceptibilityLegend && <SusceptibilityLegend />}
                 {showPrecipLegend && <PrecipLegend />}
-                {showLandslideForecastLegend && <LandslideForecastLegend />}
 
                 {showForecast && (
                     <TimeControlBar

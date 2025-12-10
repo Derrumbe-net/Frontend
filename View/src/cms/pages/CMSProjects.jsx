@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FaEdit, FaPlus, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaEdit, FaPlus, FaTrash, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import "../../cms/styles/CMSProjects.css";
 import Swal from "sweetalert2";
 
@@ -39,6 +39,43 @@ export default function CMSProjects() {
     const handleCloseForm = () => {
         setShowForm(false);
         setEditProject(null);
+    };
+
+    const handleDelete = async (id) => {
+        const confirm = await Swal.fire({
+            title: "¿Eliminar Proyecto?",
+            text: "Esta acción no se puede deshacer.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Sí, eliminar",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#e55353"
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const token = localStorage.getItem("cmsAdmin");
+
+            const response = await fetch(`${API_URL}/projects/${id}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                Swal.fire("Error", "No se pudo eliminar el proyecto.", "error");
+                return;
+            }
+
+            Swal.fire("Eliminado", "El proyecto fue eliminado correctamente.", "success");
+
+            fetchProjects(); // Refresh list
+        } catch (error) {
+            console.error(error);
+            Swal.fire("Error", "No se pudo conectar al servidor.", "error");
+        }
     };
 
     return (
@@ -119,6 +156,14 @@ export default function CMSProjects() {
                                         <button className="cms-icon-btn" onClick={() => handleOpenForm(p)} title="Editar">
                                             <FaEdit />
                                         </button>
+                                        <button
+                                            className="cms-icon-btn cms-delete-btn"
+                                            onClick={() => handleDelete(p.project_id)}
+                                            title="Eliminar"
+                                        >
+                                            <FaTrash />
+                                        </button>
+
                                     </td>
                                 </tr>
                             ))}

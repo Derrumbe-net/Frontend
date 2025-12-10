@@ -32,6 +32,8 @@ function Navbar() {
     setOpenDropdown(openDropdown === menu ? null : menu);
   };
 
+  const closeDropdown = () => setOpenDropdown(null);
+
   return (
     <nav className="nav">
       <div className="nav__inner">
@@ -50,9 +52,20 @@ function Navbar() {
         </button>
 
         <ul className={`nav__list ${menuOpen ? 'active' : ''}`} ref={menuRef}>
-          <li className="nav__item"><Link to="/" className="nav__link">Inicio</Link></li>
-          <li className="nav__item"><Link to="/sobre-nosotros" className="nav__link">Sobre Nosotros</Link></li>
 
+          <li className="nav__item">
+            <Link to="/" className="nav__link" onClick={closeDropdown}>
+              Inicio
+            </Link>
+          </li>
+
+          <li className="nav__item">
+            <Link to="/sobre-nosotros" className="nav__link" onClick={closeDropdown}>
+              Sobre Nosotros
+            </Link>
+          </li>
+
+          {/* INVESTIGACIÓN */}
           <li className="nav__item nav__item--dropdown">
             <button
               className="nav__link nav__toggle"
@@ -60,14 +73,25 @@ function Navbar() {
             >
               Investigación {openDropdown === 'investigación' ? '▴' : '▾'}
             </button>
+
             {openDropdown === 'investigación' && (
               <ul className="nav__menu">
-                <li><Link to="/proyectos" className="nav__sublink">Proyectos</Link></li>
-                <li><Link to="/publicaciones" className="nav__sublink">Publicaciones</Link></li>
+                <li>
+                  <Link to="/proyectos" className="nav__sublink" onClick={closeDropdown}>
+                    Proyectos
+                  </Link>
+                </li>
+
+                <li>
+                  <Link to="/publicaciones" className="nav__sublink" onClick={closeDropdown}>
+                    Publicaciones
+                  </Link>
+                </li>
               </ul>
             )}
           </li>
 
+          {/* MONITOREO */}
           <li className="nav__item nav__item--dropdown">
             <button
               className="nav__link nav__toggle"
@@ -75,15 +99,29 @@ function Navbar() {
             >
               Monitoreo {openDropdown === 'monitoreo' ? '▴' : '▾'}
             </button>
+
             {openDropdown === 'monitoreo' && (
               <ul className="nav__menu">
-                <li><Link to="/mapa-interactivo" className="nav__sublink">Mapa Interactivo</Link></li>
-                 <li><Link to="/estaciones" className="nav__sublink">Estaciones</Link></li>
-                <li><Link to="/pronostico-lluvia" className="nav__sublink">Pronóstico de lluvia</Link></li>
+                <li>
+                  <Link to="/mapa-interactivo" className="nav__sublink" onClick={closeDropdown}>
+                    Mapa Interactivo
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/estaciones" className="nav__sublink" onClick={closeDropdown}>
+                    Estaciones
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/pronostico-lluvia" className="nav__sublink" onClick={closeDropdown}>
+                    Pronóstico de lluvia
+                  </Link>
+                </li>
               </ul>
             )}
           </li>
 
+          {/* RECURSOS */}
           <li className="nav__item nav__item--dropdown">
             <button
               className="nav__link nav__toggle"
@@ -91,17 +129,35 @@ function Navbar() {
             >
               Recursos {openDropdown === 'recursos' ? '▴' : '▾'}
             </button>
+
             {openDropdown === 'recursos' && (
               <ul className="nav__menu">
-                <li><Link to="/guia-deslizamientos" className="nav__sublink">Guía sobre Deslizamientos</Link></li>
-                  <li><Link to="/mapa-susceptibilidad" className="nav__sublink">Mapa Susceptibilidad</Link></li>
-                <li><Link to="/mapa-susceptibilidad-municipios" className="nav__sublink">Mapas Municipales</Link></li>
+                <li>
+                  <Link to="/guia-deslizamientos" className="nav__sublink" onClick={closeDropdown}>
+                    Guía sobre Deslizamientos
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/mapa-susceptibilidad" className="nav__sublink" onClick={closeDropdown}>
+                    Mapa Susceptibilidad
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/mapa-susceptibilidad-municipios" className="nav__sublink" onClick={closeDropdown}>
+                    Mapas Municipales
+                  </Link>
+                </li>
               </ul>
             )}
           </li>
 
-          <li className="nav__item"><Link to="/reportar" className="nav__link">Reportar</Link></li>
+          <li className="nav__item">
+            <Link to="/reportar" className="nav__link" onClick={closeDropdown}>
+              Reportar
+            </Link>
+          </li>
 
+          {/* LANDSLIDEREADY */}
           <li className="nav__item nav__item--dropdown">
             <button
               className="nav__link nav__toggle"
@@ -115,13 +171,23 @@ function Navbar() {
               />{" "}
               {openDropdown === 'landslideready' ? '▴' : '▾'}
             </button>
+
             {openDropdown === 'landslideready' && (
               <ul className="nav__menu">
-                <li><Link to="/landslideready-individuos" className="nav__sublink">LandslideReady para Individuos</Link></li>
-                <li><Link to="/landslideready-municipios" className="nav__sublink">LandslideReady para Municipios</Link></li>
+                <li>
+                  <Link to="/landslideready-individuos" className="nav__sublink" onClick={closeDropdown}>
+                    LandslideReady para Individuos
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/landslideready-municipios" className="nav__sublink" onClick={closeDropdown}>
+                    LandslideReady para Municipios
+                  </Link>
+                </li>
               </ul>
             )}
           </li>
+
         </ul>
       </div>
     </nav>

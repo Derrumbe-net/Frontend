@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // Removed useEffect
+import React, { useState, useEffect } from 'react'; // Re-added useEffect
 import { Popup } from 'react-leaflet';
 import '../styles/StationPopup.css';
 
@@ -12,24 +12,54 @@ const ChevronRight = () => (
         <path d="M9 18l6-6-6-6" />
     </svg>
 );
-const CameraIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginBottom: '5px'}}>
-        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-        <circle cx="12" cy="13" r="4" />
-    </svg>
-);
 
 const LandslidePopup = ({ landslide }) => {
     const [images, setImages] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [loading, setLoading] = useState(false);
-    const [hasLoaded, setHasLoaded] = useState(false); // New state to track if we tried fetching
+    const [loading, setLoading] = useState(true); // Start loading immediately
+    const [hasLoaded, setHasLoaded] = useState(false);
 
     const API_BASE_URL = `${import.meta.env.VITE_API_URL}`;
 
     if (!landslide) return null;
 
     const { landslide_id, landslide_date } = landslide;
+
+    // Trigger fetch immediately when component mounts (Popup opens)
+    useEffect(() => {
+        let isMounted = true; // Cleanup flag
+
+        const fetchImages = async () => {
+            setLoading(true);
+            setImages([]);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/landslides/${landslide_id}/images`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (isMounted && data.images && Array.isArray(data.images)) {
+                        const formattedImages = data.images.map((imgName, index) => ({
+                            src: `${API_BASE_URL}/landslides/${landslide_id}/images/${imgName}`,
+                            label: `View ${index + 1}`
+                        }));
+                        setImages(formattedImages);
+                    }
+                }
+            } catch (error) {
+                console.error("Error connecting to API:", error);
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                    setHasLoaded(true);
+                    setCurrentIndex(0);
+                }
+            }
+        };
+
+        fetchImages();
+
+        return () => { isMounted = false; };
+    }, [landslide_id, API_BASE_URL]);
 
     const formatDate = (dateString) => {
         if (!dateString) return "N/A";
@@ -39,33 +69,6 @@ const LandslidePopup = ({ landslide }) => {
             month: 'long',
             day: 'numeric'
         });
-    };
-
-    const handleLoadPhotos = async (e) => {
-        if (e) e.stopPropagation(); // Prevent map click through
-
-        setLoading(true);
-        setImages([]);
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/landslides/${landslide_id}/images`);
-            if (response.ok) {
-                const data = await response.json();
-                if (data.images && Array.isArray(data.images)) {
-                    const formattedImages = data.images.map((imgName, index) => ({
-                        src: `${API_BASE_URL}/landslides/${landslide_id}/images/${imgName}`,
-                        label: `View ${index + 1}`
-                    }));
-                    setImages(formattedImages);
-                }
-            }
-        } catch (error) {
-            console.error("Error connecting to API:", error);
-        } finally {
-            setLoading(false);
-            setHasLoaded(true); // Mark as loaded so we don't show the button again
-            setCurrentIndex(0);
-        }
     };
 
     const nextImage = (e) => {
@@ -109,35 +112,16 @@ const LandslidePopup = ({ landslide }) => {
                                 backgroundColor: '#f0f0f0'
                             }}
                         >
-                            {!hasLoaded && !loading && (
-                                <button
-                                    onClick={handleLoadPhotos}
-                                    style={{
-                                        border: 'none',
-                                        background: '#333',
-                                        color: 'white',
-                                        padding: '10px 15px',
-                                        borderRadius: '5px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        fontSize: '14px'
-                                    }}
-                                >
-                                    <CameraIcon />
-                                    Load Photos
-                                </button>
-                            )}
-
+                            {/* Loading State */}
                             {loading && (
                                 <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
-                                    <div className="spinner" style={{marginBottom:'5px'}}></div> {/* CSS Spinner recommended */}
+                                    <div className="spinner" style={{marginBottom:'5px'}}></div>
                                     <span style={{color:'#666', fontSize:'14px'}}>Fetching images...</span>
                                 </div>
                             )}
 
-                            {hasLoaded && !loading && (
+                            {/* Loaded State */}
+                            {!loading && hasLoaded && (
                                 images.length > 0 ? (
                                     <>
                                         <img
@@ -157,13 +141,14 @@ const LandslidePopup = ({ landslide }) => {
                                     </>
                                 ) : (
                                     <div style={{color: '#666', fontSize: '14px', fontStyle: 'italic'}}>
-                                        No images found
+                                        No images available
                                     </div>
                                 )
                             )}
                         </div>
 
-                        {hasLoaded && images.length > 1 && (
+                        {/* Controls (Only show if loaded and > 1 image) */}
+                        {!loading && hasLoaded && images.length > 1 && (
                             <div className="carousel-controls">
                                 <button onClick={prevImage} className="carousel-btn left">
                                     <ChevronLeft />

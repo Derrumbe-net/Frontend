@@ -89,7 +89,7 @@ export default function CMSLogin() {
     <div className="cms-login">
       <div className="cms-login-box">
       <img src={logo} alt="Logo" className="cms-login-logo" />
-        <h1>Log In</h1>
+        <h1> Inicia Sesión </h1>
         <form onSubmit={handleLogin}>
           
           <input

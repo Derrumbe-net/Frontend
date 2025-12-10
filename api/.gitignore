@@ -4,3 +4,4 @@
 *swp
 shell.nix
 .phpunit.result.cache
+coverage-report/

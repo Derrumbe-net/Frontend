@@ -7,7 +7,9 @@ use Exception;
 
 class StationInfoController {
     private StationInfo $stationInfoModel;
-    public function __construct($db) { $this->stationInfoModel = new StationInfo($db); }
+    public function __construct(StationInfo $stationInfoModel) {
+        $this->stationInfoModel = $stationInfoModel;
+    }
 
     private function jsonResponse($response, $data, $status=200){
         $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
