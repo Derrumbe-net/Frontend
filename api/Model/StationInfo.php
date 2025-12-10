@@ -26,11 +26,11 @@ class StationInfo
                 "INSERT INTO station_info
             (admin_id, soil_saturation, precipitation, sensor_image_url, data_image_url, city,
              is_available, last_updated, latitude, longitude, wc1, wc2, wc3, wc4,
-             geological_unit, land_unit, elevation, slope, suscetability, depth, station_installation_date, collaborator)
+             geological_unit, land_unit, elevation, slope, susceptibility, depth, station_installation_date, collaborator)
              VALUES
             (:admin_id, :soil_saturation, :precipitation, :sensor_image_url, :data_image_url, :city,
              :is_available, :last_updated, :latitude, :longitude, :wc1, :wc2, :wc3, :wc4,
-             :geological_unit, :land_unit, :elevation, :slope, :suscetability, :depth, :station_installation_date, :collaborator)"
+             :geological_unit, :land_unit, :elevation, :slope, :susceptibility, :depth, :station_installation_date, :collaborator)"
             );
 
             $stmt->bindParam(':admin_id', $data['admin_id'], PDO::PARAM_INT);
@@ -51,7 +51,7 @@ class StationInfo
             $stmt->bindParam(':land_unit', $data['land_unit'], PDO::PARAM_STR);
             $stmt->bindParam(':elevation', $data['elevation'], PDO::PARAM_STR);
             $stmt->bindParam(':slope', $data['slope'], PDO::PARAM_STR);
-            $stmt->bindParam(':suscetability', $data['suscetability'], PDO::PARAM_STR);
+            $stmt->bindParam(':susceptibility', $data['susceptibility'], PDO::PARAM_STR);
             $stmt->bindParam(':depth', $data['depth'], PDO::PARAM_STR);
             $stmt->bindParam(':station_installation_date', $data['station_installation_date'], PDO::PARAM_STR);
             $stmt->bindParam(':collaborator', $data['collaborator'], PDO::PARAM_STR);
@@ -87,44 +87,43 @@ class StationInfo
     public function updateStationInfo($id, $data)
     {
         try {
-            // Added new fields to UPDATE statement
-            $stmt = $this->conn->prepare(
-                "UPDATE station_info SET 
-             admin_id=:admin_id, soil_saturation=:soil_saturation, precipitation=:precipitation,
-             sensor_image_url=:sensor_image_url, data_image_url=:data_image_url, city=:city,
-             is_available=:is_available, last_updated=:last_updated, latitude=:latitude, longitude=:longitude,
-             wc1=:wc1, wc2=:wc2, wc3=:wc3, wc4=:wc4,
-             geological_unit=:geological_unit, land_unit=:land_unit, elevation=:elevation,
-             slope=:slope, suscetability=:suscetability, depth=:depth,
-             station_installation_date=:station_installation_date, collaborator=:collaborator
-             WHERE station_id=:id"
-            );
+            // 1. Define allowed columns (Whitelist)
+            $allowedColumns = [
+                'admin_id', 'soil_saturation', 'precipitation',
+                'sensor_image_url', 'data_image_url', 'city',
+                'is_available', 'last_updated', 'latitude', 'longitude',
+                'wc1', 'wc2', 'wc3', 'wc4',
+                'geological_unit', 'land_unit', 'elevation',
+                'slope', 'susceptibility', 'depth',
+                'station_installation_date', 'collaborator'
+            ];
 
-            $stmt->bindParam(':admin_id', $data['admin_id'], PDO::PARAM_INT);
-            $stmt->bindParam(':soil_saturation', $data['soil_saturation'], PDO::PARAM_STR);
-            $stmt->bindParam(':precipitation', $data['precipitation'], PDO::PARAM_STR);
-            $stmt->bindParam(':sensor_image_url', $data['sensor_image_url'], PDO::PARAM_STR);
-            $stmt->bindParam(':data_image_url', $data['data_image_url'], PDO::PARAM_STR);
-            $stmt->bindParam(':city', $data['city'], PDO::PARAM_STR);
-            $stmt->bindParam(':is_available', $data['is_available'], PDO::PARAM_BOOL);
-            $stmt->bindParam(':last_updated', $data['last_updated'], PDO::PARAM_STR);
-            $stmt->bindParam(':latitude', $data['latitude'], PDO::PARAM_STR);
-            $stmt->bindParam(':longitude', $data['longitude'], PDO::PARAM_STR);
-            $stmt->bindParam(':wc1', $data['wc1'], PDO::PARAM_STR);
-            $stmt->bindParam(':wc2', $data['wc2'], PDO::PARAM_STR);
-            $stmt->bindParam(':wc3', $data['wc3'], PDO::PARAM_STR);
-            $stmt->bindParam(':wc4', $data['wc4'], PDO::PARAM_STR);
-            $stmt->bindParam(':geological_unit', $data['geological_unit'], PDO::PARAM_STR);
-            $stmt->bindParam(':land_unit', $data['land_unit'], PDO::PARAM_STR);
-            $stmt->bindParam(':elevation', $data['elevation'], PDO::PARAM_STR);
-            $stmt->bindParam(':slope', $data['slope'], PDO::PARAM_STR);
-            $stmt->bindParam(':suscetability', $data['suscetability'], PDO::PARAM_STR);
-            $stmt->bindParam(':depth', $data['depth'], PDO::PARAM_STR);
-            $stmt->bindParam(':station_installation_date', $data['station_installation_date'], PDO::PARAM_STR);
-            $stmt->bindParam(':collaborator', $data['collaborator'], PDO::PARAM_STR);
+            $fieldsToUpdate = [];
+            $params = [':id' => $id];
 
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-            return $stmt->execute();
+            foreach ($data as $key => $value) {
+                if (in_array($key, $allowedColumns)) {
+                    $fieldsToUpdate[] = "$key = :$key";
+
+                    // CRITICAL FIX: Convert empty strings to NULL for numeric fields
+                    // If the value is strictly an empty string, save as NULL.
+                    if ($value === '') {
+                        $params[":$key"] = null;
+                    } else {
+                        $params[":$key"] = $value;
+                    }
+                }
+            }
+
+            if (empty($fieldsToUpdate)) {
+                return false;
+            }
+
+            $sql = "UPDATE station_info SET " . implode(", ", $fieldsToUpdate) . " WHERE station_id = :id";
+
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute($params);
+
         } catch (PDOException $e) {
             error_log($e->getMessage());
             return false;

@@ -1,87 +1,118 @@
-/* ===== Sidebar Base ===== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
 .cms-sidebar {
-  width: 240px;
-  background-color: rgba(0, 0, 0, 0.55);
-  color: white;
-  display: flex;
-  flex-direction: column;
-  position: sticky;
-  top: 0;
-  padding: 1rem 0;
+    width: 300px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background-color: #13241e;
+    color: #e3e3e3;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    font-family: 'Inter', sans-serif;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* ===== Header: Logo + Text Side-by-side ===== */
 .cms-sidebar__header {
-  display: flex;
-  align-items: center;   /* vertically align logo + text */
-  gap: 0.8rem;           /* spacing between logo and text */
-  padding: 0 1rem;
+    padding: 40px 24px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
 
 .cms-sidebar__logo {
-  width: 55px;           /* slightly smaller fits better horizontally */
-  height: auto;
+    width: 96px;
+    height: auto;
+    margin-bottom: 16px;
 }
 
 .cms-sidebar__title {
-  font-size: 0.75rem;    /* shrink text to prevent wrapping too much */
-  font-weight: 300;
-  line-height: 1.1;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.5;
+    letter-spacing: 0;
 }
 
-/* ===== Navigation (Menu stays fixed under header) ===== */
 .cms-sidebar__nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-  padding-top: 2rem;
+    flex: 1;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
 }
 
-/* ===== Menu Links ===== */
 .cms-link {
-  text-decoration: none;
-  color: white;
-  padding: 0.6rem 1rem;
-  font-weight: 600;
-  transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px 0 24px;
+    height: 56px;
+    text-decoration: none;
+    color: #c4c7c5;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border-radius: 100px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .cms-link:hover {
-  background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #e3e3e3 !important;
 }
 
 .cms-link--active {
-  background-color: #2f3230;
+    background-color: #6fa174 !important;
+    color: #0f1c18 !important;
+    font-weight: 700 !important;
 }
 
-/* ===== Footer / Logout ===== */
-/* Push footer ONLY to bottom */
+.cms-link--active {
+    color: #ffffff !important;
+}
+
+.cms-link-icon {
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .cms-sidebar__footer {
-  margin-top: auto;       /* ⭐ MAGIC: pushes footer down */
-  padding: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-  display: flex;
-  justify-content: flex-start;
+    padding: 24px 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    background-color: #0f1c18;
 }
 
 .cms-logout {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 500;
-  transition: opacity 0.2s;
-}
-
-.cms-logout__icon {
-  width: 18px;
-  height: 18px;
+    width: 100%;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background-color: transparent;
+    color: #ffb4ab;
+    border: 1px solid rgba(255, 180, 171, 0.3);
+    border-radius: 100px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
 .cms-logout:hover {
-  opacity: 0.8;
+    background-color: rgba(255, 180, 171, 0.1);
+    color: #ffb4ab;
+    border-color: #ffb4ab;
+}
+
+.cms-logout__icon {
+    font-size: 1.2rem;
 }
