@@ -33,7 +33,7 @@ jobs:
         working-directory: ./View
 
       - name: Run Frontend Tests (Coverage)
-        run: npx vitest run --coverage --reporter=lcov
+        run: npx vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text
         working-directory: ./View
 
       # Lint frontend code
