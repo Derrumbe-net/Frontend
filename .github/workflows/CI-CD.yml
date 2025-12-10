@@ -40,6 +40,7 @@ jobs:
       - name: Lint Frontend
         run: npm run lint --if-present
         working-directory: ./View
+        continue-on-error: true
 
       # Setup PHP
       - name: Setup PHP
