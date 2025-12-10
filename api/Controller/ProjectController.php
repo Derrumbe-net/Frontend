@@ -16,7 +16,7 @@ class ProjectController {
 
     public function createProject($request,$response){
         $id = $this->projectModel->createProject($request->getParsedBody());
-        return $id ? $this->jsonResponse($response,['message'=>'Project created','id'=>$id],201)
+        return $id ? $this->jsonResponse($response,['message'=>'Project created', 'project_id' => $id],201)
                    : $this->jsonResponse($response,['error'=>'Failed'],500);
     }
 
