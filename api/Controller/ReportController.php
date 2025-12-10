@@ -157,4 +157,72 @@ class ReportController {
         return $deleted ? $this->jsonResponse($response,['message'=>'Deleted'])
                         : $this->jsonResponse($response,['error'=>'Failed'],500);
     }
+
+    public function getReportImages(Request $request, Response $response, $args) {
+        $reportId = $args['id'];
+        
+        // Fetch all image data encoded in Base64
+        $images = $this->reportModel->getReportImagesBase64($reportId);
+    
+        // If no images found, you might want to return 200 with empty array, or 404
+        if (empty($images)) {
+             return $this->jsonResponse($response, []);
+        }
+    
+        return $this->jsonResponse($response, $images);
+    }
+
+// GET /reports/{id}/images
+public function listReportImages(Request $request, Response $response, $args) {
+    $reportId = $args['id'];
+    
+    // Get Folder Name from DB
+    $report = $this->reportModel->getReportById($reportId);
+    if (!$report || empty($report['image_url'])) {
+        return $this->jsonResponse($response, []);
+    }
+
+    $folderName = $report['image_url']; // e.g. "2023-10-01_15"
+
+    // Get List from FTP
+    $files = $this->reportModel->getReportImageList($folderName);
+
+    // Return JSON list
+    return $this->jsonResponse($response, $files);
+}
+
+public function serveReportImage(Request $request, Response $response, $args) {
+    $reportId = $args['id'];
+    $fileName = $args['filename'];
+
+    // Get Folder Name from DB
+    $report = $this->reportModel->getReportById($reportId);
+    if (!$report || empty($report['image_url'])) {
+        return $response->withStatus(404);
+    }
+
+    $folderName = $report['image_url'];
+
+    // Get Binary Content
+    $imageContent = $this->reportModel->getReportImageContent($folderName, $fileName);
+
+    if (!$imageContent) {
+        return $response->withStatus(404)->getBody()->write('Image not found');
+    }
+
+    // Determine Mime Type
+    $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+    $mime = match($ext) {
+        'jpg', 'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        default => 'application/octet-stream'
+    };
+
+    // Return Binary Stream
+    $response->getBody()->write($imageContent);
+    return $response->withHeader('Content-Type', $mime);
+}
+
+
+
 }
