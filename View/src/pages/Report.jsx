@@ -40,6 +40,17 @@ function Report() {
   const mapRef = useRef(null);
   const viewRef = useRef(null);
 
+  const fieldStyle = {
+    backgroundColor: "#ffffff",
+    opacity: 1,
+    width: "100%",
+    boxSizing: "border-box", 
+    padding: "10px",
+    border: "1px solid #ccc",
+    borderRadius: "4px",
+    fontSize: "16px"
+  };
+
   const pueblos = [
     "Adjuntas", "Aguada", "Aguadilla", "Aguas Buenas", "Aibonito", "Añasco", "Arecibo", "Arroyo", "Barceloneta",
     "Barranquitas", "Bayamón", "Cabo Rojo", "Caguas", "Camuy", "Canóvanas", "Carolina", "Cataño", "Cayey", "Ceiba",
@@ -52,10 +63,8 @@ function Report() {
     "Yabucoa", "Yauco"
   ];
 
-
   useEffect(() => {
     if (showCamera) {
-
       (async () => {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -67,7 +76,7 @@ function Report() {
           }
         } catch (err) {
           console.error("Camera Error:", err);
-          alert("No se pudo acceder a la cámara. Asegúrese de permitir el acceso o de estar usando HTTPS/Localhost.");
+          alert("No se pudo acceder a la cámara.");
           setShowCamera(false);
         }
       })();
@@ -84,50 +93,33 @@ function Report() {
     const canvas = canvasRef.current;
 
     if (video && canvas) {
-      // Set canvas size to match video stream
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      
-      // Draw current video frame to canvas
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Convert Canvas to File object
       canvas.toBlob((blob) => {
         if (!blob) return;
         const fileName = `cam_capture_${Date.now()}.jpg`;
         const file = new File([blob], fileName, { type: "image/jpeg" });
-        
-        // Add to existing files
         setFiles((prev) => [...prev, file]);
-        
-        // Close Camera
         setShowCamera(false);
       }, 'image/jpeg', 0.8);
     }
   };
 
-  // --- Drag and Drop Logic ---
   useEffect(() => {
     const el = dropRef.current;
     if (!el) return;
-
     const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
     const onDrop = (e) => {
       prevent(e);
       const list = Array.from(e.dataTransfer.files || []);
       setFiles((prev) => [...prev, ...list]);
     };
-
-    ["dragenter", "dragover", "dragleave", "drop"].forEach((ev) =>
-      el.addEventListener(ev, prevent)
-    );
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((ev) => el.addEventListener(ev, prevent));
     el.addEventListener("drop", onDrop);
-
     return () => {
-      ["dragenter", "dragover", "dragleave", "drop"].forEach((ev) =>
-        el.removeEventListener(ev, prevent)
-      );
+      ["dragenter", "dragover", "dragleave", "drop"].forEach((ev) => el.removeEventListener(ev, prevent));
       el.removeEventListener("drop", onDrop);
     };
   }, []);
@@ -147,16 +139,12 @@ function Report() {
       ...f,
       [name]: type === "checkbox" ? checked : value,
     }));
-
     if (name === "allowLocation") setShowMap(checked);
   };
 
-  // --- Map Initialization ---
   useEffect(() => {
     if (!showMap) return;
-
     const map = new EsriMap({ basemap: "satellite" });
-
     const view = new MapView({
       container: mapRef.current,
       map,
@@ -189,25 +177,20 @@ function Report() {
     };
 
     let marker;
-
     view.on("click", (event) => {
       const { latitude, longitude } = event.mapPoint;
       if (marker) view.graphics.remove(marker);
-
       marker = new Graphic({
         geometry: new Point({ latitude, longitude }),
         symbol: markerSymbol,
       });
       view.graphics.add(marker);
       setCoords({ lat: latitude, lng: longitude });
-
       view.goTo({ target: event.mapPoint, zoom: 15 }, { duration: 1000, easing: "ease-in-out" });
     });
-
     return () => view && view.destroy();
   }, [showMap]);
 
-  // --- Geolocation ---
   useEffect(() => {
     const requestLocation = async () => {
       if (!form.allowLocation || !viewRef.current) return;
@@ -237,8 +220,6 @@ function Report() {
     requestLocation();
   }, [form.allowLocation]);
 
-
-  // --- SUBMIT LOGIC ---
   const onSubmit = async (e) => {
     e.preventDefault();
     setMessage(null);
@@ -322,17 +303,13 @@ function Report() {
           backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 9999,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
         }}>
-          {/* Video Preview */}
           <video 
             ref={videoRef} 
             autoPlay 
             playsInline 
             style={{ width: '100%', maxWidth: '600px', borderRadius: '10px', backgroundColor: '#000' }}
           />
-          {/* Hidden Canvas for Capture */}
           <canvas ref={canvasRef} style={{ display: 'none' }} />
-
-          {/* Controls */}
           <div style={{ marginTop: '20px', display: 'flex', gap: '20px' }}>
             <button 
               type="button" 
@@ -379,14 +356,74 @@ function Report() {
           </div>
         )}
         
-        <div className="form-row"><label htmlFor="name">Nombre:</label><input id="name" name="name" type="text" value={form.name} onChange={onChange} /></div>
-        <div className="form-row"><label htmlFor="phone">Teléfono:</label><input id="phone" name="phone" type="phone" value={form.phone} onChange={onChange} /></div>
-        <div className="form-row"><label htmlFor="email">Email:</label><input id="email" name="email" type="email" value={form.email} onChange={onChange} /></div>
-        <div className="form-row"><label htmlFor="date">Fecha:</label><input id="date" name="date" type="date" value={form.date} onChange={onChange} /></div>
-        <div className="form-row"><label htmlFor="description">Descripción:</label><textarea id="description" name="description" rows={4} value={form.description} onChange={onChange} /></div>
+        <div className="form-row">
+          <label htmlFor="name">Nombre <small style={{color: '#666'}}>(Opcional)</small>:</label>
+          <input 
+            id="name" 
+            name="name" 
+            type="text" 
+            value={form.name} 
+            onChange={onChange} 
+            style={fieldStyle}
+            placeholder="Ej. Juan del Pueblo"
+          />
+        </div>
 
         <div className="form-row">
-          <label> Añadir Foto/Video:</label>
+          <label htmlFor="phone">Teléfono <small style={{color: '#666'}}>(Opcional)</small>:</label>
+          <input 
+            id="phone" 
+            name="phone" 
+            type="tel" 
+            value={form.phone} 
+            onChange={onChange} 
+            style={fieldStyle}
+            placeholder="Ej. 787-555-0123"
+          />
+        </div>
+
+        <div className="form-row">
+          <label htmlFor="email">Email <small style={{color: '#666'}}>(Opcional)</small>:</label>
+          <input 
+            id="email" 
+            name="email" 
+            type="email" 
+            value={form.email} 
+            onChange={onChange} 
+            style={fieldStyle}
+            placeholder="Ej. juan@ejemplo.com"
+          />
+        </div>
+
+        <div className="form-row">
+          <label htmlFor="date">Fecha <small style={{color: '#d9534f'}}>* Requerido</small>:</label>
+          <input 
+            id="date" 
+            name="date" 
+            type="date" 
+            value={form.date} 
+            onChange={onChange} 
+            style={fieldStyle}
+            required 
+          />
+        </div>
+
+        <div className="form-row">
+          <label htmlFor="description">Descripción <small style={{color: '#d9534f'}}>* Requerido</small>:</label>
+          <textarea 
+            id="description" 
+            name="description" 
+            rows={4} 
+            value={form.description} 
+            onChange={onChange} 
+            style={fieldStyle}
+            placeholder="Ej. Deslizamiento bloqueando el carril derecho. Se observan árboles caídos y terreno inestable..."
+            required
+          />
+        </div>
+
+        <div className="form-row">
+          <label> Añadir Foto/Video <small style={{color: '#666'}}>(Opcional)</small>:</label>
           <div className="dropzone" ref={dropRef}>
             <div className="dropzone__hint">
               <span className="drop-cloud">☁️</span>
@@ -424,22 +461,43 @@ function Report() {
         </div>
 
         <div className="form-row">
-          <label htmlFor="pueblo">Pueblo:</label>
-          <select id="pueblo" name="pueblo" value={form.pueblo} onChange={onChange}>
-            <option value="">Seleccione…</option>
+          <label htmlFor="pueblo">Pueblo <small style={{color: '#d9534f'}}>* Requerido</small>:</label>
+          <select 
+            id="pueblo" 
+            name="pueblo" 
+            value={form.pueblo} 
+            onChange={onChange} 
+            style={fieldStyle}
+            required
+          >
+            <option value="">Seleccione un pueblo...</option>
             {pueblos.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
-        <div className="form-row"><label htmlFor="carretera">Carretera:</label><input id="carretera" name="carretera" type="text" value={form.carretera} onChange={onChange} /></div>
+
+        <div className="form-row">
+          <label htmlFor="carretera">Carretera / Dirección <small style={{color: '#666'}}>(Opcional)</small>:</label>
+          <input 
+            id="carretera" 
+            name="carretera" 
+            type="text" 
+            value={form.carretera} 
+            onChange={onChange} 
+            style={fieldStyle}
+            placeholder="Ej. PR-123 Km 4.5, Barrio Salto Arriba"
+          />
+        </div>
         
         <div className="form-row form-row--inline">
           <input id="allowLocation" name="allowLocation" type="checkbox" checked={form.allowLocation} onChange={onChange} />
-          <label htmlFor="allowLocation" className="inline-label">Doy permiso a acceder mi localización.</label>
+          <label htmlFor="allowLocation" className="inline-label">
+            Doy permiso a acceder mi localización <small style={{color: '#d9534f'}}>* Requerido</small>
+          </label>
         </div>
 
         {showMap && (
           <div className="form-row">
-            <label>Ubicación:</label>
+            <label>Ubicación <small style={{color: '#d9534f'}}>* Haga clic en el mapa si la ubicación no es exacta</small>:</label>
             <div ref={mapRef} style={{ height: "400px", width: "100%", borderRadius: "10px", overflow: "hidden", border: "2px solid #a6b09f" }}></div>
           </div>
         )}
