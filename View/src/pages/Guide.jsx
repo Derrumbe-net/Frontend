@@ -1,5 +1,6 @@
 import HTMLFlipBook from "react-pageflip";
 import Slider from "react-slick";
+import {useState} from "react";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
@@ -26,6 +27,15 @@ import landslide from "../assets/landslide.png";
 
 function Guide() {
   const pages = [page1, page2, page3, page4, page5, page6, page7, page8, page9, page10, page11, page12, page13, page14, page15, page16];
+  const [showHint, setShowHint] = useState(true);
+  const [hideHint, setHideHint] = useState(false);
+
+  const dismissHint = () => {
+    if (!showHint) return;
+    setHideHint(true);
+    setTimeout(() => setShowHint(false), 600); // match animation duration
+  };
+
 
   const carouselSettings = {
     dots: true,
@@ -61,11 +71,21 @@ function Guide() {
         <a href="https://hazards.colorado.edu/uploads/documents/PuertoRico_LandslideGuide_2020.pdf" target="_blank" rel="noopener noreferrer" >here</a>.
       </p>
       <p>
-        Para avanzar o retroceder, haga clic o arrastre desde las esquinas del libro.
+        Para avanzar o retroceder, <strong>haga clic o arrastre desde las esquinas</strong> del libro.
         Puede detenerse en cualquier página para leer con calma o ampliar el contenido usando el zoom del navegador.
       </p>
       
-      <div className="guide__flipbook-container">
+      <div
+        className="guide__flipbook-container"
+        onClick={dismissHint}
+        onPointerDown={dismissHint}
+      >
+        {showHint && (
+          <div className={`flipbook-hint ${hideHint ? "hide" : ""}`}>
+            ➡️ Haga clic o deslice para pasar la página
+          </div>
+        )}
+
         <HTMLFlipBook
           width={500}
           height={700}
@@ -75,6 +95,8 @@ function Guide() {
           maxHeight={900}
           showCover={true}
           className="guide__flipbook"
+          onFlip={dismissHint}
+          onPointerDown={dismissHint}
         >
           {pages.map((img, i) => (
             <div key={i} className="guide__page">

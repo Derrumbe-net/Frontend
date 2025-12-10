@@ -7,7 +7,7 @@ export default function InteractiveMunicipalityMap() {
   const [data, setData] = useState(null);
 
   useEffect(() => {
-    fetch("/data/puerto-rico-municipalities.geojson")
+    fetch("/View/src/assets/puerto-rico-municipalities.geojson")
       .then(res => res.json())
       .then(json => setData(json));
   }, []);
