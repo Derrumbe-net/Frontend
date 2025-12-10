@@ -155,9 +155,9 @@ export default function CMSPublicaciones() {
         </div>
     );
 }
-
 function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) {
     const isEdit = !!publication;
+    const [isValidating, setIsValidating] = useState(false);
 
     const [formData, setFormData] = useState({
         title: "", publication_url: "", description: "", imageFile: null,
@@ -173,14 +173,9 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
                 description: publication.description,
                 imageFile: null,
             });
-
             if (publication.image_url) {
                 setPreviewUrl(`${apiUrl}/publications/${publication.publication_id}/image`);
-            } else {
-                setPreviewUrl(null);
             }
-        } else {
-            setPreviewUrl(null);
         }
     }, [publication, apiUrl]);
 
@@ -197,21 +192,33 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
         setFormData({ ...formData, [name]: value });
     };
 
-    const validate = () => {
+    const normalizeUrl = (url) => {
+        const trimmed = url.trim();
+        if (!trimmed) return "";
+        // Check if it starts with http:// or https://
+        if (!/^https?:\/\//i.test(trimmed)) {
+            return `https://${trimmed}`;
+        }
+        return trimmed;
+    };
+
+    const validateSyntax = (urlToCheck) => {
         if (!formData.title.trim()) {
             Swal.fire("Error", "El título es obligatorio.", "warning");
             return false;
         }
-        if (!formData.publication_url.trim()) {
+        if (!urlToCheck) {
             Swal.fire("Error", "El enlace (URL) es obligatorio.", "warning");
             return false;
         }
+        
         try {
-            new URL(formData.publication_url);
+            new URL(urlToCheck);
         } catch {
-            Swal.fire("Error", "URL inválida. Debe comenzar con http:// o https://", "warning");
+            Swal.fire("Error", "El formato del enlace no es válido.", "warning");
             return false;
         }
+
         if (formData.description.trim().length < 10) {
             Swal.fire("Error", "La descripción debe tener al menos 10 caracteres.", "warning");
             return false;
@@ -219,10 +226,48 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
         return true;
     };
 
+    const validateUrlReachability = async (url) => {
+        try {
+            // Check the normalized URL
+            const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+            const data = await response.json();
+            if (data.status.http_code && data.status.http_code >= 400) {
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.warn("Validation skipped due to network error:", error);
+            return false;
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!validate()) return;
 
+        // Normalize the URL first
+        const finalUrl = normalizeUrl(formData.publication_url);
+
+        // Validate using the normalized URL
+        if (!validateSyntax(finalUrl)) return;
+
+        setIsValidating(true);
+        const isReachable = await validateUrlReachability(finalUrl);
+        setIsValidating(false);
+
+        if (!isReachable) {
+            const warningResult = await Swal.fire({
+                title: "Enlace sospechoso",
+                text: `No pudimos verificar "${finalUrl}". ¿Desea guardarlo de todas formas?`,
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Sí, guardar",
+                cancelButtonText: "Revisar",
+                confirmButtonColor: "#d33",
+            });
+            if (!warningResult.isConfirmed) return;
+        }
+
+        // Confirm Save
         const confirm = await Swal.fire({
             title: isEdit ? "Guardar cambios" : "Crear Publicación",
             text: "¿Desea confirmar esta acción?",
@@ -240,17 +285,17 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
             ? `${apiUrl}/publications/${publication.publication_id}`
             : `${apiUrl}/publications`;
 
+        // Send the FINAL (normalized) URL to the backend
         const bodyData = {
             ...formData,
+            publication_url: finalUrl, // IMPORTANT: Sending the fixed URL
             admin_id: 1,
         };
 
         try {
             const token = localStorage.getItem("cmsAdmin");
-            if (!token) {
-                Swal.fire("Error", "Sesión expirada.", "error");
-                return;
-            }
+            
+            if (!token) { Swal.fire("Error", "Sesión expirada.", "error"); return; }
 
             const response = await fetch(url, {
                 method,
@@ -300,7 +345,6 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
             </p>
 
             <div className="cms-form-grid">
-
                 <div className="cms-form-section-title">Detalles del Contenido</div>
 
                 <div className="cms-form-group span-2">
@@ -310,7 +354,7 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
                         name="title"
                         value={formData.title}
                         onChange={handleChange}
-                        placeholder="Ej. Nuevo reporte anual de deslizamientos"
+                        placeholder="Ej. Nuevo reporte anual"
                     />
                 </div>
 
@@ -321,7 +365,7 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
                         name="publication_url"
                         value={formData.publication_url}
                         onChange={handleChange}
-                        placeholder="https://..."
+                        placeholder="Ej. google.com"
                     />
                 </div>
 
@@ -332,7 +376,7 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
                         name="description"
                         value={formData.description}
                         onChange={handleChange}
-                        placeholder="Resumen breve del contenido..."
+                        placeholder="Resumen breve..."
                     />
                 </div>
 
@@ -345,25 +389,18 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
                             <img src={previewUrl} alt="Vista previa" className="cms-form-preview" />
                         </div>
                     )}
-
                     <label>Subir Imagen</label>
-                    <input
-                        className="cms-input"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                    />
+                    <input className="cms-input" type="file" accept="image/*" onChange={handleImageChange} />
                 </div>
 
                 <div className="cms-form-actions">
-                    <button type="button" className="cms-btn cms-btn-secondary" onClick={onClose}>
+                    <button type="button" className="cms-btn cms-btn-secondary" onClick={onClose} disabled={isValidating}>
                         Cancelar
                     </button>
-                    <button type="submit" className="cms-btn">
-                        {isEdit ? "Guardar Cambios" : "Crear Publicación"}
+                    <button type="submit" className="cms-btn" disabled={isValidating}>
+                        {isValidating ? "Validando Enlace..." : (isEdit ? "Guardar Cambios" : "Crear Publicación")}
                     </button>
                 </div>
-
             </div>
         </form>
     );
