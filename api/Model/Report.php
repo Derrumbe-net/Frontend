@@ -36,41 +36,39 @@ class Report {
 
     public function updateReport($id, $data){
         try{
-            // Note: I removed :image_url from the query because we handle images separately via FTP now
-            // If you want to allow updating the folder name manually, keep it, otherwise remove it.
             $stmt = $this->conn->prepare(
                 "UPDATE report SET 
-             landslide_id=:landslide_id,
-             reported_at=:reported_at,
-             description=:description,
-             city=:city,
-             latitude=:latitude,
-             longitude=:longitude,
-             reporter_name=:reporter_name,
-             reporter_phone=:reporter_phone,
-             reporter_email=:reporter_email,
-             physical_address=:physical_address,
-             is_validated=:is_validated
-             WHERE report_id=:id"
+                landslide_id = :landslide_id,
+                reported_at = :reported_at,
+                description = :description,
+                city = :city,
+                latitude = :latitude,
+                longitude = :longitude,
+                reporter_name = :reporter_name,
+                reporter_phone = :reporter_phone,
+                reporter_email = :reporter_email,
+                physical_address = :physical_address,
+                is_validated = :is_validated
+            WHERE report_id = :id"
             );
 
-            // Bind params
-            $stmt->bindParam(':landslide_id', $data['landslide_id'], PDO::PARAM_INT);
-            $stmt->bindParam(':reported_at', $data['reported_at']);
-            $stmt->bindParam(':description', $data['description']);
-            $stmt->bindParam(':city', $data['city']);
-            $stmt->bindParam(':latitude', $data['latitude']);
-            $stmt->bindParam(':longitude', $data['longitude']);
-            $stmt->bindParam(':reporter_name', $data['reporter_name']);
-            $stmt->bindParam(':reporter_phone', $data['reporter_phone']);
-            $stmt->bindParam(':reporter_email', $data['reporter_email']);
-            $stmt->bindParam(':physical_address', $data['physical_address']);
-            $stmt->bindParam(':is_validated', $data['is_validated'], PDO::PARAM_INT);
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            $stmt->bindValue(':landslide_id', $data['landslide_id'] ?? null, PDO::PARAM_INT);
+            $stmt->bindValue(':reported_at', $data['reported_at'] ?? null);
+            $stmt->bindValue(':description', $data['description'] ?? '');
+            $stmt->bindValue(':city', $data['city'] ?? '');
+            $stmt->bindValue(':latitude', $data['latitude'] ?? null);
+            $stmt->bindValue(':longitude', $data['longitude'] ?? null);
+            $stmt->bindValue(':reporter_name', $data['reporter_name'] ?? '');
+            $stmt->bindValue(':reporter_phone', $data['reporter_phone'] ?? '');
+            $stmt->bindValue(':reporter_email', $data['reporter_email'] ?? '');
+            $stmt->bindValue(':physical_address', $data['physical_address'] ?? '');
+            $stmt->bindValue(':is_validated', $data['is_validated'] ?? 0, PDO::PARAM_INT);
+            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
 
             return $stmt->execute();
+
         } catch(PDOException $e){
-            error_log($e->getMessage());
+            error_log("Database Update Error: " . $e->getMessage());
             return false;
         }
     }

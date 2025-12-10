@@ -71,7 +71,6 @@ export default function CMSReports() {
                             {paginatedReports.map((r) => (
                                 <tr key={r.report_id}>
                                     <td>
-                                        {/* Use the helper component to fetch and show the first image */}
                                         <ReportThumbnail reportId={r.report_id} hasFolder={!!r.image_url} />
                                     </td>
                                     <td>{r.reported_at?.slice(0, 10)}</td>
@@ -142,11 +141,9 @@ function ReportThumbnail({ reportId, hasFolder }) {
     useEffect(() => {
         if (!hasFolder) return;
 
-        // Fetch list of images for this report
         fetch(`${API_URL}/reports/${reportId}/images`)
             .then(res => res.json())
             .then(data => {
-                // If we have images, pick the first one
                 if (data.images && data.images.length > 0) {
                     setFirstImage(data.images[0]);
                 }
@@ -161,7 +158,7 @@ function ReportThumbnail({ reportId, hasFolder }) {
     const imageUrl = `${API_URL}/reports/${reportId}/images/${firstImage}`;
 
     return (
-        <a href={imageUrl} target="_blank" rel="noopener noreferrer">
+        <a href={imageUrl} target="_blank" rel="noopener noreferrer" title="Ver imagen completa">
             <img
                 src={imageUrl}
                 alt="Evidencia"
@@ -171,7 +168,8 @@ function ReportThumbnail({ reportId, hasFolder }) {
                     height: '60px',
                     objectFit: 'cover',
                     borderRadius: '4px',
-                    border: '1px solid #e2e8f0'
+                    border: '1px solid #e2e8f0',
+                    cursor: 'pointer'
                 }}
             />
         </a>
@@ -289,6 +287,26 @@ function ReportForm({ report, onClose, refreshReports }) {
         return true;
     };
 
+    useEffect(() => {
+        if (report) {
+            setFormData({
+                reporter_name: report.reporter_name || "",
+                reporter_phone: report.reporter_phone || "",
+                reporter_email: report.reporter_email || "",
+                reported_at: report.reported_at?.slice(0, 10) || "",
+                description: report.description || "",
+                city: report.city || "",
+                physical_address: report.physical_address || "",
+                latitude: report.latitude || "",
+                longitude: report.longitude || "",
+                is_validated: report.is_validated || 0,
+                // ADD THIS LINE:
+                landslide_id: report.landslide_id || null
+            });
+            fetchServerImages();
+        }
+    }, [report]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validate()) return;
@@ -308,7 +326,8 @@ function ReportForm({ report, onClose, refreshReports }) {
             const token = localStorage.getItem("cmsAdmin");
             if(!token) { Swal.fire("Error", "Sesión expirada", "error"); return; }
 
-            await fetch(`${API_URL}/reports/${report.report_id}`, {
+            // 2. CHECK RESPONSE STATUS
+            const res = await fetch(`${API_URL}/reports/${report.report_id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -317,15 +336,23 @@ function ReportForm({ report, onClose, refreshReports }) {
                 body: JSON.stringify(formData)
             });
 
+            // If server returns 400 or 500, throw error
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.error || "Error al actualizar");
+            }
+
+            // Image uploading logic...
             if (newFiles.length > 0) {
                 for (const file of newFiles) {
                     const uploadForm = new FormData();
                     uploadForm.append("image_file", file);
-                    await fetch(`${API_URL}/reports/${report.report_id}/upload`, {
+                    const imgRes = await fetch(`${API_URL}/reports/${report.report_id}/upload`, {
                         method: "POST",
                         headers: { Authorization: `Bearer ${token}` },
                         body: uploadForm
                     });
+                    if (!imgRes.ok) console.error("Error uploading one of the images");
                 }
             }
 
@@ -335,7 +362,8 @@ function ReportForm({ report, onClose, refreshReports }) {
 
         } catch (error) {
             console.error(error);
-            Swal.fire("Error", "No se pudo actualizar el reporte.", "error");
+            // Now you will actually see the error popup if it fails
+            Swal.fire("Error", error.message, "error");
         }
     };
 
@@ -408,18 +436,28 @@ function ReportForm({ report, onClose, refreshReports }) {
                     <label style={{marginBottom:'10px', display:'block'}}>Imágenes Existentes:</label>
                     {existingImages.length > 0 ? (
                         <div className="cms-image-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
-                            {existingImages.map((filename, idx) => (
-                                <div key={idx} className="cms-image-card" style={{ position: 'relative', width: '150px', height: '150px', border:'1px solid #ddd', borderRadius:'8px', overflow:'hidden' }}>
-                                    <img
-                                        src={`${API_URL}/reports/${report.report_id}/images/${filename}`}
-                                        alt="Evidencia"
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                    />
-                                    <button type="button" onClick={() => handleDeleteServerImage(filename)} style={{ position: 'absolute', top: '5px', right: '5px', backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #c62828', color: '#c62828', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <FaTrash size={12} />
-                                    </button>
-                                </div>
-                            ))}
+                            {existingImages.map((filename, idx) => {
+                                const imgUrl = `${API_URL}/reports/${report.report_id}/images/${filename}`;
+                                return (
+                                    <div key={idx} className="cms-image-card" style={{ position: 'relative', width: '150px', height: '150px', border:'1px solid #ddd', borderRadius:'8px', overflow:'hidden' }}>
+                                        <a href={imgUrl} target="_blank" rel="noopener noreferrer" title="Click para ver imagen completa">
+                                            <img
+                                                src={imgUrl}
+                                                alt="Evidencia"
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor:'pointer' }}
+                                            />
+                                        </a>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => { e.preventDefault(); handleDeleteServerImage(filename); }}
+                                            style={{ position: 'absolute', top: '5px', right: '5px', backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #c62828', color: '#c62828', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}
+                                            title="Eliminar imagen"
+                                        >
+                                            <FaTrash size={12} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
                         </div>
                     ) : (
                         <p style={{fontStyle:'italic', color:'#888'}}>No hay imágenes guardadas.</p>
@@ -432,7 +470,9 @@ function ReportForm({ report, onClose, refreshReports }) {
                     {newPreviews.length > 0 && (
                         <div style={{ marginTop: '10px', display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom:'5px' }}>
                             {newPreviews.map((src, i) => (
-                                <img key={i} src={src} alt="New" style={{ height: '80px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                                <a key={i} href={src} target="_blank" rel="noopener noreferrer" title="Click para previsualizar">
+                                    <img src={src} alt="New" style={{ height: '80px', borderRadius: '4px', border: '1px solid #ccc', cursor:'pointer' }} />
+                                </a>
                             ))}
                         </div>
                     )}
