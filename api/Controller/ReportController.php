@@ -50,6 +50,7 @@ class ReportController {
                 'reporter_name'    => $data['reporter_name'] ?? 'N/A',
                 'reporter_phone'   => $data['reporter_phone'] ?: 'N/A',
                 'reporter_email'   => $data['reporter_email'] ?: 'N/A',
+                'cms_link' => $_ENV['FRONTEND_URL'] . "/cms"
             ]);
 
             $this->emailService->sendEmail(
