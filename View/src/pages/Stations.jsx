@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Tooltip } from "react-leaflet"; // Added Tooltip here
+import { MapContainer, TileLayer, Marker, Tooltip } from "react-leaflet";
 import L from "leaflet";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import "leaflet/dist/leaflet.css";
 import "../styles/Stations.css";
+import stationSchematic from "../assets/station_schematic.png";
+
 import Cookies from 'js-cookie'; 
 const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 const BASE_STATIONS_URL = BASE_DOMAIN + "/stations";
 const getHistoryUrl = (stationId) => `${BASE_STATIONS_URL}/history/${stationId}/wc`;
 const getSensorImageUrl = (stationId) => `${BASE_STATIONS_URL}/${stationId}/image/sensor`;
+
+const getDataImageUrl = (stationId) => `${BASE_STATIONS_URL}/${stationId}/image/data`;
 
 /* --- MAP ICONS --- */
 const createSaturationIcon = (saturation) => {
@@ -50,9 +54,6 @@ const createStatusIcon = (color) => {
 
 /* --- MAP COMPONENT --- */
 const StationsMap = ({ stations, selectedMetric, onStationSelect, selectedStationId }) => {
-
-    // REMOVED: The useEffect hook that used map.flyTo() is gone.
-    // The map will no longer move when selectedStationId changes.
 
     const getStatusColor = (station) => {
         if (station.last_updated) {
@@ -95,7 +96,6 @@ const StationsMap = ({ stations, selectedMetric, onStationSelect, selectedStatio
                             click: () => onStationSelect(station),
                         }}
                     >
-                        {/* ADDED: Tooltip for Hover Name */}
                         <Tooltip direction="top" offset={[0, -20]} opacity={1}>
                             <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{station.city}</span>
                         </Tooltip>
@@ -215,7 +215,6 @@ function Stations() {
 
     const handleStationSelect = (station) => {
         setSelectedStation(station);
-        // Map stays still, panel updates
     };
 
     return (
@@ -226,7 +225,6 @@ function Stations() {
             </p>
 
             <div className="dashboard-container">
-
                 {/* LEFT: MAP */}
                 <div className="map-panel">
                     <div className="panel-controls">
@@ -244,7 +242,7 @@ function Stations() {
                     <div className="map-wrapper">
                         <MapContainer
                             center={[18.220833, -66.420149]}
-                            zoom={10} /* Keeps your Zoom In preference */
+                            zoom={10}
                             style={{ height: "100%", width: "100%" }}
                             zoomControl={false}
                             scrollWheelZoom={false}
@@ -290,6 +288,12 @@ function Stations() {
                                 >
                                     Información
                                 </button>
+                                <button
+                                    className={`tab-btn ${activeTab === 'graphic' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('graphic')}
+                                >
+                                    Gráfico
+                                </button>
                             </div>
 
                             <div className="details-content">
@@ -332,25 +336,79 @@ function Stations() {
                                         </ul>
                                     </div>
                                 )}
+                                {activeTab === 'graphic' && (
+                                    <div className="info-view">
+                                        <div className="station-grafico-img-container">
+                                            {selectedStation.data_image_url ? (
+                                                <img
+                                                    src={getDataImageUrl(selectedStation.station_id)}
+                                                    alt={`Gráfico de datos de ${selectedStation.city}`}
+                                                    onError={(e) => e.target.style.display = 'none'}
+                                                />
+                                            ) : (
+                                                <div className="no-img">Gráfico no disponible</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </>
                     )}
                 </div>
             </div>
 
-            {/* STATIC INFO (Footer) */}
+            {/* --- FOOTER: 2 COLUMNS --- */}
             <div className="stations-footer">
-                <div className="footer-col">
-                    <h3>Sobre los Sensores</h3>
-                    <p>Cada estación mide contenido volumétrico de agua (VWC), presión, temperatura y lluvia. Los datos se transmiten cada hora entre las 7:00 y las 20:00 AST.</p>
-                </div>
-                <div className="footer-col">
-                    <h3>Glosario de Datos</h3>
-                    <ul>
-                        <li><strong>VWC:</strong> Relación entre volumen de agua y suelo.</li>
-                        <li><strong>Succión:</strong> Presión negativa de los poros.</li>
-                        <li><strong>Piezómetro:</strong> Nivel de agua subterránea.</li>
-                    </ul>
+                <div className="footer-layout-wrapper">
+
+                    {/* LEFT COL: All Text Information */}
+                    <div className="footer-text-column">
+                        <h2>Sensores y equipos de la estación</h2>
+                        <p>
+                            Cada estación de la Red de Pronóstico de Deslizamientos de Tierra de Puerto Rico incluye estaciones de monitoreo equipadas con sensores subterráneos que miden el contenido volumétrico de agua, la presión de succión del suelo, la temperatura del suelo y la presión del agua subterránea. Los sensores se instalan en un hoyo excavado a mano hasta la base del suelo, donde se encuentra material de lecho rocoso meteorizado.
+                        </p>
+                        <p>
+                            El conjunto de sensores se instala a intervalos de 0.25d, 0.50d, 0.75d y 1.00d, donde "d" es la profundidad total del perfil del suelo. La distribución de los sensores se muestra en el diagrama adjunto.
+                        </p>
+                        <p>
+                            Los sensores sobre el suelo miden la temperatura del aire, la presión barométrica y la lluvia. Cada estación está controlada por un registrador de datos que recopila datos cada 5 minutos y transmite datos cada hora a través de un módem celular a nuestro servidor local entre las 7:00 y las 20:00 AST. Debido a que las estaciones funcionan con energía solar y batería, los datos generalmente no se transmiten durante la noche para ahorrar energía.
+                        </p>
+
+                        <h2 className="secondary-footer-header">Datos de la estación</h2>
+                        <p>
+                            Los datos medidos incluyen el contenido volumétrico de agua, la succión del suelo, el nivel de agua subterránea, la temperatura del suelo, la temperatura del aire, la presión barométrica y la lluvia.
+                        </p>
+
+                        <ul className="glossary-list">
+                            <li>
+                                <strong>El contenido volumétrico de agua (VWC)</strong> es la relación entre el volumen de agua y el volumen total del suelo. Los valores normalmente no superan los 0,5 cm³/cm³. El contenido volumétrico de agua se puede utilizar para calcular la saturación del suelo.
+                            </li>
+                            <li>
+                                <strong>La succión del suelo</strong> es la presión negativa de los poros dentro del suelo. Cuando la presión de los poros del suelo es positiva, no hay succión. Nuestros sensores solo miden presiones negativas de hasta 0 kPa. Cuando los sensores leen ~0 kPa, la presión de los poros del suelo podría ser positiva.
+                            </li>
+                            <li>
+                                <strong>El nivel de agua subterránea del suelo</strong> se mide con un piezómetro de cuerda vibrante. El piezómetro mide la presión del agua subterránea por encima de su posición. Las unidades informadas están en centímetros de agua. Las lecturas del piezómetro se corrigen según las variaciones de presión atmosférica del barómetro sobre el suelo.
+                            </li>
+                            <li>
+                                <strong>La temperatura del suelo</strong> también se mide con nuestro instrumento piezómetro. Las unidades informadas son grados Celsius.
+                            </li>
+                            <li>
+                                <strong>La temperatura del aire</strong> se mide con un termómetro situado sobre la superficie. Las unidades que se indican son grados Celsius. Los valores de temperatura del aire que se indican pueden ser excesivamente altos si el sensor está expuesto directamente al sol.
+                            </li>
+                            <li>
+                                <strong>La presión atmosférica</strong> se mide con un barómetro situado sobre la superficie.
+                            </li>
+                            <li>
+                                <strong>La cantidad y la tasa de lluvia</strong> se miden con un pluviómetro de cubeta basculante. Las unidades que se indican son milímetros.
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* RIGHT COL: Image Only */}
+                    <div className="footer-image-column">
+                        <img src={stationSchematic} alt="Esquema de sensores de la estación" className="schematic-img" />
+                    </div>
+
                 </div>
             </div>
         </div>

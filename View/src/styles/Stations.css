@@ -182,6 +182,15 @@
     border: 1px solid #ccc;
 }
 
+.station-grafico-img-container img {
+    width: 100%;
+    height: 525px;
+    object-fit: fill;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+}
+
 .no-img {
     width: 100%;
     height: 150px;
@@ -204,25 +213,86 @@
     font-size: 0.9rem;
 }
 
+
 /* --- FOOTER --- */
 .stations-footer {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3rem;
     margin-top: 3rem;
     border-top: 1px solid rgba(0,0,0,0.1);
     padding-top: 2rem;
+    background-color: transparent;
+    color: #000;
 }
 
-.footer-col h3 {
-    font-size: 1.2rem;
-    font-weight: 700;
+/* Flex Wrapper for 2-Column Layout */
+.footer-layout-wrapper {
+    display: flex;
+    gap: 4rem; /* Generous gap between text and image */
+    align-items: flex-start; /* Align to top */
+}
+
+/* Left Column: Text Info */
+.footer-text-column {
+    flex: 2; /* Takes up 2/3rds of space */
+    min-width: 0; /* Prevents flex overflow */
+}
+
+/* Right Column: Image */
+.footer-image-column {
+    flex: 1; /* Takes up 1/3rd of space */
+    display: flex;
+    justify-content: center;
+    position: sticky;
+    top: 2rem; /* Optional: keeps image in view while scrolling text */
+}
+
+.schematic-img {
+    width: 100%;
+    max-width: 450px; /* Controls max size of schematic */
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background: white;
+    padding: 0.5rem;
+}
+
+/* Header Styles */
+.stations-footer h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
     margin-bottom: 1rem;
+    color: #1a1a1a;
+    margin-top: 0;
 }
 
-.footer-col p, .footer-col li {
-    font-size: 0.95rem;
+/* Secondary Header (Datos de la estación) Spacing */
+.secondary-footer-header {
+    margin-top: 3rem;
+    border-top: 1px solid rgba(0,0,0,0.1); /* Optional: visual separator inside text col */
+    padding-top: 2rem;
+}
+
+.stations-footer p {
+    font-size: 1rem;
     line-height: 1.6;
+    margin-bottom: 1.5rem;
+    color: #333;
+    text-align: justify;
+}
+
+/* Glossary List */
+.glossary-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.glossary-list li {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    color: #333;
+    text-align: justify;
+    padding-left: 1rem;
+    border-left: 3px solid #3B7D23; /* Green accent */
 }
 
 /* --- MAP MARKERS (CSS Only, No Emojis) --- */
