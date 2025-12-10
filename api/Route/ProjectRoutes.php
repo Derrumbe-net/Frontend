@@ -4,16 +4,19 @@ use Slim\App;
 use DerrumbeNet\Controller\ProjectController;
 use DerrumbeNet\Model\Project;
 use Slim\Routing\RouteCollectorProxy;
+use DerrumbeNet\Middleware\JwtMiddleware;
 
 return function (App $app, $db) {
 
-    // 1. Create the Model (injecting DB)
+    // Create the Model (injecting DB)
     $projectModel = new Project($db);
+    $jwtSecret = $_ENV['JWT_SECRET'];
+    $jwtMiddleware = new JwtMiddleware($jwtSecret);
 
-    // 2. Create the Controller (injecting Model)
+    // Create the Controller (injecting Model)
     $projectController = new ProjectController($projectModel);
 
-    // 3. Define Routes using the instantiated Controller
+    // Define Routes using the instantiated Controller
     $app->group('/projects', function (RouteCollectorProxy $group) use ($projectController) {
 
         // Note: We use the array syntax [$object, 'methodName']
@@ -27,5 +30,5 @@ return function (App $app, $db) {
         // Image handling
         $group->post('/{id}/image', [$projectController, 'uploadProjectImage']);
         $group->get('/{id}/image', [$projectController, 'serveProjectImage']);
-    });
+    })->add($jwtMiddleware);
 };
