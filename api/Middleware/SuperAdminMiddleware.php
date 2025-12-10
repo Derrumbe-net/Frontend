@@ -10,8 +10,8 @@ use Slim\Psr7\Response as SlimResponse;
 class SuperAdminMiddleware implements MiddlewareInterface {
     private string $superAdminEmail;
 
-    public function __construct(string $email = 'slidespr@gmail.com') {
-        $this->superAdminEmail = $email;
+    public function __construct() {
+        $this->superAdminEmail = $_ENV['SUPERADMIN_EMAIL'];
     }
 
     public function process(Request $request, RequestHandler $handler): Response {
