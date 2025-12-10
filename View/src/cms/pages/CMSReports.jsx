@@ -389,7 +389,7 @@ function ReportForm({ report, onClose, refreshReports }) {
                 image_url: sharedFolder // Ensure report gets the folder name too
             };
 
-            const repRes = await fetch(`${API_URL}/reports/${report.report_id}`, {
+            const res = await fetch(`${API_URL}/reports/${report.report_id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -402,8 +402,6 @@ function ReportForm({ report, onClose, refreshReports }) {
                 const errorData = await res.json();
                 throw new Error(errorData.error || "Error al actualizar datos del reporte");
             }
-
-            // 2. Upload Images (POST) - UPDATED LOGIC
             if (newFiles.length > 0) {
                 // Show a loading alert because uploads can take time
                 Swal.fire({

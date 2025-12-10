@@ -38,7 +38,12 @@ class Report {
                 ':reporter_email'   => $data['reporter_email'] ?? '',
                 ':physical_address' => $data['physical_address'] ?? '',
                 ':is_validated'     => $data['is_validated'] ?? 0
-            ];
+            ]);
+
+            if ($stmt->execute($data)) {
+                return $this->conn->lastInsertId();
+            }
+            return false;
 
             if ($stmt->execute($params)) {
                 return $this->conn->lastInsertId();
