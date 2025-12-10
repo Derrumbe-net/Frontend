@@ -1,36 +1,31 @@
 <?php
+
 use Slim\App;
+use DerrumbeNet\Controller\ProjectController;
+use DerrumbeNet\Model\Project;
 use Slim\Routing\RouteCollectorProxy;
-use DerrumbeNet\Controller\ReportController;
-use DerrumbeNet\Middleware\JwtMiddleware;
 
 return function (App $app, $db) {
-    $controller = new ReportController($db);
-    $jwtSecret = $_ENV['JWT_SECRET'];
-    $jwtMiddleware = new JwtMiddleware($jwtSecret);
 
-    // Main Group for ALL report routes
-    $app->group('/reports', function (RouteCollectorProxy $group) use ($controller, $jwtMiddleware) {
+    // 1. Create the Model (injecting DB)
+    $projectModel = new Project($db);
 
-        // ==== PUBLIC ROUTES ====
-        $group->get('', [$controller, 'getAllReports']);
-        $group->post('', [$controller, 'createReport']);
-        $group->get('/{id}', [$controller, 'getReport']);
+    // 2. Create the Controller (injecting Model)
+    $projectController = new ProjectController($projectModel);
 
-        // Image Routes (Updated to match Landslide Structure)
-        $group->post('/{id}/upload', [$controller, 'uploadReportImage']);
-        $group->get('/{id}/images', [$controller, 'getReportImages']); // Returns list
-        $group->get('/{id}/images/{filename}', [$controller, 'serveReportImage']); // Returns binary
+    // 3. Define Routes using the instantiated Controller
+    $app->group('/projects', function (RouteCollectorProxy $group) use ($projectController) {
 
-        // ==== PROTECTED ROUTES (Sub-group) ====
-        $group->group('', function (RouteCollectorProxy $protected) use ($controller) {
-            $protected->put('/{id}', [$controller, 'updateReport']);
-            $protected->delete('/{id}', [$controller, 'deleteReport']);
+        // Note: We use the array syntax [$object, 'methodName']
+        $group->post('', [$projectController, 'createProject']);
+        $group->get('', [$projectController, 'getAllProjects']);
 
-            // NEW DELETE ROUTE
-            $protected->delete('/{id}/images/{filename}', [$controller, 'deleteReportImage']);
+        $group->get('/{id}', [$projectController, 'getProject']);
+        $group->put('/{id}', [$projectController, 'updateProject']);
+        $group->delete('/{id}', [$projectController, 'deleteProject']);
 
-        })->add($jwtMiddleware);
-
+        // Image handling
+        $group->post('/{id}/image', [$projectController, 'uploadProjectImage']);
+        $group->get('/{id}/image', [$projectController, 'serveProjectImage']);
     });
 };
