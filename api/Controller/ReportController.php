@@ -194,17 +194,28 @@ class ReportController {
         $filename = $args['filename'];
 
         $report = $this->reportModel->getReportById($id);
+
+        // FIX 1: Handle null report (optional but good practice)
+        if (!$report) {
+            $response->getBody()->write('Report not found');
+            return $response->withStatus(404);
+        }
+
         $folderName = $report['image_url'];
 
         if (!$folderName) {
-            return $response->withStatus(404)->write('Folder name not found in DB');
+            // FIX 2: Write to body, then return response
+            $response->getBody()->write('Folder name not found in DB');
+            return $response->withStatus(404);
         }
 
         try {
             $imageContent = $this->reportModel->getReportImageContent($folderName, $filename);
 
             if (!$imageContent) {
-                return $response->withStatus(404)->write('Image content empty or not found');
+                // FIX 3: Write to body, then return response
+                $response->getBody()->write('Image content empty or not found');
+                return $response->withStatus(404);
             }
 
             $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
@@ -219,7 +230,9 @@ class ReportController {
             return $response->withHeader('Content-Type', $mimeType);
 
         } catch (\Exception $e) {
-            return $response->withStatus(404)->write('Image not found');
+            // FIX 4: Write to body, then return response
+            $response->getBody()->write('Image not found');
+            return $response->withStatus(404);
         }
     }
 

@@ -116,13 +116,17 @@ class PublicationController {
             $pub = $this->publicationModel->getPublicationById($publicationId);
 
             if (!$pub) {
-                return $response->withStatus(404)->write('Publication not found');
+                // FIX: Write to Body, then return response
+                $response->getBody()->write('Publication not found');
+                return $response->withStatus(404);
             }
 
             $fileName = $pub['image_url'] ?? null;
 
             if (empty($fileName)) {
-                return $response->withStatus(404)->write('Image not defined for this publication');
+                // FIX: Write to Body, then return response
+                $response->getBody()->write('Image not defined for this publication');
+                return $response->withStatus(404);
             }
 
             // Fetch content from FTP
@@ -143,7 +147,9 @@ class PublicationController {
 
         } catch (\Exception $e) {
             error_log($e->getMessage());
-            return $response->withStatus(500)->write('Error fetching image');
+            // FIX: Write to Body, then return response
+            $response->getBody()->write('Error fetching image');
+            return $response->withStatus(500);
         }
     }
 }

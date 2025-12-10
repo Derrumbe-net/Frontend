@@ -7,8 +7,8 @@ use DerrumbeNet\Model\Landslide;
 class LandslideController {
     private Landslide $landslideModel;
 
-    public function __construct($db) {
-        $this->landslideModel = new Landslide($db);
+    public function __construct($db, Landslide $landslideModel = null) {
+        $this->landslideModel = $landslideModel ?? new Landslide($db);
     }
 
     private function jsonResponse($response, $data, $status = 200) {
@@ -75,10 +75,14 @@ class LandslideController {
         $filename = $args['filename'];
 
         $landslide = $this->landslideModel->getLandslideById($id);
-        $folderName = $landslide['image_url'];
+
+        // Handle case where landslide doesn't exist or has no folder
+        $folderName = $landslide['image_url'] ?? null;
 
         if (!$folderName) {
-            return $response->withStatus(404)->write('Folder name not found in DB');
+            // FIX 1: Write to Body, then return response with status
+            $response->getBody()->write('Folder name not found in DB');
+            return $response->withStatus(404);
         }
 
         try {
@@ -96,7 +100,9 @@ class LandslideController {
             return $response->withHeader('Content-Type', $mimeType);
 
         } catch (\Exception $e) {
-            return $response->withStatus(404)->write('Image not found');
+            // FIX 2: Write to Body, then return response with status
+            $response->getBody()->write('Image not found');
+            return $response->withStatus(404);
         }
     }
 }

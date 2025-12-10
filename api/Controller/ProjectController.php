@@ -4,47 +4,57 @@ namespace DerrumbeNet\Controller;
 
 use DerrumbeNet\Model\Project;
 
-class ProjectController {
+class ProjectController
+{
     private Project $projectModel;
-    public function __construct(Project $projectModel) {
+
+    public function __construct(Project $projectModel)
+    {
         $this->projectModel = $projectModel;
     }
 
-    private function jsonResponse($response, $data, $status=200) {
+    private function jsonResponse($response, $data, $status = 200)
+    {
         $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
         $response->getBody()->write($payload);
-        return $response->withHeader('Content-Type','application/json')->withStatus($status);
+        return $response->withHeader('Content-Type', 'application/json')->withStatus($status);
     }
 
-    public function createProject($request,$response){
+    public function createProject($request, $response)
+    {
         $id = $this->projectModel->createProject($request->getParsedBody());
-        return $id ? $this->jsonResponse($response,['message'=>'Project created', 'project_id' => $id],201)
-                   : $this->jsonResponse($response,['error'=>'Failed'],500);
+        return $id ? $this->jsonResponse($response, ['message' => 'Project created', 'project_id' => $id], 201)
+            : $this->jsonResponse($response, ['error' => 'Failed'], 500);
     }
 
-    public function getAllProjects($request,$response){ 
-        return $this->jsonResponse($response,$this->projectModel->getAllProjects());
+    public function getAllProjects($request, $response)
+    {
+        return $this->jsonResponse($response, $this->projectModel->getAllProjects());
     }
 
-    public function getProject($request,$response,$args){
+    public function getProject($request, $response, $args)
+    {
         $proj = $this->projectModel->getProjectById($args['id']);
-        return $proj ? $this->jsonResponse($response,$proj)
-                     : $this->jsonResponse($response,['error'=>'Not found'],404);
+        return $proj ? $this->jsonResponse($response, $proj)
+            : $this->jsonResponse($response, ['error' => 'Not found'], 404);
     }
 
-    public function updateProject($request,$response,$args){
-        $updated = $this->projectModel->updateProject($args['id'],$request->getParsedBody());
-        return $updated ? $this->jsonResponse($response,['message'=>'Updated'])
-                        : $this->jsonResponse($response,['error'=>'Failed'],500);
+    public function updateProject($request, $response, $args)
+    {
+        $updated = $this->projectModel->updateProject($args['id'], $request->getParsedBody());
+        return $updated ? $this->jsonResponse($response, ['message' => 'Updated'])
+            : $this->jsonResponse($response, ['error' => 'Failed'], 500);
     }
 
-    public function deleteProject($request,$response,$args){
+    public function deleteProject($request, $response, $args)
+    {
         $deleted = $this->projectModel->deleteProject($args['id']);
-        return $deleted ? $this->jsonResponse($response,['message'=>'Deleted'])
-                        : $this->jsonResponse($response,['error'=>'Failed'],500);
+        return $deleted ? $this->jsonResponse($response, ['message' => 'Deleted'])
+            : $this->jsonResponse($response, ['error' => 'Failed'], 500);
     }
 
-    public function uploadProjectImage($request, $response, $args) {
+    public function uploadProjectImage($request, $response, $args)
+    {
         $projectId = $args['id'];
         $uploadedFiles = $request->getUploadedFiles();
 
@@ -95,20 +105,25 @@ class ProjectController {
         }
     }
 
-    public function serveProjectImage($request, $response, $args) {
+    public function serveProjectImage($request, $response, $args)
+    {
         $projectId = $args['id'];
 
         try {
             $proj = $this->projectModel->getProjectById($projectId);
 
             if (!$proj) {
-                return $response->withStatus(404)->write('Project not found');
+                // FIX 1: Write to Body, then return response
+                $response->getBody()->write('Project not found');
+                return $response->withStatus(404);
             }
 
             $fileName = $proj['image_url'] ?? null;
 
             if (empty($fileName)) {
-                return $response->withStatus(404)->write('Image not defined for this project');
+                // FIX 2: Write to Body, then return response
+                $response->getBody()->write('Image not defined for this project');
+                return $response->withStatus(404);
             }
 
             // Fetch content from FTP
@@ -129,7 +144,9 @@ class ProjectController {
 
         } catch (\Exception $e) {
             error_log($e->getMessage());
-            return $response->withStatus(500)->write('Error fetching image');
+            // FIX 3: Write to Body, then return response
+            $response->getBody()->write('Error fetching image');
+            return $response->withStatus(500);
         }
     }
 }
