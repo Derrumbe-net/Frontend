@@ -365,29 +365,23 @@ function StationForm({ station, onClose, refreshStations }) {
         <option value={1}>Sí</option>
         <option value={0}>No</option>
       </select>
-      
-      <label>Saturación (%):</label>
-      <input type="number" name="soil_saturation" value={formData.soil_saturation} onChange={handleChange} />
 
-      <label>Precipitación:</label>
-      <input type="number" name="precipitation" value={formData.precipitation} onChange={handleChange} />
-
-      <label>Máximo Contenido de Agua 1 (WC1 Max):</label>
+      <label>Máximo Contenido de Agua 1 (WC1 Max):<span className="required">*</span></label>
       <input type="number" name="wc1" value={formData.wc1} onChange={handleChange} />
 
-      <label>Máximo Contenido de Agua 2 (WC2 Max)</label>
+      <label>Máximo Contenido de Agua 2 (WC2 Max)<span className="required">*</span></label>
       <input type="number" name="wc2" value={formData.wc2} onChange={handleChange} />
 
-      <label>Máximo Contenido de Agua 3 (WC3 Max)</label>
+      <label>Máximo Contenido de Agua 3 (WC3 Max)<span className="required">*</span></label>
       <input type="number" name="wc3" value={formData.wc3} onChange={handleChange} />
 
-      <label>Máximo Contenido de Agua 4 (WC4 Max)</label>
+      <label>Máximo Contenido de Agua 4 (WC4 Max)<span className="required">*</span></label>
       <input type="number" name="wc4" value={formData.wc4} onChange={handleChange} />
 
-      <label>Latitud:</label>
+      <label>Latitud:<span className="required">*</span></label>
       <input type="number" name="latitude" value={formData.latitude} onChange={handleChange} />
 
-      <label>Longitud:</label>
+      <label>Longitud:<span className="required">*</span></label>
       <input type="number" name="longitude" value={formData.longitude} onChange={handleChange} />
 
       <label>Unidad geológica:</label>
@@ -414,8 +408,8 @@ function StationForm({ station, onClose, refreshStations }) {
       <label>Colaborador:</label>
       <input name="collaborator" value={formData.collaborator} onChange={handleChange} />
 
-      <label>Ruta del Archivo de Data (.dat):</label>
-      <input name="ftp_file_path" value={formData.ftp_file_path} onChange={handleChange} />
+      <label>Ruta del Archivo de Data (.dat):<span className="required">*</span></label>
+      <input name="ftp_file_path" value={formData.ftp_file_path} onChange={handleChange} placeholder="network/data/latest/(nombre)_t60min.dat" />
 
       <label>Subir Imagen (opcional):</label>
       <input
