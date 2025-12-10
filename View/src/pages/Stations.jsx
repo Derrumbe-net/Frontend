@@ -7,6 +7,7 @@ import "leaflet/dist/leaflet.css";
 import "../styles/Stations.css";
 import stationSchematic from "../assets/station_schematic.png";
 
+import Cookies from 'js-cookie'; 
 const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 const BASE_STATIONS_URL = BASE_DOMAIN + "/stations";
 const getHistoryUrl = (stationId) => `${BASE_STATIONS_URL}/history/${stationId}/wc`;
@@ -169,11 +170,41 @@ const StationChart = ({ station, sensorIndex }) => {
 
 /* --- MAIN PAGE --- */
 function Stations() {
+    // --- COOKIE CONFIGURATION ---
+    const COOKIE_NAME = 'stations_dashboard_settings';
+
+    // Helper: Safely get cookie
+    const getSavedSettings = () => {
+        try {
+            const saved = Cookies.get(COOKIE_NAME);
+            return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+            console.warn("Error parsing station cookies", e);
+            return {};
+        }
+    };
+
+    const savedSettings = getSavedSettings();
+
+    // --- STATE MANAGEMENT ---
     const [stations, setStations] = useState([]);
-    const [mapMetric, setMapMetric] = useState("status");
-    const [selectedStation, setSelectedStation] = useState(null);
-    const [selectedSensor, setSelectedSensor] = useState(1);
     const [activeTab, setActiveTab] = useState("data");
+
+    // Load these from cookie or use default
+    const [mapMetric, setMapMetric] = useState(savedSettings.mapMetric ?? "status");
+    const [selectedStation, setSelectedStation] = useState(savedSettings.selectedStation ?? null);
+    const [selectedSensor, setSelectedSensor] = useState(savedSettings.selectedSensor ?? 1);
+
+    // --- EFFECT: SAVE TO COOKIES ON CHANGE ---
+    useEffect(() => {
+        const settingsToSave = {
+            mapMetric,
+            selectedStation,
+            selectedSensor
+        };
+        // Save to cookie (Expires in 30 days)
+        Cookies.set(COOKIE_NAME, JSON.stringify(settingsToSave), { expires: 30 });
+    }, [mapMetric, selectedStation, selectedSensor]);
 
     useEffect(() => {
         fetch(BASE_STATIONS_URL)

@@ -34,71 +34,94 @@ class ReportController {
             return $this->jsonResponse($response, ['error' => 'Failed to create report'], 500);
         }
 
-        // Generate Folder Name: {id}_{reported_at}
-        // Example: "15_2025-12-07"
-        $reportedAt = $data['reported_at'] ?? date('Y-m-d');
-        $safeDate = str_replace([':', ' '], ['-', '_'], $reportedAt);
-        $folderName = "{$reportId}_{$safeDate}";
+        $rawDate = $data['reported_at'] ?? date('Y-m-d');
+        
+        // YYYY-MM-DD format 
+        $dateFormatted = date('Y-m-d', strtotime($rawDate));
 
-        // Temporarily store the FOLDER NAME in the DB so Step 2 knows where to put the file
+        // Create folder name: {date}_{id}
+        $folderName = "{$dateFormatted}_{$reportId}";
+
         $this->reportModel->updateReportImage($reportId, $folderName);
 
-        // Return ID so frontend can call upload
         return $this->jsonResponse($response, [
             'message' => 'Report metadata created. Ready for upload.',
             'report_id' => $reportId,
             'target_folder' => $folderName
         ], 201);
     }
-public function uploadReportImage(Request $request, Response $response, $args){
-    $reportId = $args['id'];
+
+    public function uploadReportImage(Request $request, Response $response, $args)
+    {
+        $reportId = $args['id'];
     
-    // Get the report to access the date and ID
-    $report = $this->reportModel->getReportById($reportId);
-    if (!$report) {
-        return $this->jsonResponse($response, ['error' => 'Report not found'], 404);
-    }
-
-    $reportedAt = $report['reported_at']; 
-    $safeDate = str_replace([':', ' '], ['-', '_'], $reportedAt);
-    $targetFolder = "{$reportId}_{$safeDate}";
-
-    $files = $request->getUploadedFiles();
-    $uploadedFile = $files['image_file'] ?? null;
-    if (is_array($uploadedFile)) $uploadedFile = $uploadedFile[0] ?? null;
-
-    if ($uploadedFile instanceof UploadedFileInterface && $uploadedFile->getError() === UPLOAD_ERR_OK) {
-        try {
-            $content = $uploadedFile->getStream()->getContents();
-            $ext = pathinfo($uploadedFile->getClientFilename(), PATHINFO_EXTENSION);
-            // Unique filename to prevent overwriting previous images
-            $fileName = 'image_' . time() . '_' . uniqid() . '.' . $ext;
-
-            $fullPath = $this->reportModel->uploadTextFile($fileName, $content, $targetFolder);
-
-            if ($fullPath) {
-                $this->reportModel->updateReportImage($reportId, $fullPath);
-
-                return $this->jsonResponse($response, [
-                    'message' => 'Image uploaded successfully',
-                    'full_path' => $fullPath,
-                    'folder_used' => $targetFolder
-                ]);
-            } else {
-                return $this->jsonResponse($response, ['error' => 'FTP upload failed'], 500);
-            }
-
-        } catch (\Exception $e) {
-            error_log("Upload Exception: " . $e->getMessage());
-            return $this->jsonResponse($response, ['error' => 'Internal error'], 500);
+        $report = $this->reportModel->getReportById($reportId);
+        if (!$report) {
+            return $this->jsonResponse($response, ['error' => 'Report not found'], 404);
         }
+    
+        $rawDate = $report['reported_at'];
+        $dateFormatted = date('Y-m-d', strtotime($rawDate));
+        
+        $targetFolder = "{$dateFormatted}_{$reportId}";
+    
+        $files = $request->getUploadedFiles();
+        $uploadedFile = $files['image_file'] ?? null;
+    
+        if ($uploadedFile instanceof UploadedFileInterface && $uploadedFile->getError() === UPLOAD_ERR_OK) {
+    
+            $ext = strtolower(pathinfo($uploadedFile->getClientFilename(), PATHINFO_EXTENSION));
+            $allowed = ['jpg', 'jpeg', 'png'];
+    
+            if (!in_array($ext, $allowed)) {
+                return $this->jsonResponse($response, ['error' => 'Invalid file type'], 400);
+            }
+    
+            try {
+                $content = $uploadedFile->getStream()->getContents();
+                $fileName = 'image_' . time() . '_' . uniqid() . '.' . $ext;
+    
+                // This uploads the physical file
+                $fullPath = $this->reportModel->uploadTextFile($fileName, $content, $targetFolder);
+    
+                if ($fullPath) {
+                    $this->reportModel->updateReportImage($reportId, $targetFolder);
+                    return $this->jsonResponse($response, [
+                        'message' => 'Image uploaded successfully',
+                        'path' => $fullPath 
+                    ]);
+                }
+    
+                return $this->jsonResponse($response, ['error' => 'FTP upload failed'], 500);
+    
+            } catch (\Exception $e) {
+                error_log("Upload Exception: " . $e->getMessage());
+                return $this->jsonResponse($response, ['error' => 'Internal error'], 500);
+            }
+        }
+    
+        return $this->jsonResponse($response, ['error' => 'No valid file sent'], 400);
     }
 
-    return $this->jsonResponse($response, ['error' => 'No valid file sent'], 400);
-}
-    // ... Standard methods ...
-    public function getAllReports(Request $request, Response $response){
-        return $this->jsonResponse($response, $this->reportModel->getAllReports());
+    public function getAllReports($request,$response){
+        return $this->jsonResponse($response,$this->reportModel->getAllReports());
     }
-    // (Add updateReport/deleteReport/getReport as needed)
+
+    public function getReport($request,$response,$args){
+        $rep = $this->reportModel->getReportById($args['id']);
+        return $rep ? $this->jsonResponse($response,$rep)
+                    : $this->jsonResponse($response,['error'=>'Not found'],404);
+    }
+
+    public function updateReport($request,$response,$args){
+        $updated = $this->reportModel->updateReport($args['id'],$request->getParsedBody());
+        return $updated ? $this->jsonResponse($response,['message'=>'Updated'])
+                        : $this->jsonResponse($response,['error'=>'Failed'],500);
+    }
+
+    public function deleteReport($request,$response,$args){
+        $deleted = $this->reportModel->deleteReport($args['id']);
+        return $deleted ? $this->jsonResponse($response,['message'=>'Deleted'])
+                        : $this->jsonResponse($response,['error'=>'Failed'],500);
+    }
 }

@@ -48,17 +48,16 @@ export default function CMSStations() {
       <table className="cms-table">
         <thead>
           <tr>
-            <th></th>
+            <th>Editar</th>
             <th>Ciudad</th>
             <th>Saturación</th>
-            <th>Precip.</th>
+            <th>Precipitación</th>
             <th>WC1</th>
             <th>WC2</th>
             <th>WC3</th>
             <th>WC4</th>
-            <th>Suscept.</th>
-            <th>Elevación</th>
             <th>Disponible</th>
+            <th>Imagen</th>
           </tr>
         </thead>
 
@@ -77,9 +76,18 @@ export default function CMSStations() {
               <td>{s.wc2}</td>
               <td>{s.wc3}</td>
               <td>{s.wc4}</td>
-              <td>{s.susceptibility}</td>
-              <td>{s.elevation}</td>
               <td>{s.is_available ? "Sí" : "No"}</td>
+              <td>
+                {s.image_url ? (
+                  <img
+                    src={`${API_URL}/stations/${s.station_id}/image`}
+                    alt="Station"
+                    className="cms-thumb"
+                  />
+                ) : (
+                  <span className="no-img">Sin imagen</span>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -149,6 +157,7 @@ function StationForm({ station, onClose, refreshStations }) {
     ftp_file_path: "",
     is_available: 1,
     station_installation_date: "",
+    imageFile: null,
   });
 
   useEffect(() => {
@@ -171,9 +180,10 @@ function StationForm({ station, onClose, refreshStations }) {
         slope: station.slope || "",
         collaborator: station.collaborator || "",
         ftp_file_path: station.ftp_file_path || "",
+        imageFile: null,
         is_available: station.is_available ?? 1,
         station_installation_date:
-          station.station_installation_date?.slice(0, 10) || "",
+        station.station_installation_date?.slice(0, 10) || "",
       });
     } else {
       setFormData({
@@ -203,7 +213,28 @@ function StationForm({ station, onClose, refreshStations }) {
 
   const validate = () => {
     if (!formData.city.trim()) {
-      Swal.fire("Campo requerido", "La ciudad es obligatoria.", "warning");
+      Swal.fire("Campo requerido", "El nombre es obligatoria.", "warning");
+      return false;
+    }
+    if (!formData.susceptibility?.trim()) {
+      Swal.fire("Campo requerido", "La susceptibilidad es obligatoria.", "warning");
+      return false;
+    }
+    if (!formData.elevation) {
+      Swal.fire("Campo requerido", "La elevación es obligatoria.", "warning");
+      return false;
+    }
+    const depthRegex = /^(\d+\s?cm)(,\s?\d+\s?cm){3}$/;
+    if (!depthRegex.test(formData.depth.trim())) {
+      Swal.fire(
+        "Formato incorrecto",
+        "Formato de las profundidades deben tener unidades y estar separadas por comas.",
+        "warning"
+      );
+      return false;
+    }
+    if (!formData.station_installation_date) {
+      Swal.fire("Campo requerido", "La fecha de instalación es obligatoria.", "warning");
       return false;
     }
     if (!formData.latitude || !formData.longitude) {
@@ -263,6 +294,25 @@ function StationForm({ station, onClose, refreshStations }) {
         return;
       }
 
+      const result = await response.json();
+      const stationId = isEdit ? station.station_id : result.station_id;
+
+      if (formData.imageFile) {
+        const imageForm = new FormData();
+        imageForm.append("image", formData.imageFile);
+
+        await fetch(`${API_URL}/stations/${stationId}/image`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+          body: imageForm,
+        });
+      }
+
+      refreshStations();
+      onClose();
+
       Swal.fire(
         "Éxito",
         isEdit
@@ -291,32 +341,48 @@ function StationForm({ station, onClose, refreshStations }) {
     <form className="cms-form" onSubmit={handleSubmit}>
       <h2>{isEdit ? "Editar Estación" : "Añadir Estación"}</h2>
 
-      <label>Ciudad:</label>
+      {isEdit && (
+        <div className="current-image">
+          <p>Imagen actual:</p>
+
+          {station?.image_url ? (
+            <img
+              src={`${API_URL}/stations/${station.station_id}/image`}
+              alt="Current Station"
+              className="image-preview"
+            />
+          ) : (
+            <p className="no-img">No hay imagen disponible</p>
+          )}
+        </div>
+      )}
+
+      <label>Nombre:<span className="required">*</span></label>
       <input name="city" value={formData.city} onChange={handleChange} />
 
+      <label>Disponible:</label>
+      <select name="is_available" value={formData.is_available} onChange={handleChange}>
+        <option value={1}>Sí</option>
+        <option value={0}>No</option>
+      </select>
+      
       <label>Saturación (%):</label>
       <input type="number" name="soil_saturation" value={formData.soil_saturation} onChange={handleChange} />
 
       <label>Precipitación:</label>
       <input type="number" name="precipitation" value={formData.precipitation} onChange={handleChange} />
 
-      <label>WC1:</label>
+      <label>Máximo Contenido de Agua 1 (WC1 Max):</label>
       <input type="number" name="wc1" value={formData.wc1} onChange={handleChange} />
 
-      <label>WC2:</label>
+      <label>Máximo Contenido de Agua 2 (WC2 Max)</label>
       <input type="number" name="wc2" value={formData.wc2} onChange={handleChange} />
 
-      <label>WC3:</label>
+      <label>Máximo Contenido de Agua 3 (WC3 Max)</label>
       <input type="number" name="wc3" value={formData.wc3} onChange={handleChange} />
 
-      <label>WC4:</label>
+      <label>Máximo Contenido de Agua 4 (WC4 Max)</label>
       <input type="number" name="wc4" value={formData.wc4} onChange={handleChange} />
-
-      <label>Susceptibilidad:</label>
-      <input name="susceptibility" value={formData.susceptibility} onChange={handleChange} />
-
-      <label>Elevación (m):</label>
-      <input type="number" name="elevation" value={formData.elevation} onChange={handleChange} />
 
       <label>Latitud:</label>
       <input type="number" name="latitude" value={formData.latitude} onChange={handleChange} />
@@ -324,32 +390,41 @@ function StationForm({ station, onClose, refreshStations }) {
       <label>Longitud:</label>
       <input type="number" name="longitude" value={formData.longitude} onChange={handleChange} />
 
-      <label>Unidad de suelo:</label>
-      <input name="land_unit" value={formData.land_unit} onChange={handleChange} />
-
       <label>Unidad geológica:</label>
       <input name="geological_unit" value={formData.geological_unit} onChange={handleChange} />
 
-      <label>Inclinación:</label>
+      <label>Unidad de suelo:</label>
+      <input name="land_unit" value={formData.land_unit} onChange={handleChange} />
+
+      <label>Elevación (m):<span className="required">*</span></label>
+      <input type="number" name="elevation" value={formData.elevation} onChange={handleChange} />
+
+      <label>Pendiente:</label>
       <input type="number" name="slope" value={formData.slope} onChange={handleChange} />
+      
+      <label>Susceptibilidad:<span className="required">*</span></label>
+      <input name="susceptibility" value={formData.susceptibility} onChange={handleChange} />
+      
+      <label>Profundidades de los Sensores:<span className="required">*</span></label>
+      <input name="depth" value={formData.depth} onChange={handleChange} placeholder="25 cm, 50 cm, 75 cm, 100 cm" />
 
-      <label>Profundidad WC:</label>
-      <input name="depth" value={formData.depth} onChange={handleChange} />
-
+      <label>Fecha de Instalación:<span className="required">*</span></label>
+      <input type="date" name="station_installation_date" value={formData.station_installation_date} onChange={handleChange} />
+      
       <label>Colaborador:</label>
       <input name="collaborator" value={formData.collaborator} onChange={handleChange} />
 
-      <label>Archivo FTP:</label>
+      <label>Ruta del Archivo de Data (.dat):</label>
       <input name="ftp_file_path" value={formData.ftp_file_path} onChange={handleChange} />
 
-      <label>Fecha Instalación:</label>
-      <input type="date" name="station_installation_date" value={formData.station_installation_date} onChange={handleChange} />
-
-      <label>Disponible:</label>
-      <select name="is_available" value={formData.is_available} onChange={handleChange}>
-        <option value={1}>Sí</option>
-        <option value={0}>No</option>
-      </select>
+      <label>Subir Imagen (opcional):</label>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) =>
+          setFormData({ ...formData, imageFile: e.target.files[0] })
+        }
+      />
 
       <div className="cms-form__actions">
         <button type="button" className="cancel-btn" onClick={onClose}>

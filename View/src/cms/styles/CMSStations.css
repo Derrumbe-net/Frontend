@@ -217,3 +217,8 @@
   to { transform: rotate(360deg); }
 }
 
+.required {
+  color: red;
+  font-weight: bold;
+  margin-left: 4px;
+}
