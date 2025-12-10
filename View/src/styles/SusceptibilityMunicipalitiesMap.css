@@ -39,6 +39,30 @@
     height: 60vh !important;
 }
 
+.municipality-dropdown {
+  width: 100%;
+  max-width: 350px;
+  padding: 12px;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  margin: 0 auto;
+  display: block;
+  background: #fff;
+  cursor: pointer;
+}
+
+.municipality-dropdown:hover {
+  border-color: #009100;
+}
+
+.municipality-list-title {
+  text-align: center;
+  margin-bottom: 10px;
+  font-size: 1.4rem;
+}
+
+
 /* === TABLET BREAKPOINT === */
 @media (max-width: 768px) {
     .municipality-page {

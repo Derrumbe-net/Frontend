@@ -4,29 +4,30 @@ import "../styles/Projects_module.css";
 import searchIcon from "../assets/search-icon-png-9.png";
 
 // Local images
-import actualproject1 from "../assets/projects/proyecto actual 1.webp";
-import actualproject2 from "../assets/projects/proyecto actual 2.webp";
-import actualproject3 from "../assets/projects/proyecto actual 3.webp";
-import actualproject4 from "../assets/projects/proyecto actual 4.webp";
-import actualproject5 from "../assets/projects/proyecto actual 5.webp";
+import placeholder from "../assets/placeholder.png";
+// import actualproject1 from "../assets/projects/proyecto actual 1.webp";
+// import actualproject2 from "../assets/projects/proyecto actual 2.webp";
+// import actualproject3 from "../assets/projects/proyecto actual 3.webp";
+// import actualproject4 from "../assets/projects/proyecto actual 4.webp";
+// import actualproject5 from "../assets/projects/proyecto actual 5.webp";
 
-import pastproject1 from "../assets/projects/proyecto pasado 1.webp";
-import pastproject2 from "../assets/projects/proyecto pasado 2.webp";
-import pastproject3 from "../assets/projects/proyecto pasado 3.webp";
-import pastproject4 from "../assets/projects/proyecto pasado 4.webp";
+// import pastproject1 from "../assets/projects/proyecto pasado 1.webp";
+// import pastproject2 from "../assets/projects/proyecto pasado 2.webp";
+// import pastproject3 from "../assets/projects/proyecto pasado 3.webp";
+// import pastproject4 from "../assets/projects/proyecto pasado 4.webp";
 
-// Map backend project_id to local images
-const imageMap = {
-  1: pastproject1, 
-  2: pastproject2,
-  3: pastproject3,
-  4: pastproject4,
-  5: actualproject1,
-  6: actualproject2,
-  7: actualproject3,
-  8: actualproject4,
-  9: actualproject5,
-};
+// // Map backend project_id to local images
+// const imageMap = {
+//   1: pastproject1, 
+//   2: pastproject2,
+//   3: pastproject3,
+//   4: pastproject4,
+//   5: actualproject1,
+//   6: actualproject2,
+//   7: actualproject3,
+//   8: actualproject4,
+//   9: actualproject5,
+// };
 
 function Projects() {
   const [projects, setProjects] = useState([]);
@@ -56,7 +57,9 @@ function Projects() {
               ? "present"
               : "past",
           description: item.description,
-          image: imageMap[item.project_id] || "/placeholder.webp",
+          image: item.image_url
+                      ? `${API_URL}/projects/${item.project_id}/image`
+                      : placeholder,
         }));
 
         setProjects(formattedData);

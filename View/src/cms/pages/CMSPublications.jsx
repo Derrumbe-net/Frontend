@@ -49,10 +49,11 @@ export default function CMSPublicaciones() {
       <table className="cms-table">
         <thead>
           <tr>
-            <th></th>
+            <th>Editar</th>
             <th>Título</th>
             <th>Link</th>
             <th>Descripción</th>
+            <th>Imagen</th>
           </tr>
         </thead>
 
@@ -74,6 +75,18 @@ export default function CMSPublicaciones() {
               </td>
 
               <td>{pub.description?.slice(0, 40)}...</td>
+
+              <td>
+                {pub.image_url ? (
+                  <img
+                    src={`${API_URL}/publications/${pub.publication_id}/image`}
+                    alt="Publication"
+                    className="cms-thumb"
+                  />
+                ) : (
+                  <span className="no-img">Sin imagen</span>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -118,7 +131,10 @@ function PublicationForm({ publication, onClose, refreshPublications }) {
     title: publication?.title || "",
     publication_url: publication?.publication_url || "",
     description: publication?.description || "",
+    imageFile: null,
   });
+
+  const API_URL = `${import.meta.env.VITE_API_URL}`;
 
   const isEdit = !!publication;
 
@@ -128,12 +144,14 @@ function PublicationForm({ publication, onClose, refreshPublications }) {
         title: publication.title,
         publication_url: publication.publication_url,
         description: publication.description,
+        imageFile: null,
       });
     } else {
       setFormData({
         title: "",
         publication_url: "",
         description: "",
+        imageFile: null,
       });
     }
   }, [publication]);
@@ -187,7 +205,6 @@ function PublicationForm({ publication, onClose, refreshPublications }) {
 
     if (!confirm.isConfirmed) return;
 
-    const API_URL = `${import.meta.env.VITE_API_URL}`;
     const method = isEdit ? "PUT" : "POST";
     const url = isEdit
       ? `${API_URL}/publications/${publication.publication_id}`  // CHANGE
@@ -221,6 +238,27 @@ function PublicationForm({ publication, onClose, refreshPublications }) {
         return;
       }
 
+      const result = await response.json();
+      const pubId = isEdit ? publication.publication_id : result.publication_id;
+      
+      if (formData.imageFile) {
+        const token = localStorage.getItem("cmsAdmin");
+
+        const imageForm = new FormData();
+        imageForm.append("image", formData.imageFile);
+
+        await fetch(`${API_URL}/publications/${pubId}/image`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+          body: imageForm,
+        });
+      }
+
+      refreshPublications();
+      onClose();
+
       Swal.fire(
         "Éxito",
         isEdit ? "Publicación actualizada" : "Publicación añadida",
@@ -244,6 +282,22 @@ function PublicationForm({ publication, onClose, refreshPublications }) {
     <form className="cms-form" onSubmit={handleSubmit}>
       <h2>{isEdit ? "Editar Publicación" : "Añadir Publicación"}</h2>
 
+      {isEdit && (
+        <div className="current-image">
+          <p>Imagen actual:</p>
+
+          {publication?.image_url ? (
+            <img
+              src={`${API_URL}/publications/${publication.publication_id}/image`}
+              alt="Current Publication"
+              className="image-preview"
+            />
+          ) : (
+            <p className="no-img">No hay imagen disponible</p>
+          )}
+        </div>
+      )}
+
       <label>Título:</label>
       <input name="title" value={formData.title} onChange={handleChange} required />
 
@@ -252,6 +306,15 @@ function PublicationForm({ publication, onClose, refreshPublications }) {
 
       <label>Descripción:</label>
       <textarea name="description" rows="4" value={formData.description} onChange={handleChange} />
+
+      <label>Subir Imagen (opcional):</label>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) =>
+          setFormData({ ...formData, imageFile: e.target.files[0] })
+        }
+      />
 
       <div className="cms-form__actions">
         <button type="button" className="cancel-btn" onClick={onClose}>

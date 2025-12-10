@@ -159,3 +159,34 @@
   to { transform: rotate(360deg); }
 }
 
+.cms-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.no-img {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.image-preview {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.current-image p {
+  margin: 0 0 6px;
+  font-weight: 500;
+}
+
+.no-img {
+  font-size: 0.9rem;
+  color: #777;
+}
+
+

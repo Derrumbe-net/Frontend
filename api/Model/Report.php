@@ -13,15 +13,18 @@ class Report {
 
     // Create Report 
     public function createReport($data){
-        try{
+        try {
             $stmt = $this->conn->prepare(
                 "INSERT INTO report
                 (landslide_id, reported_at, description, city, image_url, latitude, longitude,
-                 reporter_name, reporter_phone, reporter_email, physical_address)
-                 VALUES
+                 reporter_name, reporter_phone, reporter_email, physical_address,
+                 is_validated)
+                VALUES
                 (:landslide_id, :reported_at, :description, :city, :image_url, :latitude, :longitude,
-                 :reporter_name, :reporter_phone, :reporter_email, :physical_address)"
+                 :reporter_name, :reporter_phone, :reporter_email, :physical_address,
+                 0)"
             );
+
             $stmt->bindParam(':landslide_id', $data['landslide_id'], PDO::PARAM_INT);
             $stmt->bindParam(':reported_at', $data['reported_at'], PDO::PARAM_STR);
             $stmt->bindParam(':description', $data['description'], PDO::PARAM_STR);
@@ -33,15 +36,40 @@ class Report {
             $stmt->bindParam(':reporter_phone', $data['reporter_phone'], PDO::PARAM_STR);
             $stmt->bindParam(':reporter_email', $data['reporter_email'], PDO::PARAM_STR);
             $stmt->bindParam(':physical_address', $data['physical_address'], PDO::PARAM_STR);
-            
+
             if ($stmt->execute()) {
                 return $this->conn->lastInsertId();
-            } else {
-                return false;
             }
-        }catch(PDOException $e){ 
-            error_log($e->getMessage()); 
-            return false; 
+            return false;
+
+        } catch(PDOException $e) {
+            error_log($e->getMessage());
+            return false;
+        }
+    }
+
+    public function updateReport($id, $data){
+        try {
+            $stmt = $this->conn->prepare(
+                "UPDATE report SET
+                    description = :description,
+                    city = :city,
+                    reported_at = :reported_at,
+                    is_validated = :is_validated,
+                WHERE report_id = :id"
+            );
+
+            $stmt->bindParam(':description', $data['description'], PDO::PARAM_STR);
+            $stmt->bindParam(':city', $data['city'], PDO::PARAM_STR);
+            $stmt->bindParam(':reported_at', $data['reported_at'], PDO::PARAM_STR);
+            $stmt->bindParam(':is_validated', $data['is_validated'], PDO::PARAM_INT);
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+
+            return $stmt->execute();
+
+        } catch(PDOException $e) {
+            error_log($e->getMessage());
+            return false;
         }
     }
 

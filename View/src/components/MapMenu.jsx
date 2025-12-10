@@ -82,7 +82,7 @@ export default function MapMenu({
 
                     <label>
                         <input type="checkbox" checked={showPrecip} onChange={onTogglePrecip} />
-                        Precipitation Layer
+                        12hr Precipitation Estimates
                     </label>
 
                     <label>
@@ -92,7 +92,7 @@ export default function MapMenu({
 
                     <label>
                         <input type="checkbox" checked={showSusceptibility} onChange={onToggleSusceptibility} />
-                        Susceptibility Layer
+                        Landslide Susceptibility
                     </label>
                 </div>
             )}

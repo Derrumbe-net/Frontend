@@ -48,12 +48,13 @@ export default function CMSProjects() {
       <table className="cms-table">
         <thead>
           <tr>
-            <th></th>
+            <th>Editar</th>
             <th>Título</th>
             <th>Año de Inicio</th>
             <th>Año de Fin</th>
             <th>Estatus</th>
             <th>Descripción</th>
+            <th>Imagen</th>
           </tr>
         </thead>
         <tbody>
@@ -69,6 +70,17 @@ export default function CMSProjects() {
               <td>{p.end_year}</td>
               <td>{p.project_status}</td>
               <td>{p.description?.slice(0, 40)}...</td>
+              <td>
+                {p.image_url ? (
+                  <img
+                    src={`${API_URL}/projects/${p.project_id}/image`}
+                    alt="Project"
+                    className="cms-thumb"
+                  />
+                ) : (
+                  <span className="no-img">Sin imagen</span>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -118,7 +130,10 @@ function ProjectForm({ project, onClose, refreshProjects }) {
     end_year: project?.end_year || "",
     project_status: project?.project_status || "active",
     description: project?.description || "",
+    imageFile: null,
   });
+
+  const API_URL = `${import.meta.env.VITE_API_URL}`;
 
   const isEdit = !!project;
 
@@ -130,6 +145,7 @@ function ProjectForm({ project, onClose, refreshProjects }) {
         end_year: project.end_year,
         project_status: project.project_status,
         description: project.description,
+        imageFile: null,
       });
     } else {
       setFormData({
@@ -192,7 +208,6 @@ function ProjectForm({ project, onClose, refreshProjects }) {
 
     if (!confirm.isConfirmed) return; 
 
-    const API_URL = `${import.meta.env.VITE_API_URL}`;
     const method = isEdit ? "PUT" : "POST";
     const url = isEdit
       ? `${API_URL}/projects/${project.project_id}`  // CHANGE
@@ -224,6 +239,27 @@ function ProjectForm({ project, onClose, refreshProjects }) {
         return;
       }
 
+      const result = await response.json();
+      const projId = isEdit ? project.project_id : result.project_id;
+      
+      if (formData.imageFile) {
+        const token = localStorage.getItem("cmsAdmin");
+
+        const imageForm = new FormData();
+        imageForm.append("image", formData.imageFile);
+
+        await fetch(`${API_URL}/projects/${projId}/image`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+          body: imageForm,
+        });
+      }
+
+      refreshProjects();
+      onClose();
+
       Swal.fire(
         "Éxito",
         isEdit ? "Proyecto actualizado correctamente" : "Proyecto creado correctamente",
@@ -246,6 +282,22 @@ function ProjectForm({ project, onClose, refreshProjects }) {
   return (
     <form className="cms-form" onSubmit={handleSubmit}>
       <h2>{isEdit ? "Editar Proyecto" : "Añadir Proyecto"}</h2>
+
+      {isEdit && (
+        <div className="current-image">
+          <p>Imagen actual:</p>
+
+          {project?.image_url ? (
+            <img
+              src={`${API_URL}/projects/${project.project_id}/image`}
+              alt="Current Project"
+              className="image-preview"
+            />
+          ) : (
+            <p className="no-img">No hay imagen disponible</p>
+          )}
+        </div>
+      )}
 
       <label>Título:</label>
       <input name="title" value={formData.title} onChange={handleChange} required />
@@ -284,6 +336,15 @@ function ProjectForm({ project, onClose, refreshProjects }) {
         rows="4"
         value={formData.description}
         onChange={handleChange}
+      />
+
+      <label>Subir Imagen (opcional):</label>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) =>
+          setFormData({ ...formData, imageFile: e.target.files[0] })
+        }
       />
 
       <div className="cms-form__actions">
