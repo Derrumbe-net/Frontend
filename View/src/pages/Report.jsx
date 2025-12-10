@@ -40,6 +40,8 @@ function Report() {
   const mapRef = useRef(null);
   const viewRef = useRef(null);
 
+  const today = new Date().toISOString().split("T")[0];
+
   const fieldStyle = {
     backgroundColor: "#ffffff",
     opacity: 1,
@@ -396,7 +398,7 @@ function Report() {
         </div>
 
         <div className="form-row">
-          <label htmlFor="date">Fecha <small style={{color: '#d9534f'}}>* Requerido</small>:</label>
+          <label htmlFor="date">Fecha: <small style={{color: '#d9534f'}}>*</small></label>
           <input 
             id="date" 
             name="date" 
@@ -404,12 +406,13 @@ function Report() {
             value={form.date} 
             onChange={onChange} 
             style={fieldStyle}
-            required 
+            required
+            max={today}
           />
         </div>
 
         <div className="form-row">
-          <label htmlFor="description">Descripción <small style={{color: '#d9534f'}}>* Requerido</small>:</label>
+          <label htmlFor="description">Descripción: <small style={{color: '#d9534f'}}>*</small></label>
           <textarea 
             id="description" 
             name="description" 
@@ -432,15 +435,15 @@ function Report() {
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px', flexWrap: 'wrap' }}>
                 <label className="pick-files-btn">
                   📁 Seleccionar
-                  <input type="file" multiple onChange={onFilePick} style={{ display: 'none' }} />
+                  <input type="file" multiple onChange={onFilePick} style={{ display: 'none', cursor: 'pointer'}} />
                 </label>
                 <button 
                   type="button" 
                   className="camera-btn"
                   onClick={() => setShowCamera(true)}
                   style={{
-                    backgroundColor: '#ff4f00', color: 'white', border: 'none', 
-                    padding: '8px 15px', borderRadius: '5px', cursor: 'pointer'
+                    backgroundColor: 'none' , color: 'black', border: 1, 
+                    padding: '8px 15px', borderRadius: '5px', cursor: 'pointer',
                   }}
                 >
                   📷 Tomar Foto
@@ -461,7 +464,7 @@ function Report() {
         </div>
 
         <div className="form-row">
-          <label htmlFor="pueblo">Pueblo <small style={{color: '#d9534f'}}>* Requerido</small>:</label>
+          <label htmlFor="pueblo">Pueblo <small style={{color: '#d9534f'}}>*</small></label>
           <select 
             id="pueblo" 
             name="pueblo" 
@@ -491,7 +494,7 @@ function Report() {
         <div className="form-row form-row--inline">
           <input id="allowLocation" name="allowLocation" type="checkbox" checked={form.allowLocation} onChange={onChange} />
           <label htmlFor="allowLocation" className="inline-label">
-            Doy permiso a acceder mi localización <small style={{color: '#d9534f'}}>* Requerido</small>
+            Doy permiso a acceder mi localización <small style={{color: '#d9534f'}}>*</small>
           </label>
         </div>
 

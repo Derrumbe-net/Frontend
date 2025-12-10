@@ -2,22 +2,19 @@ import "../styles/Request_module.css";
 import educationalTalk from "../assets/educational_talk.webp";
 import { useState } from "react";
 
-
-
 export default function EducationalTalkRequest() {
 
   const [agreed, setAgreed] = useState(false);
 
   const handleCheckboxChange = (e) => {
-    const isChecked = e.target.checked;
-    setAgreed(isChecked);
+    setAgreed(e.target.checked);
+  };
 
-    if (isChecked) {
-      window.open(
-        "https://forms.office.com/pages/responsepage.aspx?id=wF36DW8DFUaZ5JSvgi8rhIlImwsjD_VBt9FEUbX9hshUNVI0NjVRSDlVMzZUTUYwTzJMVVRSWFJJMyQlQCN0PWcu&route=shorturl",
-        "_blank"
-      );
-    }
+  const openForm = () => {
+    window.open(
+      "https://forms.office.com/pages/responsepage.aspx?id=wF36DW8DFUaZ5JSvgi8rhIlImwsjD_VBt9FEUbX9hshUNVI0NjVRSDlVMzZUTUYwTzJMVVRSWFJJMyQlQCN0PWcu&route=shorturl",
+      "_blank"
+    );
   };
 
   return (
@@ -78,9 +75,22 @@ export default function EducationalTalkRequest() {
         </ol>
 
         <label className="request__checkbox">
-          <input type="checkbox" checked={agreed} onChange={handleCheckboxChange} />
+          <input 
+            type="checkbox" 
+            checked={agreed} 
+            onChange={handleCheckboxChange} 
+          />
           He leído las reglas y las acepto.
         </label>
+
+        {agreed && (
+          <div className="request__button-container">
+            <button className="request__form-button" onClick={openForm}>
+              Acceder Formulario
+            </button>
+          </div>
+        )}
+
       </div>
     </section>
   );

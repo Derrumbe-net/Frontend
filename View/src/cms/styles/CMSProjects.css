@@ -260,3 +260,11 @@
 }
 
 .required-asterisk { color: #e53e3e; margin-left: 3px; }
+
+.cms-delete-btn {
+    color: #ff6b6b;
+}
+
+.cms-delete-btn:hover {
+    color: #ff3b3b;
+}
