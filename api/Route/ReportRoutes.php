@@ -17,7 +17,7 @@ return function (App $app, $db) {
         $group->post('', [$controller, 'createReport']);     // POST /reports
         $group->get('/{id}', [$controller, 'getReport']);    // GET /reports/{id}
         $group->post('/{id}/upload', [$controller, 'uploadReportImage']); // POST /reports/{id}/upload
-
+        $group->get('/{id}/images', [$controller, 'getReportImages']); // GET /reports/{id}/images
         // ==== PROTECTED ROUTES (Sub-group) ====
         $group->group('', function (RouteCollectorProxy $protected) use ($controller) {
             $protected->put('/{id}', [$controller, 'updateReport']);    // PUT /reports/{id}

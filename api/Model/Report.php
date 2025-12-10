@@ -162,4 +162,127 @@ class Report {
             if ($conn_id) ftp_close($conn_id);
         }
     }
+
+private function getFtpConnection() {
+    $ftp_server = $_ENV['FTPS_SERVER'];
+    $ftp_port   = $_ENV['FTPS_PORT'] ?? 21;
+    
+    $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
+    if (!$conn_id || !@ftp_login($conn_id, $_ENV['FTPS_USER'], $_ENV['FTPS_PASS'])) {
+        throw new \Exception("Could not connect to FTP");
+    }
+    ftp_pasv($conn_id, true);
+    return $conn_id;
+}
+
+public function getReportImageList($folderName) {
+    $conn_id = $this->getFtpConnection();
+    $list = [];
+
+    try {
+        $base = $_ENV['FTPS_BASE_PATH_REPORTS'] ?? 'files/landslides/';
+        $basePath = rtrim($base, '/') . '/';
+        $targetPath = $basePath . $folderName;
+
+        $files = ftp_nlist($conn_id, $targetPath);
+
+        if (is_array($files)) {
+            foreach ($files as $file) {
+                $name = basename($file);
+                if (preg_match('/\.(jpg|jpeg|png)$/i', $name)) {
+                    $list[] = $name;
+                }
+            }
+        }
+    } catch (\Exception $e) {
+        error_log($e->getMessage());
+    } finally {
+        ftp_close($conn_id);
+    }
+    
+    return $list;
+}
+
+public function getReportImageContent($folderName, $fileName) {
+    $conn_id = $this->getFtpConnection();
+
+    try {
+        $base = $_ENV['FTPS_BASE_PATH_REPORTS'] ?? 'files/landslides/';
+        $basePath = rtrim($base, '/') . '/';
+        $fullPath = $basePath . $folderName . '/' . $fileName;
+
+        $tmpFile = tmpfile();
+
+        if (!@ftp_fget($conn_id, $tmpFile, $fullPath, FTP_BINARY)) {
+            throw new \Exception("FTP download failed for $fileName");
+        }
+
+        rewind($tmpFile);
+        $content = stream_get_contents($tmpFile);
+        fclose($tmpFile);
+        
+        return $content;
+
+    } catch (\Exception $e) {
+        error_log($e->getMessage());
+        return null;
+    } finally {
+        ftp_close($conn_id);
+    }
+}
+
+public function getReportImagesBase64($id) {
+    $stmt = $this->conn->prepare("SELECT image_url FROM report WHERE report_id = :id");
+    $stmt->bindParam(':id', $id);
+    $stmt->execute();
+    $report = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$report || empty($report['image_url'])) {
+        return [];
+    }
+
+    $folderName = $report['image_url'];
+    $conn_id = $this->getFtpConnection(); // Use the helper from previous step
+    $imageData = [];
+
+    try {
+        $base = $_ENV['FTPS_BASE_PATH_REPORTS'] ?? 'files/landslides/';
+        $basePath = rtrim($base, '/') . '/';
+        $targetPath = $basePath . $folderName;
+
+        $files = ftp_nlist($conn_id, $targetPath);
+        if (!$files) return [];
+
+        foreach ($files as $file) {
+            $name = basename($file);
+            
+            // Filter specific image extensions
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            if (!in_array($ext, ['jpg', 'jpeg', 'png'])) continue;
+
+            $tmpFile = tmpfile();
+            if (@ftp_fget($conn_id, $tmpFile, $file, FTP_BINARY)) {
+                rewind($tmpFile);
+                $content = stream_get_contents($tmpFile);
+                fclose($tmpFile);
+
+                $base64 = base64_encode($content);
+                $mime = ($ext === 'png') ? 'image/png' : 'image/jpeg';
+                
+                // Add to result array
+                $imageData[] = [
+                    'filename' => $name,
+                    'src' => "data:$mime;base64,$base64" // Ready for React <img src="" />
+                ];
+            }
+        }
+
+    } catch (\Exception $e) {
+        error_log("FTP Batch Error: " . $e->getMessage());
+    } finally {
+        ftp_close($conn_id);
+    }
+
+    return $imageData;
+}
 }
