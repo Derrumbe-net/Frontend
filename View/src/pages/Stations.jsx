@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
-import * as EL from "esri-leaflet";
+import { MapContainer, TileLayer, Marker, Tooltip } from "react-leaflet"; // Added Tooltip here
 import L from "leaflet";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
@@ -9,359 +8,320 @@ import "../styles/Stations.css";
 
 const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 const BASE_STATIONS_URL = BASE_DOMAIN + "/stations";
-
 const getHistoryUrl = (stationId) => `${BASE_STATIONS_URL}/history/${stationId}/wc`;
+const getSensorImageUrl = (stationId) => `${BASE_STATIONS_URL}/${stationId}/image/sensor`;
 
+/* --- MAP ICONS --- */
 const createSaturationIcon = (saturation) => {
-    let className = "saturation-marker";
+    let className = "map-marker saturation";
     if (saturation >= 90) className += " high";
     else if (saturation >= 80) className += " medium";
     else className += " low";
 
-    const rounded = Math.round(saturation);
-
     return L.divIcon({
-        // The HTML structure is changed to match the .saturation-marker CSS from InteractiveMap.css
-        html: `<div class="${className}">${rounded}%</div>`,
-        className: "", // Clear the default L.divIcon class name
-        iconSize: [55, 30], // Increased size to match the new style
-        iconAnchor: [27, 15], // Adjusted anchor to center the new size
+        html: `<div class="${className}">${Math.round(saturation)}%</div>`,
+        className: "",
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
     });
 };
 
-const getPrecipColor = (p) => {
-    if (p > 8.0) return "#000066";
-    if (p >= 0.01) return "#9FEAFF";
-    return "#DADADA";
-};
-
 const createPrecipIcon = (precip) => {
-    const color = getPrecipColor(precip);
-    const rounded = Number(precip).toFixed(2); // Keep the two decimal places
+    let bgColor = "#DADADA";
+    if (precip > 8.0) bgColor = "#000066";
+    else if (precip >= 0.01) bgColor = "#9FEAFF";
 
     return L.divIcon({
-        html: `
-            <div class="precip-marker" style="background-color:${color}; color: white; font-weight: bold;">
-                ${rounded}"
-            </div>
-        `,
-        className: "", // Clear the default L.divIcon class name
-        iconSize: [55, 30], // Increased size to match the new style
-        iconAnchor: [27, 15], // Adjusted anchor to center the new size
+        html: `<div class="map-marker precip" style="background-color:${bgColor};">${Number(precip).toFixed(2)}"</div>`,
+        className: "",
+        iconSize: [45, 25],
+        iconAnchor: [22, 12],
     });
 };
 
 const createStatusIcon = (color) => {
     return L.divIcon({
         className: "",
-        html: `
-      <div style="
-        background-color: ${color};
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        border: 2px solid white;
-        box-shadow: 0 0 4px rgba(0,0,0,0.4);
-      "></div>
-    `,
-        iconSize: [22, 22],   // Size of the div
-        iconAnchor: [11, 11], // Center the circle (half of size)
-        popupAnchor: [0, -12] // Popup appears slightly above
+        html: `<div class="map-marker status" style="background-color: ${color};"></div>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
     });
 };
 
-const StationsMap = ({ selectedMetric, onStationSelect, selectedStationId }) => {
-    const [stations, setStations] = useState([]);
-    const center = [18.220833, -66.420149];
+/* --- MAP COMPONENT --- */
+const StationsMap = ({ stations, selectedMetric, onStationSelect, selectedStationId }) => {
 
-    useEffect(() => {
-        fetch(BASE_STATIONS_URL)
-            .then((res) => res.json())
-            .then((data) => setStations(data))
-            .catch((err) => console.error("Fetch error:", err));
-    }, []);
+    // REMOVED: The useEffect hook that used map.flyTo() is gone.
+    // The map will no longer move when selectedStationId changes.
 
     const getStatusColor = (station) => {
-        if (selectedStationId === station.station_id) {
-            return "#ff0000";
-        }
         if (station.last_updated) {
-            const dateString = station.last_updated.replace(" ", "T");
-            const lastUpdate = new Date(dateString);
-            const now = new Date();
-            const diffMs = now - lastUpdate;
-            const diffHours = diffMs / (1000 * 60 * 60);
-
-            if (diffHours >= 12) {
-                return "#6c757d";
-            }
-            else if (diffHours >= 1) {
-                return "#ffc107";
-            }
+            const lastUpdate = new Date(station.last_updated.replace(" ", "T"));
+            const diffHours = (new Date() - lastUpdate) / (1000 * 60 * 60);
+            if (diffHours >= 12) return "#6c757d"; // Offline
+            if (diffHours >= 1) return "#ffc107"; // Warning
         }
-
-        if (station.soil_saturation !== null && station.soil_saturation !== undefined) {
-            return "#28a745";
-        }
-
+        if (station.soil_saturation != null) return "#28a745"; // Online
         return "#6c757d";
     };
 
     return (
-        <MapContainer
-            center={center}
-            zoom={9}
-            style={{ height: "100%", width: "100%" }}
-            zoomControl={false}
-            scrollWheelZoom={false}
-            doubleClickZoom={false}
-            touchZoom={false}
-            boxZoom={false}
-            keyboard={false}
-            dragging={true}
-        >
+        <>
             <TileLayer
                 url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 attribution="Tiles © Esri"
             />
-
             {stations.map((station) => {
-                if (station.is_available !== 1 || !station.latitude || !station.longitude) return null;
+                if (station.is_available !== 1 || !station.latitude) return null;
 
                 let icon;
-
-                if (selectedMetric === 'status') {
-                    const color = getStatusColor(station);
-                    icon = createStatusIcon(color);
-                }
-                else if (selectedMetric === 'saturation' && station.soil_saturation != null) {
+                if (selectedMetric === 'saturation' && station.soil_saturation != null) {
                     icon = createSaturationIcon(station.soil_saturation);
-                }
-                else if (selectedMetric === 'rainfall' && station.precipitation != null) {
+                } else if (selectedMetric === 'rainfall' && station.precipitation != null) {
                     icon = createPrecipIcon(station.precipitation);
+                } else {
+                    icon = createStatusIcon(getStatusColor(station));
                 }
-                else {
-                    const color = getStatusColor(station);
-                    icon = createStatusIcon(color);
-                }
+
+                const isSelected = selectedStationId === station.station_id;
 
                 return (
                     <Marker
                         key={station.station_id}
                         position={[station.latitude, station.longitude]}
                         icon={icon}
+                        zIndexOffset={isSelected ? 1000 : 0}
                         eventHandlers={{
-                            click: () => {
-                                onStationSelect(station);
-                            },
+                            click: () => onStationSelect(station),
                         }}
                     >
+                        {/* ADDED: Tooltip for Hover Name */}
+                        <Tooltip direction="top" offset={[0, -20]} opacity={1}>
+                            <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{station.city}</span>
+                        </Tooltip>
                     </Marker>
                 );
             })}
-        </MapContainer>
+        </>
     );
 };
 
+/* --- CHART COMPONENT --- */
 const StationChart = ({ station, sensorIndex }) => {
-    const [chartOptions, setChartOptions] = useState({});
+    const [chartOptions, setChartOptions] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
 
     useEffect(() => {
         if (!station) return;
-
-        const wcKey = `wc${sensorIndex}`;
-        const apiUrl = getHistoryUrl(station.station_id);
-
         setLoading(true);
-        setError(null);
 
-        fetch(apiUrl)
-            .then((res) => {
-                if (!res.ok) {
-                    throw new Error(`HTTP error! Status: ${res.status}`);
-                }
-                return res.json();
-            })
-            .then((data) => {
+        fetch(getHistoryUrl(station.station_id))
+            .then(res => res.json())
+            .then(data => {
+                const wcKey = `wc${sensorIndex}`;
                 const historyData = data.history || [];
 
-                const seriesData = historyData.map(item => {
-                    const date = new Date(item.timestamp);
-                    // Ensure the value exists and is a number
-                    const value = item[wcKey] !== undefined ? parseFloat(item[wcKey]) : null;
-                    return [date.getTime(), value];
-                }).filter(item => item[1] !== null);
+                const seriesData = historyData
+                    .map(item => {
+                        const val = item[wcKey];
+                        return val !== undefined ? [new Date(item.timestamp).getTime(), parseFloat(val)] : null;
+                    })
+                    .filter(item => item !== null);
 
-                // --- MODIFICATIONS START HERE ---
-                let dataMin = 0;
-                let dataMax = 1;
+                if (seriesData.length === 0) {
+                    setChartOptions(null);
+                } else {
+                    const vals = seriesData.map(i => i[1]);
+                    const min = Math.min(...vals);
+                    const max = Math.max(...vals);
+                    const padding = (max - min) * 0.1 || 0.05;
 
-                if (seriesData.length > 0) {
-                    // Extract all Y-values (water content percentages)
-                    const yValues = seriesData.map(item => item[1]);
-
-                    // Calculate the minimum and maximum data points
-                    const min = Math.min(...yValues);
-                    const max = Math.max(...yValues);
-
-                    // Determine chart min/max with padding (e.g., 5% buffer)
-                    const range = max - min;
-                    const padding = range * 0.05; // 5% buffer on each side
-
-                    // If the range is zero (all values are the same), use a fixed buffer
-                    if (range === 0) {
-                        dataMin = Math.max(0, min - 0.05); // Min is 0 or value - 0.05
-                        dataMax = Math.min(1, max + 0.05); // Max is 1 or value + 0.05
-                    } else {
-                        dataMin = Math.max(0, min - padding); // Ensure min is not below 0
-                        dataMax = Math.min(1, max + padding); // Ensure max is not above 1
-                    }
-                }
-                // --- MODIFICATIONS END HERE ---
-
-                setChartOptions({
-                    title: {
-                        text: `Contenido de Agua - ${station.city}`
-                    },
-                    subtitle: {
-                        text: `Sensor #${sensorIndex} (Historical Data)`
-                    },
-                    xAxis: {
-                        type: 'datetime',
-                        title: { text: 'Tiempo (Día)' }
-                    },
-                    yAxis: {
-                        title: { text: 'Contenido de Agua (%)' },
-                        // Use calculated min/max values
-                        min: dataMin,
-                        max: dataMax
-                    },
-                    series: [
-                        {
+                    setChartOptions({
+                        title: { text: '' },
+                        chart: { type: 'spline', backgroundColor: 'transparent', height: 300 },
+                        xAxis: { type: 'datetime', lineColor: '#000', tickColor: '#000' },
+                        yAxis: {
+                            title: { text: 'VWC (m³/m³)' },
+                            min: Math.max(0, min - padding),
+                            max: Math.min(1, max + padding),
+                            gridLineColor: '#e0e0e0'
+                        },
+                        series: [{
                             name: `Sensor ${sensorIndex}`,
                             data: seriesData,
-                            color: '#007bff',
-                            tooltip: {
-                                valueSuffix: ' %'
-                            }
-                        }
-                    ],
-                    chart: {
-                        type: 'spline',
-                        height: null,
-                    },
-                    credits: { enabled: false }
-                });
+                            color: '#3B7D23',
+                            lineWidth: 2,
+                            marker: { enabled: false, states: { hover: { enabled: true } } }
+                        }],
+                        legend: { enabled: false },
+                        credits: { enabled: false }
+                    });
+                }
                 setLoading(false);
             })
-            .catch((err) => {
-                console.error("Fetch error for station history:", err);
-                setError(`Error fetching data: ${err.message}`);
-                setLoading(false);
-            });
+            .catch(() => setLoading(false));
     }, [station, sensorIndex]);
 
-    if (!station) {
-        return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <p className="text-muted">Seleccione una estación del mapa para ver datos históricos.</p>
-            </div>
-        );
-    }
+    if (loading) return <div className="panel-msg">Cargando datos...</div>;
+    if (!chartOptions) return <div className="panel-msg">No hay datos recientes para este sensor.</div>;
 
-    if (loading) {
-        return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <p>Cargando datos históricos...</p>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'red' }}>
-                <p>{error}</p>
-            </div>
-        );
-    }
-
-    if (!chartOptions.series || chartOptions.series[0].data.length === 0) {
-        return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <p className="text-muted">No hay datos históricos disponibles para este sensor.</p>
-            </div>
-        );
-    }
-
-    return <HighchartsReact highcharts={Highcharts} options={chartOptions} containerProps={{ style: { height: "100%" } }} />;
+    return <HighchartsReact highcharts={Highcharts} options={chartOptions} />;
 };
 
+/* --- MAIN PAGE --- */
 function Stations() {
+    const [stations, setStations] = useState([]);
     const [mapMetric, setMapMetric] = useState("status");
     const [selectedStation, setSelectedStation] = useState(null);
     const [selectedSensor, setSelectedSensor] = useState(1);
+    const [activeTab, setActiveTab] = useState("data");
+
+    useEffect(() => {
+        fetch(BASE_STATIONS_URL)
+            .then((res) => res.json())
+            .then((data) => setStations(data))
+            .catch((err) => console.error(err));
+    }, []);
+
+    const handleStationSelect = (station) => {
+        setSelectedStation(station);
+        // Map stays still, panel updates
+    };
 
     return (
-        <div className="stations-container">
-            <h1>Estaciones</h1>
-            <p>Seleccione una estación en el mapa para ver su contenido de agua histórico.</p>
+        <div className="stations-page">
+            <h1 className="page-title">Estaciones</h1>
+            <p className="page-intro">
+                Seleccione una estación en el mapa para ver su contenido de agua histórico y detalles técnicos.
+            </p>
 
-            <div className="stations-layout">
+            <div className="dashboard-container">
 
-                {/* LEFT COLUMN */}
-                <div className="map-column">
-                    <div className="map-controls">
-                        <label htmlFor="metric-select"><strong>Mostrar en mapa:</strong></label>
+                {/* LEFT: MAP */}
+                <div className="map-panel">
+                    <div className="panel-controls">
+                        <label>Mostrar:</label>
                         <select
-                            id="metric-select"
                             value={mapMetric}
                             onChange={(e) => setMapMetric(e.target.value)}
+                            className="clean-select"
                         >
-                            <option value="status">Estado del Sensor (Status)</option>
+                            <option value="status">Estado del Sensor</option>
                             <option value="saturation">Saturación del Suelo</option>
-                            <option value="rainfall">Lluvia (Últimas 12hr)</option>
+                            <option value="rainfall">Lluvia (12hr)</option>
                         </select>
                     </div>
-
-                    <div className="stations-map-wrapper">
-                        <StationsMap
-                            selectedMetric={mapMetric}
-                            onStationSelect={setSelectedStation}
-                            selectedStationId={selectedStation ? selectedStation.station_id : null}
-                        />
-                    </div>
-                </div>
-
-                {/* RIGHT COLUMN: CHART */}
-                <div className="chart-column">
-                    <div className="chart-controls">
-                        <label htmlFor="sensor-select"><strong>Seleccionar Sensor:</strong></label>
-                        <select
-                            id="sensor-select"
-                            value={selectedSensor}
-                            onChange={(e) => setSelectedSensor(parseInt(e.target.value))}
-                            disabled={!selectedStation}
+                    <div className="map-wrapper">
+                        <MapContainer
+                            center={[18.220833, -66.420149]}
+                            zoom={10} /* Keeps your Zoom In preference */
+                            style={{ height: "100%", width: "100%" }}
+                            zoomControl={false}
+                            scrollWheelZoom={false}
+                            doubleClickZoom={false}
+                            touchZoom={false}
+                            boxZoom={false}
+                            keyboard={false}
+                            dragging={true}
                         >
-                            <option value={1}>Sensor de Humedad 1</option>
-                            <option value={2}>Sensor de Humedad 2</option>
-                            <option value={3}>Sensor de Humedad 3</option>
-                            <option value={4}>Sensor de Humedad 4</option>
-                        </select>
-                        {selectedStation && (
-                            <span style={{marginLeft: '15px', color: '#666'}}>
-                Viendo: <strong>{selectedStation.city}</strong>
-              </span>
-                        )}
+                            <StationsMap
+                                stations={stations}
+                                selectedMetric={mapMetric}
+                                onStationSelect={handleStationSelect}
+                                selectedStationId={selectedStation?.station_id}
+                            />
+                        </MapContainer>
                     </div>
-
-                    <StationChart
-                        station={selectedStation}
-                        sensorIndex={selectedSensor}
-                    />
                 </div>
 
+                {/* RIGHT: DETAILS SIDEBAR */}
+                <div className="details-panel">
+                    {!selectedStation ? (
+                        <div className="empty-state">
+                            <h3>Selecciona una estación</h3>
+                            <p>Haz clic en un marcador para ver datos.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="details-header">
+                                <h2>{selectedStation.city}</h2>
+                            </div>
+
+                            <div className="details-tabs">
+                                <button
+                                    className={`tab-btn ${activeTab === 'data' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('data')}
+                                >
+                                    Datos
+                                </button>
+                                <button
+                                    className={`tab-btn ${activeTab === 'info' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('info')}
+                                >
+                                    Información
+                                </button>
+                            </div>
+
+                            <div className="details-content">
+                                {activeTab === 'data' && (
+                                    <div className="data-view">
+                                        <div className="sensor-toggles">
+                                            {[1, 2, 3, 4].map(num => (
+                                                <button
+                                                    key={num}
+                                                    className={`sensor-btn ${selectedSensor === num ? 'active' : ''}`}
+                                                    onClick={() => setSelectedSensor(num)}
+                                                >
+                                                    Sensor {num}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <StationChart station={selectedStation} sensorIndex={selectedSensor} />
+                                    </div>
+                                )}
+
+                                {activeTab === 'info' && (
+                                    <div className="info-view">
+                                        <div className="station-img-container">
+                                            {selectedStation.sensor_image_url ? (
+                                                <img
+                                                    src={getSensorImageUrl(selectedStation.station_id)}
+                                                    alt={selectedStation.city}
+                                                    onError={(e) => e.target.style.display = 'none'}
+                                                />
+                                            ) : (
+                                                <div className="no-img">Imagen no disponible</div>
+                                            )}
+                                        </div>
+                                        <ul className="meta-list">
+                                            <li><strong>Unidad Geológica:</strong> {selectedStation.geological_unit || "N/A"}</li>
+                                            <li><strong>Unidad de Suelo:</strong> {selectedStation.land_unit || "N/A"}</li>
+                                            <li><strong>Elevación:</strong> {selectedStation.elevation || "N/A"}</li>
+                                            <li><strong>Pendiente:</strong> {selectedStation.slope || "N/A"}</li>
+                                            <li><strong>Colaborador:</strong> {selectedStation.collaborator || "N/A"}</li>
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* STATIC INFO (Footer) */}
+            <div className="stations-footer">
+                <div className="footer-col">
+                    <h3>Sobre los Sensores</h3>
+                    <p>Cada estación mide contenido volumétrico de agua (VWC), presión, temperatura y lluvia. Los datos se transmiten cada hora entre las 7:00 y las 20:00 AST.</p>
+                </div>
+                <div className="footer-col">
+                    <h3>Glosario de Datos</h3>
+                    <ul>
+                        <li><strong>VWC:</strong> Relación entre volumen de agua y suelo.</li>
+                        <li><strong>Succión:</strong> Presión negativa de los poros.</li>
+                        <li><strong>Piezómetro:</strong> Nivel de agua subterránea.</li>
+                    </ul>
+                </div>
             </div>
         </div>
     );
