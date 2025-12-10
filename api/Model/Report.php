@@ -56,8 +56,11 @@ public function createReport(array $data)
                 ':physical_address' => $data['physical_address'] ?? '',
                 ':is_validated'     => $data['is_validated'] ?? 0
             ]);
-            
-            return $this->conn->lastInsertId();
+
+            if ($stmt->execute($data)) {
+                return $this->conn->lastInsertId();
+            }
+            return false;
 
         } catch (\PDOException $e) {
             error_log("Database Error in createReport: " . $e->getMessage());
