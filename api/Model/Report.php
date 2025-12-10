@@ -47,32 +47,6 @@ class Report {
             return false;
         }
     }
-
-    public function updateReport($id, $data){
-        try {
-            $stmt = $this->conn->prepare(
-                "UPDATE report SET
-                    description = :description,
-                    city = :city,
-                    reported_at = :reported_at,
-                    is_validated = :is_validated,
-                WHERE report_id = :id"
-            );
-
-            $stmt->bindParam(':description', $data['description'], PDO::PARAM_STR);
-            $stmt->bindParam(':city', $data['city'], PDO::PARAM_STR);
-            $stmt->bindParam(':reported_at', $data['reported_at'], PDO::PARAM_STR);
-            $stmt->bindParam(':is_validated', $data['is_validated'], PDO::PARAM_INT);
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-
-            return $stmt->execute();
-
-        } catch(PDOException $e) {
-            error_log($e->getMessage());
-            return false;
-        }
-    }
-
     // Helper to update Image URL
     public function updateReportImage($id, $path) {
         try {
