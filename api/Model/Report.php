@@ -10,20 +10,60 @@ class Report {
     public function __construct($conn){ $this->conn = $conn; }
 
     // --- DATABASE METHODS (Unchanged) ---
-    public function createReport($data){
-        // ... (Keep your existing createReport logic) ...
-        try {
-            $stmt = $this->conn->prepare(
-                "INSERT INTO report (landslide_id, reported_at, description, city, image_url, latitude, longitude, reporter_name, reporter_phone, reporter_email, physical_address, is_validated) VALUES (:landslide_id, :reported_at, :description, :city, :image_url, :latitude, :longitude, :reporter_name, :reporter_phone, :reporter_email, :physical_address, 0)"
-            );
-            // Bind params...
-            $stmt->execute($data); // Simplified for brevity in this display
-            return $this->conn->lastInsertId();
-        } catch(PDOException $e) {
-            error_log($e->getMessage());
-            return false;
-        }
+    public function createReport(array $data)
+{
+    $sql = "INSERT INTO report (
+                landslide_id, 
+                reported_at, 
+                description, 
+                city, 
+                image_url, 
+                latitude, 
+                longitude, 
+                reporter_name, 
+                reporter_phone, 
+                reporter_email, 
+                physical_address, 
+                is_validated
+            ) VALUES (
+                :landslide_id, 
+                :reported_at, 
+                :description, 
+                :city, 
+                :image_url, 
+                :latitude, 
+                :longitude, 
+                :reporter_name, 
+                :reporter_phone, 
+                :reporter_email, 
+                :physical_address, 
+                :is_validated
+            )";
+
+    try {
+        $stmt = $this->conn->prepare($sql);
+
+        $stmt->execute([
+            ':landslide_id'     => $data['landslide_id'] ?? null,
+            ':reported_at'      => $data['reported_at'] ?? date('Y-m-d H:i:s'),
+            ':description'      => $data['description'] ?? '',
+            ':city'             => $data['city'] ?? '',
+            ':image_url'        => $data['image_url'] ?? '',
+            ':latitude'         => $data['latitude'] ?? 0.0,
+            ':longitude'        => $data['longitude'] ?? 0.0,
+            ':reporter_name'    => $data['reporter_name'] ?? '',
+            ':reporter_phone'   => $data['reporter_phone'] ?? '',
+            ':reporter_email'   => $data['reporter_email'] ?? '',
+            ':physical_address' => $data['physical_address'] ?? '',
+            ':is_validated'     => $data['is_validated'] ?? 0
+        ]);
+        return $this->conn->lastInsertId();
+
+    } catch (\PDOException $e) {
+        error_log("Database Error in createReport: " . $e->getMessage());
+        return false;
     }
+}
 
     public function updateReportImage($id, $path) {
         try {
