@@ -101,8 +101,13 @@
     font-size: 0.75rem;
     color: #a0aec0;
     font-style: italic;
-    width: 48px;
-    height: 48px;
+    width: 60px;
+    height: 60px;
+
+    display: flex;
+    justify-content: center; /* horizontal */
+    align-items: center;     /* vertical */
+    text-align: center;      /* if text breaks into multiple lines */
 }
 
 .status-pill {

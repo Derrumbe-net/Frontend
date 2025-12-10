@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { FaUserShield, FaCheck, FaBan, FaTrash } from "react-icons/fa";
+// Removed FaTrash from imports
+import { FaUserShield, FaCheck, FaBan } from "react-icons/fa";
 import Swal from "sweetalert2";
 import "../../cms/styles/CMSManageUsers.css";
 
@@ -99,49 +100,7 @@ export default function CMSManageUsers() {
         }
     };
 
-    const handleDeleteUser = async (targetUser) => {
-        if (currentUserEmail !== SUPER_ADMIN_EMAIL) {
-            Swal.fire("Acceso Denegado", "Solo el Super Admin puede eliminar usuarios.", "error");
-            return;
-        }
-        if (targetUser.email === SUPER_ADMIN_EMAIL) {
-            Swal.fire("Error Crítico", "No se puede eliminar la cuenta de Super Admin.", "error");
-            return;
-        }
-
-        const confirmDelete = await Swal.fire({
-            title: "¿Eliminar Usuario?",
-            text: `Esta acción eliminará permanentemente a ${targetUser.email}. No se puede deshacer.`,
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Sí, eliminar",
-            confirmButtonColor: "#c53030",
-            cancelButtonText: "Cancelar"
-        });
-
-        if (!confirmDelete.isConfirmed) return;
-
-        try {
-            const token = localStorage.getItem("cmsAdmin");
-            const response = await fetch(`${API_URL}/${targetUser.admin_id}`, {
-                method: "DELETE",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-            });
-
-            if (response.ok) {
-                setUsers((prevUsers) => prevUsers.filter((u) => u.admin_id !== targetUser.admin_id));
-                Swal.fire("Eliminado", "El usuario ha sido eliminado correctamente.", "success");
-            } else {
-                const errData = await response.json();
-                Swal.fire("Error", errData.error || "Error desconocido", "error");
-            }
-        } catch (error) {
-            Swal.fire("Error", "Error de conexión con el servidor.", "error");
-        }
-    };
+    // Removed handleDeleteUser function completely
 
     if (loading) return <div className="loading-container">Cargando usuarios...</div>;
 
@@ -202,14 +161,7 @@ export default function CMSManageUsers() {
                                                 {isAuth ? <><FaBan style={{marginRight:6}}/> Revocar</> : <><FaCheck style={{marginRight:6}}/> Autorizar</>}
                                             </button>
 
-                                            <button
-                                                className="cms-btn-small btn-delete"
-                                                disabled={currentUserEmail !== SUPER_ADMIN_EMAIL || isSuperAdmin}
-                                                onClick={() => handleDeleteUser(user)}
-                                                title="Eliminar permanentemente"
-                                            >
-                                                <FaTrash />
-                                            </button>
+                                            {/* Removed the Delete button here */}
                                         </div>
                                     </td>
                                 </tr>

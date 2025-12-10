@@ -26,6 +26,10 @@ return function (App $app, $db) {
         $group->group('', function (RouteCollectorProxy $protected) use ($controller) {
             $protected->put('/{id}', [$controller, 'updateReport']);
             $protected->delete('/{id}', [$controller, 'deleteReport']);
+
+            // NEW DELETE ROUTE
+            $protected->delete('/{id}/images/{filename}', [$controller, 'deleteReportImage']);
+
         })->add($jwtMiddleware);
 
     });

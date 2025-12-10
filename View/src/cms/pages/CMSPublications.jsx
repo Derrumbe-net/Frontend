@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FaEdit, FaPlus, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaEdit, FaPlus, FaTrash, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import "../../cms/styles/CMSPublications.css";
 import Swal from "sweetalert2";
 
@@ -15,6 +15,44 @@ export default function CMSPublicaciones() {
     const paginated = publications.slice(startIndex, startIndex + itemsPerPage);
 
     const API_URL = `${import.meta.env.VITE_API_URL}`;
+
+    const handleDelete = async (id) => {
+        const confirm = await Swal.fire({
+            title: "¿Eliminar Publicación?",
+            text: "Esta acción no se puede deshacer.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Sí, eliminar",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#e55353"
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const token = localStorage.getItem("cmsAdmin");
+
+            const response = await fetch(`${API_URL}/publications/${id}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                Swal.fire("Error", "No se pudo eliminar la publicación.", "error");
+                return;
+            }
+
+            Swal.fire("Eliminado", "La publicación fue eliminada correctamente.", "success");
+
+            fetchPublications(); // Refresh table
+
+        } catch (error) {
+            console.error(error);
+            Swal.fire("Error", "No se pudo conectar al servidor.", "error");
+        }
+    };
 
     useEffect(() => {
         fetchPublications();
@@ -113,6 +151,13 @@ export default function CMSPublicaciones() {
                                     <td>
                                         <button className="cms-icon-btn" onClick={() => handleOpenForm(pub)} title="Editar">
                                             <FaEdit />
+                                        </button>
+                                        <button
+                                            className="cms-icon-btn cms-delete-btn"
+                                            onClick={() => handleDelete(pub.publication_id)}
+                                            title="Eliminar"
+                                        >
+                                            <FaTrash />
                                         </button>
                                     </td>
                                 </tr>

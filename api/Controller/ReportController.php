@@ -222,4 +222,31 @@ class ReportController {
             return $response->withStatus(404)->write('Image not found');
         }
     }
+
+    public function deleteReportImage(Request $request, Response $response, array $args)
+    {
+        $id = $args['id'];
+        $filename = $args['filename'];
+
+        // 1. Get Report to find the folder name
+        $report = $this->reportModel->getReportById($id);
+
+        if (!$report) {
+            return $this->jsonResponse($response, ['error' => 'Report not found'], 404);
+        }
+
+        $folderName = $report['image_url']; // This column stores the folder name
+        if (empty($folderName)) {
+            return $this->jsonResponse($response, ['error' => 'No image folder associated'], 404);
+        }
+
+        // 2. Call Model to delete file from FTP
+        $deleted = $this->reportModel->deleteImageFile($folderName, $filename);
+
+        if ($deleted) {
+            return $this->jsonResponse($response, ['message' => 'Image deleted successfully']);
+        }
+
+        return $this->jsonResponse($response, ['error' => 'Failed to delete image (File might not exist)'], 500);
+    }
 }
