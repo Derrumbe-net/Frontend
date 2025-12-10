@@ -11,7 +11,7 @@ return function (App $app, $db) {
     // Load JWT secret and create middleware
     $jwtSecret = $_ENV['JWT_SECRET'] ?? 'CHANGE_THIS_SECRET_KEY';
     $jwtMiddleware = new JwtMiddleware($jwtSecret);
-    $superAdminMiddleware = new SuperAdminMiddleware('slidespr@gmail.com');
+    $superAdminMiddleware = new SuperAdminMiddleware();
 
     // ---- Public routes (no authentication required) ----
     $app->post('/admins/login', [$adminController, 'loginAdmin']);
@@ -27,6 +27,6 @@ return function (App $app, $db) {
         $group->put('/{id}/isAuthorized', [$adminController, 'updateAuthorization'])
             ->add($superAdminMiddleware);
         $group->delete('/{id}', [$adminController, 'deleteAdmin'])
-            ->add($superAdminMiddleware);;
+            ->add($superAdminMiddleware);
     })->add($jwtMiddleware);
 };
