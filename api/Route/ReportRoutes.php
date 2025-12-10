@@ -11,18 +11,22 @@ return function (App $app, $db) {
 
     // Main Group for ALL report routes
     $app->group('/reports', function (RouteCollectorProxy $group) use ($controller, $jwtMiddleware) {
-        
+
         // ==== PUBLIC ROUTES ====
-        $group->get('', [$controller, 'getAllReports']);      // GET /reports
-        $group->post('', [$controller, 'createReport']);     // POST /reports
-        $group->get('/{id}', [$controller, 'getReport']);    // GET /reports/{id}
-        $group->post('/{id}/upload', [$controller, 'uploadReportImage']); // POST /reports/{id}/upload
-        $group->get('/{id}/images', [$controller, 'getReportImages']); // GET /reports/{id}/images
+        $group->get('', [$controller, 'getAllReports']);
+        $group->post('', [$controller, 'createReport']);
+        $group->get('/{id}', [$controller, 'getReport']);
+
+        // Image Routes (Updated to match Landslide Structure)
+        $group->post('/{id}/upload', [$controller, 'uploadReportImage']);
+        $group->get('/{id}/images', [$controller, 'getReportImages']); // Returns list
+        $group->get('/{id}/images/{filename}', [$controller, 'serveReportImage']); // Returns binary
+
         // ==== PROTECTED ROUTES (Sub-group) ====
         $group->group('', function (RouteCollectorProxy $protected) use ($controller) {
-            $protected->put('/{id}', [$controller, 'updateReport']);    // PUT /reports/{id}
-            $protected->delete('/{id}', [$controller, 'deleteReport']); // DELETE /reports/{id}
-        })->add($jwtMiddleware); // Middleware only applies to this sub-group
+            $protected->put('/{id}', [$controller, 'updateReport']);
+            $protected->delete('/{id}', [$controller, 'deleteReport']);
+        })->add($jwtMiddleware);
 
     });
 };

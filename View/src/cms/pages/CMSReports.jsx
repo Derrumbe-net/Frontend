@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaEdit, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaEdit, FaChevronLeft, FaChevronRight, FaTrash } from "react-icons/fa";
 import Swal from "sweetalert2";
 import "../../cms/styles/CMSReports.css";
 
@@ -71,21 +71,8 @@ export default function CMSReports() {
                             {paginatedReports.map((r) => (
                                 <tr key={r.report_id}>
                                     <td>
-                                        {r.image_ul ? (
-                                            <a
-                                                href={`${API_URL}/reports/${r.report_id}/images`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                            >
-                                                <img
-                                                    src={`${API_URL}/reports/${r.report_id}/images`}
-                                                    alt="Evidencia"
-                                                    className="cms-thumb"
-                                                />
-                                            </a>
-                                        ) : (
-                                            <span className="no-img">N/A</span>
-                                        )}
+                                        {/* Use the helper component to fetch and show the first image */}
+                                        <ReportThumbnail reportId={r.report_id} hasFolder={!!r.image_url} />
                                     </td>
                                     <td>{r.reported_at?.slice(0, 10)}</td>
                                     <td style={{ fontWeight: '600' }}>{r.city}</td>
@@ -94,9 +81,9 @@ export default function CMSReports() {
                                     <td>{r.longitude}</td>
 
                                     <td>
-                      <span className={`status-pill ${r.is_validated ? "status-valid" : "status-pending"}`}>
-                        {r.is_validated ? "Validado" : "Pendiente"}
-                      </span>
+                                      <span className={`status-pill ${r.is_validated ? "status-valid" : "status-pending"}`}>
+                                        {r.is_validated ? "Validado" : "Pendiente"}
+                                      </span>
                                     </td>
                                     <td>
                                         <button
@@ -122,8 +109,8 @@ export default function CMSReports() {
                             <FaChevronLeft />
                         </button>
                         <span className="cms-page-info">
-              Página {currentPage} de {totalPages || 1}
-            </span>
+                            Página {currentPage} de {totalPages || 1}
+                        </span>
                         <button
                             className="cms-icon-btn"
                             disabled={currentPage === totalPages || totalPages === 0}
@@ -147,16 +134,63 @@ export default function CMSReports() {
     );
 }
 
+// --- HELPER COMPONENT FOR TABLE THUMBNAIL ---
+function ReportThumbnail({ reportId, hasFolder }) {
+    const API_URL = `${import.meta.env.VITE_API_URL}`;
+    const [firstImage, setFirstImage] = useState(null);
+
+    useEffect(() => {
+        if (!hasFolder) return;
+
+        // Fetch list of images for this report
+        fetch(`${API_URL}/reports/${reportId}/images`)
+            .then(res => res.json())
+            .then(data => {
+                // If we have images, pick the first one
+                if (data.images && data.images.length > 0) {
+                    setFirstImage(data.images[0]);
+                }
+            })
+            .catch(err => console.error("Thumb load error", err));
+    }, [reportId, hasFolder, API_URL]);
+
+    if (!hasFolder || !firstImage) {
+        return <span className="no-img" style={{fontSize:'0.8rem', color:'#999'}}>Sin imagen</span>;
+    }
+
+    const imageUrl = `${API_URL}/reports/${reportId}/images/${firstImage}`;
+
+    return (
+        <a href={imageUrl} target="_blank" rel="noopener noreferrer">
+            <img
+                src={imageUrl}
+                alt="Evidencia"
+                className="cms-thumb"
+                style={{
+                    width: '60px',
+                    height: '60px',
+                    objectFit: 'cover',
+                    borderRadius: '4px',
+                    border: '1px solid #e2e8f0'
+                }}
+            />
+        </a>
+    );
+}
+
+// --- FORM COMPONENT ---
 function ReportForm({ report, onClose, refreshReports }) {
     const API_URL = `${import.meta.env.VITE_API_URL}`;
 
     const [formData, setFormData] = useState({
         reporter_name: "", reporter_phone: "", reporter_email: "",
         reported_at: "", description: "", city: "", physical_address: "",
-        latitude: "", longitude: "", is_validated: 0, imageFile: null
+        latitude: "", longitude: "", is_validated: 0
     });
 
-    const [previewUrl, setPreviewUrl] = useState(null);
+    const [existingImages, setExistingImages] = useState([]);
+    const [newFiles, setNewFiles] = useState([]);
+    const [newPreviews, setNewPreviews] = useState([]);
 
     useEffect(() => {
         if (report) {
@@ -170,37 +204,84 @@ function ReportForm({ report, onClose, refreshReports }) {
                 physical_address: report.physical_address || "",
                 latitude: report.latitude || "",
                 longitude: report.longitude || "",
-                is_validated: report.is_validated || 0,
-                imageFile: null
+                is_validated: report.is_validated || 0
             });
-
-            if (report.image_ul) {
-                setPreviewUrl(`${API_URL}/reports/${report.report_id}/images`);
-            } else {
-                setPreviewUrl(null);
-            }
+            fetchServerImages();
         }
-    }, [report, API_URL]);
+        // eslint-disable-next-line
+    }, [report]);
 
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setFormData({ ...formData, imageFile: file });
-            setPreviewUrl(URL.createObjectURL(file));
+    useEffect(() => {
+        return () => newPreviews.forEach(url => URL.revokeObjectURL(url));
+    }, [newPreviews]);
+
+    const fetchServerImages = async () => {
+        try {
+            const res = await fetch(`${API_URL}/reports/${report.report_id}/images`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.images && Array.isArray(data.images)) {
+                    setExistingImages(data.images);
+                } else {
+                    setExistingImages([]);
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching images", error);
+        }
+    };
+
+    const handleFileChange = (e) => {
+        if (e.target.files) {
+            const filesArray = Array.from(e.target.files);
+            setNewFiles(prev => [...prev, ...filesArray]);
+            const newUrls = filesArray.map(file => URL.createObjectURL(file));
+            setNewPreviews(prev => [...prev, ...newUrls]);
         }
     };
 
     const handleChange = (e) => {
-        const { name, value, type } = e.target;
+        const { name, value } = e.target;
         const val = name === 'is_validated' ? parseInt(value) : value;
         setFormData({ ...formData, [name]: val });
+    };
+
+    const handleDeleteServerImage = async (filename) => {
+        const confirm = await Swal.fire({
+            title: "¿Eliminar imagen?",
+            text: "Esta acción no se puede deshacer.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Sí, eliminar",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#d33",
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const token = localStorage.getItem("cmsAdmin");
+            const res = await fetch(`${API_URL}/reports/${report.report_id}/images/${filename}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.ok) {
+                Swal.fire("Eliminado", "La imagen ha sido eliminada.", "success");
+                setExistingImages(prev => prev.filter(img => img !== filename));
+            } else {
+                throw new Error("Failed to delete");
+            }
+        } catch (error) {
+            console.error(error);
+            Swal.fire("Error", "No se pudo eliminar la imagen.", "error");
+        }
     };
 
     const validate = () => {
         const missing = [];
         if (!formData.reported_at) missing.push("Fecha");
         if (!formData.city) missing.push("Pueblo");
-
         if (missing.length > 0) {
             Swal.fire("Campos faltantes", `Complete: ${missing.join(", ")}`, "warning");
             return false;
@@ -218,7 +299,6 @@ function ReportForm({ report, onClose, refreshReports }) {
             icon: "question",
             showCancelButton: true,
             confirmButtonText: "Sí, guardar",
-            cancelButtonText: "Cancelar",
             confirmButtonColor: "#6fa174",
         });
 
@@ -237,15 +317,16 @@ function ReportForm({ report, onClose, refreshReports }) {
                 body: JSON.stringify(formData)
             });
 
-            if (formData.imageFile) {
-                const uploadForm = new FormData();
-                uploadForm.append("image_file", formData.imageFile);
-
-                await fetch(`${API_URL}/reports/${report.report_id}/upload`, {
-                    method: "POST",
-                    headers: { Authorization: `Bearer ${token}` },
-                    body: uploadForm
-                });
+            if (newFiles.length > 0) {
+                for (const file of newFiles) {
+                    const uploadForm = new FormData();
+                    uploadForm.append("image_file", file);
+                    await fetch(`${API_URL}/reports/${report.report_id}/upload`, {
+                        method: "POST",
+                        headers: { Authorization: `Bearer ${token}` },
+                        body: uploadForm
+                    });
+                }
             }
 
             Swal.fire("Éxito", "Reporte actualizado correctamente.", "success");
@@ -260,99 +341,107 @@ function ReportForm({ report, onClose, refreshReports }) {
 
     return (
         <form onSubmit={handleSubmit}>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: '#13241e' }}>
-                Validar Reporte: {formData.city}
-            </h2>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '1rem' }}>
+                <h2 style={{ fontSize: '1.5rem', color: '#13241e', margin:0 }}>
+                    Validar Reporte: {formData.city}
+                </h2>
+                <button type="button" onClick={onClose} style={{background:'none', border:'none', fontSize:'1.5rem', cursor:'pointer'}}>&times;</button>
+            </div>
+
             <p style={{ color: '#666', marginBottom: '24px' }}>
                 Revise los datos del reporte ciudadano y cambie el estado a "Validado" para publicarlo.
             </p>
 
             <div className="cms-form-grid">
-
                 <div className="cms-form-section-title">Información del Ciudadano</div>
 
                 <div className="cms-form-group">
                     <label>Nombre Completo</label>
                     <input className="cms-input" name="reporter_name" value={formData.reporter_name} onChange={handleChange} />
                 </div>
-
                 <div className="cms-form-group">
                     <label>Teléfono</label>
                     <input className="cms-input" name="reporter_phone" value={formData.reporter_phone} onChange={handleChange} />
                 </div>
-
                 <div className="cms-form-group span-2">
                     <label>Correo Electrónico</label>
                     <input className="cms-input" name="reporter_email" value={formData.reporter_email} onChange={handleChange} />
                 </div>
 
                 <div className="cms-form-section-title">Detalles del Incidente</div>
-
                 <div className="cms-form-group">
                     <label>Fecha del Evento <span className="required-asterisk">*</span></label>
                     <input className="cms-input" type="date" name="reported_at" value={formData.reported_at} onChange={handleChange} />
                 </div>
-
                 <div className="cms-form-group">
                     <label>Estado de Validación</label>
-                    <select
-                        className="cms-select"
-                        name="is_validated"
-                        value={formData.is_validated}
-                        onChange={handleChange}
-                        style={{ fontWeight: 'bold', color: formData.is_validated ? '#2e7d32' : '#c62828' }}
-                    >
+                    <select className="cms-select" name="is_validated" value={formData.is_validated} onChange={handleChange} style={{ fontWeight: 'bold', color: formData.is_validated ? '#2e7d32' : '#c62828' }}>
                         <option value={0}>⚠ Pendiente (No Publicado)</option>
                         <option value={1}>✓ Validado (Público)</option>
                     </select>
                 </div>
-
                 <div className="cms-form-group span-2">
                     <label>Descripción</label>
                     <textarea className="cms-textarea" name="description" value={formData.description} onChange={handleChange} />
                 </div>
 
                 <div className="cms-form-section-title">Ubicación</div>
-
                 <div className="cms-form-group">
                     <label>Pueblo <span className="required-asterisk">*</span></label>
                     <input className="cms-input" name="city" value={formData.city} onChange={handleChange} />
                 </div>
-
                 <div className="cms-form-group">
                     <label>Carretera / Dirección</label>
                     <input className="cms-input" name="physical_address" value={formData.physical_address} onChange={handleChange} />
                 </div>
-
                 <div className="cms-form-group">
                     <label>Latitud </label>
                     <input className="cms-input" name="latitude" value={formData.latitude} onChange={handleChange} />
                 </div>
-
                 <div className="cms-form-group">
                     <label>Longitud </label>
                     <input className="cms-input" name="longitude" value={formData.longitude} onChange={handleChange} />
                 </div>
 
                 <div className="cms-form-section-title">Evidencia Fotográfica</div>
+                <div className="cms-form-group span-2">
+                    <label style={{marginBottom:'10px', display:'block'}}>Imágenes Existentes:</label>
+                    {existingImages.length > 0 ? (
+                        <div className="cms-image-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+                            {existingImages.map((filename, idx) => (
+                                <div key={idx} className="cms-image-card" style={{ position: 'relative', width: '150px', height: '150px', border:'1px solid #ddd', borderRadius:'8px', overflow:'hidden' }}>
+                                    <img
+                                        src={`${API_URL}/reports/${report.report_id}/images/${filename}`}
+                                        alt="Evidencia"
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                    <button type="button" onClick={() => handleDeleteServerImage(filename)} style={{ position: 'absolute', top: '5px', right: '5px', backgroundColor: 'rgba(255, 255, 255, 0.9)', border: '1px solid #c62828', color: '#c62828', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <FaTrash size={12} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p style={{fontStyle:'italic', color:'#888'}}>No hay imágenes guardadas.</p>
+                    )}
+                </div>
 
                 <div className="cms-form-group span-2">
-                    {previewUrl && (
-                        <div className="cms-image-preview-container">
-                            <p style={{marginBottom: '10px', fontSize:'0.8rem', fontWeight:'600', color:'#718096'}}>Vista Previa:</p>
-                            <img src={previewUrl} alt="Reporte" className="cms-form-preview" />
+                    <label>Agregar Nuevas Imágenes</label>
+                    <input className="cms-input" type="file" accept="image/*" multiple onChange={handleFileChange} />
+                    {newPreviews.length > 0 && (
+                        <div style={{ marginTop: '10px', display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom:'5px' }}>
+                            {newPreviews.map((src, i) => (
+                                <img key={i} src={src} alt="New" style={{ height: '80px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                            ))}
                         </div>
                     )}
-
-                    <label>Actualizar Imagen (Opcional)</label>
-                    <input className="cms-input" type="file" accept="image/*" onChange={handleImageChange} />
                 </div>
 
                 <div className="cms-form-actions">
                     <button type="button" className="cms-btn cms-btn-secondary" onClick={onClose}>Cancelar</button>
                     <button type="submit" className="cms-btn">Guardar Cambios</button>
                 </div>
-
             </div>
         </form>
     );
