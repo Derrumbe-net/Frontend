@@ -16,6 +16,10 @@ return function (App $app, $db) {
     // ---- Public routes (no authentication required) ----
     $app->post('/admins/login', [$adminController, 'loginAdmin']);
     $app->post('/admins/signup', [$adminController, 'signUpAdmin']);
+    
+    // --- NEW: Email Verification Route ---
+    // Handles the request when the user clicks the link in their email
+    $app->get('/admins/verify', [$adminController, 'verifyEmail']); 
 
     // ---- Protected routes (require valid JWT) ----
     $app->group('/admins', function (RouteCollectorProxy $group) use ($adminController, $superAdminMiddleware) {

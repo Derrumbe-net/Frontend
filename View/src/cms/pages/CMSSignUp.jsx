@@ -114,8 +114,8 @@ export default function CMSSignUp() {
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <h2 style={{ color: '#28a745', marginBottom: '15px' }}>¡Cuenta creada exitosamente!</h2>
             <p style={{ lineHeight: '1.6', marginBottom: '25px', color: '#555' }}>
-              Su cuenta está pendiente de confirmación. Por favor espere a que un administrador 
-              apruebe su acceso antes de iniciar sesión.
+                Hemos enviado un enlace de verificación a su correo. Por favor, revíselo para verificar su cuenta.
+                Una vez verificada, deberá esperar a que un administrador apruebe su acceso.
             </p>
             <button 
               onClick={() => navigate('/cms/login')}

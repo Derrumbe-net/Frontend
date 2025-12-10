@@ -36,6 +36,34 @@ class ReportController {
             return $this->jsonResponse($response, ['error' => 'Failed to create report'], 500);
         }
 
+        try {
+            // Build email using a template (you can create report_submitted.html)
+            $body = $this->emailService->renderTemplate('report_submitted', [
+                'id'               => $reportId,
+                'reported_at'      => $data['reported_at'] ?? 'N/A',
+                'city'             => $data['city'] ?? 'N/A',
+                'latitude'         => $data['latitude'] ?? 'N/A',
+                'longitude'        => $data['longitude'] ?? 'N/A',
+                'physical_address' => $data['physical_address'] ?: 'N/A',
+                'description'      => $data['description'] ?? 'N/A',
+                'reporter_name'    => $data['reporter_name'] ?? 'N/A',
+                'reporter_phone'   => $data['reporter_phone'] ?: 'N/A',
+                'reporter_email'   => $data['reporter_email'] ?: 'N/A',
+                'cms_link' => $_ENV['FRONTEND_URL'] . "/cms"
+            ]);
+
+            $this->emailService->sendEmail(
+                $_ENV['SUPERADMIN_EMAIL'],
+                "New Report Submitted (#{$reportId})",
+                $body
+            );
+
+        } catch (\Exception $e) {
+            error_log("Report email error: " . $e->getMessage());
+        }
+
+        // Generate Folder Name: {id}_{reported_at}
+        // Example: "15_2025-12-07"
         $rawDate = $data['reported_at'] ?? date('Y-m-d');
         $dateFormatted = date('Y-m-d', strtotime($rawDate));
         $folderName = "{$dateFormatted}_{$reportId}";
