@@ -103,6 +103,9 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
         const hillshade = EL.tiledMapLayer({
             url: 'https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Hillshade_Puerto_Rico/MapServer',
             opacity: 0.5,
+            minZoom: 7,  // Prevents requesting tiles when zoomed too far out
+            maxZoom: 16, // Prevents requesting tiles when zoomed too far in (Adjust if layer supports deeper zoom)
+            errorTileUrl: '', // Optional: hides the broken image icon if a tile is missing
         }).addTo(map);
 
         const municipalities = EL.featureLayer({
@@ -170,6 +173,8 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
             susceptibilityLayer = EL.tiledMapLayer({
                 url: "https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Susceptibilidad_Derrumbe_PR/MapServer",
                 opacity: 0.5,
+                minZoom: 7, 
+                maxZoom: 16
             }).addTo(map);
         }
         return () => {
@@ -789,7 +794,7 @@ export default function InteractiveMap() {
             <MapContainer
                 id="map"
                 center={center}
-                zoom={isMobile ? 8 : 9}
+                zoom={isMobile ? 9 : 10}
                 minZoom={7}
                 maxZoom={18}
                 scrollWheelZoom={false}
