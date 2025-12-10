@@ -26,4 +26,13 @@
         <env name="DB_NAME" value="test_db"/>
     </php>
 
+    <source>
+        <include>
+            <directory suffix=".php">./Controller</directory>
+            <directory suffix=".php">./Model</directory>
+            <directory suffix=".php">./Helpers</directory>
+            <directory suffix=".php">./Middleware</directory>
+        </include>
+    </source>
+
 </phpunit>

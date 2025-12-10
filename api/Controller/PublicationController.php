@@ -6,7 +6,9 @@ use DerrumbeNet\Model\Publication;
 
 class PublicationController {
     private Publication $publicationModel;
-    public function __construct($db) { $this->publicationModel = new Publication($db); }
+    public function __construct(Publication $publicationModel) {
+        $this->publicationModel = $publicationModel;
+    }
 
     private function jsonResponse($response, $data, $status = 200) {
         $payload = json_encode($data, JSON_UNESCAPED_UNICODE);

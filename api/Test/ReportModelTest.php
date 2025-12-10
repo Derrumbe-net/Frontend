@@ -1,11 +1,11 @@
 <?php
 namespace DerrumbeNet\Test;
 
-use PDOException;
-use PDOStatement;
-use PDO;
 use PHPUnit\Framework\TestCase;
 use DerrumbeNet\Model\Report;
+use PDO;
+use PDOStatement;
+use PDOException;
 
 class ReportModelTest extends TestCase
 {
@@ -16,7 +16,6 @@ class ReportModelTest extends TestCase
     protected function setUp(): void
     {
         $this->stmtMock = $this->createMock(PDOStatement::class);
-
         $this->pdoMock = $this->createMock(PDO::class);
         $this->pdoMock->method('prepare')->willReturn($this->stmtMock);
         $this->pdoMock->method('query')->willReturn($this->stmtMock);
@@ -27,7 +26,20 @@ class ReportModelTest extends TestCase
 
     public function testCreateReportSuccess()
     {
-        $data = ['landslide_id' => 1, 'city' => 'Test', /* ... */];
+        // Provide all keys expected by the Model to avoid PHP Notices
+        $data = [
+            'landslide_id' => 1,
+            'reported_at' => '2023-01-01',
+            'description' => 'Test',
+            'city' => 'Test City',
+            'image_url' => '',
+            'latitude' => 10.0,
+            'longitude' => 10.0,
+            'reporter_name' => 'John',
+            'reporter_phone' => '555',
+            'reporter_email' => 'a@b.com',
+            'physical_address' => 'Addr'
+        ];
 
         $this->stmtMock->method('execute')->willReturn(true);
 
@@ -35,9 +47,20 @@ class ReportModelTest extends TestCase
         $this->assertEquals('123', $result);
     }
 
+    public function testUpdateReportSuccess()
+    {
+        // Provide keys for update
+        $data = ['landslide_id' => 1, 'city' => 'Updated'];
+        $this->stmtMock->method('execute')->willReturn(true);
+
+        $result = $this->reportModel->updateReport(1, $data);
+        $this->assertTrue($result);
+    }
+
     public function testCreateReportFailure()
     {
-        $data = [/* ... */];
+        $data = []; // Empty or dummy data
+
         $this->stmtMock->method('execute')->willReturn(false);
 
         $result = $this->reportModel->createReport($data);
@@ -77,14 +100,6 @@ class ReportModelTest extends TestCase
         $this->stmtMock->method('fetchAll')->willReturn($expectedData);
         $result = $this->reportModel->getAllReports();
         $this->assertEquals($expectedData, $result);
-    }
-
-    public function testUpdateReportSuccess()
-    {
-        $data = ['landslide_id' => 1, 'city' => 'Updated', /* ... */];
-        $this->stmtMock->method('execute')->willReturn(true);
-        $result = $this->reportModel->updateReport(1, $data);
-        $this->assertTrue($result);
     }
 
     public function testDeleteReportSuccess()

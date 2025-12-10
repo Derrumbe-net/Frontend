@@ -1,30 +1,36 @@
 <?php
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
-use DerrumbeNet\Controller\ProjectController;
+use DerrumbeNet\Controller\ReportController;
 use DerrumbeNet\Middleware\JwtMiddleware;
 
 return function (App $app, $db) {
-    $controller = new ProjectController($db);
-
-    // Load JWT secret and create middleware
+    $controller = new ReportController($db);
     $jwtSecret = $_ENV['JWT_SECRET'];
     $jwtMiddleware = new JwtMiddleware($jwtSecret);
 
-    // ---- Public routes ----
-    $app->get('/projects', [$controller, 'getAllProjects']);
-    $app->get('/projects/{id}', [$controller, 'getProject']);
+    // Main Group for ALL report routes
+    $app->group('/reports', function (RouteCollectorProxy $group) use ($controller, $jwtMiddleware) {
 
-    // Serve Image
-    $app->get('/projects/{id}/image', [$controller, 'serveProjectImage']);
+        // ==== PUBLIC ROUTES ====
+        $group->get('', [$controller, 'getAllReports']);
+        $group->post('', [$controller, 'createReport']);
+        $group->get('/{id}', [$controller, 'getReport']);
 
-    // ---- Protected routes ----
-    $app->group('/projects', function (RouteCollectorProxy $group) use ($controller) {
-        $group->post('', [$controller, 'createProject']);
-        $group->put('/{id}', [$controller, 'updateProject']);
-        $group->delete('/{id}', [$controller, 'deleteProject']);
+        // Image Routes (Updated to match Landslide Structure)
+        $group->post('/{id}/upload', [$controller, 'uploadReportImage']);
+        $group->get('/{id}/images', [$controller, 'getReportImages']); // Returns list
+        $group->get('/{id}/images/{filename}', [$controller, 'serveReportImage']); // Returns binary
 
-        // Upload Image - Multipart/form-data
-        $group->post('/{id}/image', [$controller, 'uploadProjectImage']);
-    })->add($jwtMiddleware);
+        // ==== PROTECTED ROUTES (Sub-group) ====
+        $group->group('', function (RouteCollectorProxy $protected) use ($controller) {
+            $protected->put('/{id}', [$controller, 'updateReport']);
+            $protected->delete('/{id}', [$controller, 'deleteReport']);
+
+            // NEW DELETE ROUTE
+            $protected->delete('/{id}/images/{filename}', [$controller, 'deleteReportImage']);
+
+        })->add($jwtMiddleware);
+
+    });
 };

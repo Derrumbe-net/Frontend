@@ -12,9 +12,9 @@ class ReportController {
     private Report $reportModel;
     private EmailService $emailService;
 
-    public function __construct($db){
-        $this->reportModel = new Report($db);
-        $this->emailService = new EmailService();
+    public function __construct(Report $reportModel, EmailService $emailService) {
+        $this->reportModel = $reportModel;
+        $this->emailService = $emailService;
     }
 
     private function jsonResponse(Response $response, $data, $status = 200){

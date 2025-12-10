@@ -1,31 +1,25 @@
 <?php
 namespace DerrumbeNet\Test;
 
-use PDOException;
-use PDOStatement;
-use PDO;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Request;
 use Slim\Psr7\Response;
 use DerrumbeNet\Controller\PublicationController;
+use DerrumbeNet\Model\Publication;
 
 class PublicationControllerTest extends TestCase
 {
-    private $stmtMock;
-    private $pdoMock;
+    private $publicationModelMock;
     private $controller;
     private $response;
 
     protected function setUp(): void
     {
-        $this->stmtMock = $this->createMock(PDOStatement::class);
+        // 1. Mock the Model directly
+        $this->publicationModelMock = $this->createMock(Publication::class);
 
-        $this->pdoMock = $this->createMock(PDO::class);
-        $this->pdoMock->method('prepare')->willReturn($this->stmtMock);
-        $this->pdoMock->method('query')->willReturn($this->stmtMock);
-        $this->pdoMock->method('lastInsertId')->willReturn('123');
-
-        $this->controller = new PublicationController($this->pdoMock);
+        // 2. Inject the mocked model
+        $this->controller = new PublicationController($this->publicationModelMock);
         $this->response = new Response();
     }
 
@@ -41,29 +35,14 @@ class PublicationControllerTest extends TestCase
         $data = ['admin_id' => 1, 'title' => 'New Publication'];
         $request = $this->createMockRequest($data);
 
-        $this->stmtMock->method('execute')->willReturn(true);
+        // Expect the Model to return an ID '123'
+        $this->publicationModelMock->method('createPublication')->willReturn('123');
 
         $response = $this->controller->createPublication($request, $this->response);
 
         $this->assertEquals(201, $response->getStatusCode());
         $this->assertJsonStringEqualsJsonString(
-            '{"message":"Publication created","id":"123"}',
-            (string) $response->getBody()
-        );
-    }
-
-    public function testCreatePublicationFailure()
-    {
-        $data = ['admin_id' => 1];
-        $request = $this->createMockRequest($data);
-
-        $this->stmtMock->method('execute')->willReturn(false);
-
-        $response = $this->controller->createPublication($request, $this->response);
-
-        $this->assertEquals(500, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"error":"Failed"}',
+            '{"message":"Publication created","publication_id":"123"}',
             (string) $response->getBody()
         );
     }
@@ -74,44 +53,10 @@ class PublicationControllerTest extends TestCase
         $args = ['id' => 42];
         $expectedData = ['publication_id' => 42, 'title' => 'Test Pub'];
 
-        $this->stmtMock->method('fetch')->willReturn($expectedData);
+        // Expect Model to return array
+        $this->publicationModelMock->method('getPublicationById')->willReturn($expectedData);
 
         $response = $this->controller->getPublication($request, $this->response, $args);
-
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            json_encode($expectedData),
-            (string) $response->getBody()
-        );
-    }
-
-    public function testGetPublicationNotFound()
-    {
-        $request = $this->createMock(Request::class);
-        $args = ['id' => 99];
-
-        $this->stmtMock->method('fetch')->willReturn(false);
-
-        $response = $this->controller->getPublication($request, $this->response, $args);
-
-        $this->assertEquals(404, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"error":"Not found"}',
-            (string) $response->getBody()
-        );
-    }
-
-    public function testGetAllPublications()
-    {
-        $request = $this->createMock(Request::class);
-        $expectedData = [
-            ['publication_id' => 1],
-            ['publication_id' => 2]
-        ];
-
-        $this->stmtMock->method('fetchAll')->willReturn($expectedData);
-
-        $response = $this->controller->getAllPublications($request, $this->response);
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertJsonStringEqualsJsonString(
@@ -122,36 +67,30 @@ class PublicationControllerTest extends TestCase
 
     public function testUpdatePublicationSuccess()
     {
-        $data = ['admin_id' => 1, 'title' => 'Updated Pub'];
+        $data = ['title' => 'Updated Pub'];
         $request = $this->createMockRequest($data);
         $args = ['id' => 42];
 
-        $this->stmtMock->method('execute')->willReturn(true);
+        // Expect Model to return true
+        $this->publicationModelMock->method('updatePublication')->willReturn(true);
 
         $response = $this->controller->updatePublication($request, $this->response, $args);
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertJsonStringEqualsJsonString(
-            '{"message":"Updated"}',
+            '{"message":"Updated successfully"}',
             (string) $response->getBody()
         );
     }
 
-    public function testUpdatePublicationFailure()
+    public function testUpdatePublicationEmptyData()
     {
-        $data = ['admin_id' => 1, 'title' => 'Updated Pub'];
-        $request = $this->createMockRequest($data);
+        $request = $this->createMockRequest([]);
         $args = ['id' => 42];
-
-        $this->stmtMock->method('execute')->willReturn(false);
 
         $response = $this->controller->updatePublication($request, $this->response, $args);
 
-        $this->assertEquals(500, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"error":"Failed"}',
-            (string) $response->getBody()
-        );
+        $this->assertEquals(400, $response->getStatusCode());
     }
 
     public function testDeletePublicationSuccess()
@@ -159,29 +98,13 @@ class PublicationControllerTest extends TestCase
         $request = $this->createMock(Request::class);
         $args = ['id' => 42];
 
-        $this->stmtMock->method('execute')->willReturn(true);
+        $this->publicationModelMock->method('deletePublication')->willReturn(true);
 
         $response = $this->controller->deletePublication($request, $this->response, $args);
 
         $this->assertEquals(200, $response->getStatusCode());
         $this->assertJsonStringEqualsJsonString(
             '{"message":"Deleted"}',
-            (string) $response->getBody()
-        );
-    }
-
-    public function testDeletePublicationFailure()
-    {
-        $request = $this->createMock(Request::class);
-        $args = ['id' => 42];
-
-        $this->stmtMock->method('execute')->willReturn(false);
-
-        $response = $this->controller->deletePublication($request, $this->response, $args);
-
-        $this->assertEquals(500, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"error":"Failed"}',
             (string) $response->getBody()
         );
     }

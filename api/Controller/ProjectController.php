@@ -6,7 +6,9 @@ use DerrumbeNet\Model\Project;
 
 class ProjectController {
     private Project $projectModel;
-    public function __construct($db) { $this->projectModel = new Project($db); }
+    public function __construct(Project $projectModel) {
+        $this->projectModel = $projectModel;
+    }
 
     private function jsonResponse($response, $data, $status=200) {
         $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
