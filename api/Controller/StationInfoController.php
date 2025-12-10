@@ -31,10 +31,18 @@ class StationInfoController {
             : $this->jsonResponse($response,['error'=>'Not found'],404);
     }
 
-    public function updateStation($request,$response,$args){
-        $updated = $this->stationInfoModel->updateStationInfo($args['id'],$request->getParsedBody());
-        return $updated ? $this->jsonResponse($response,['message'=>'Updated'])
-            : $this->jsonResponse($response,['error'=>'Failed'],500);
+    public function updateStation($request, $response, $args){
+        $body = $request->getParsedBody();
+
+        if (empty($body) || !is_array($body)) {
+            return $this->jsonResponse($response, ['error' => 'No data provided for update'], 400);
+        }
+
+        $updated = $this->stationInfoModel->updateStationInfo($args['id'], $body);
+
+        return $updated
+            ? $this->jsonResponse($response, ['message' => 'Updated'])
+            : $this->jsonResponse($response, ['error' => 'Failed to update (Station ID may not exist or no changes detected)'], 500);
     }
 
     public function deleteStation($request,$response,$args){
