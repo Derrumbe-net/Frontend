@@ -101,8 +101,26 @@ class ReportController {
     
         return $this->jsonResponse($response, ['error' => 'No valid file sent'], 400);
     }
-    
-    public function getAllReports(Request $request, Response $response){
-        return $this->jsonResponse($response, $this->reportModel->getAllReports());
+
+    public function getAllReports($request,$response){
+        return $this->jsonResponse($response,$this->reportModel->getAllReports());
+    }
+
+    public function getReport($request,$response,$args){
+        $rep = $this->reportModel->getReportById($args['id']);
+        return $rep ? $this->jsonResponse($response,$rep)
+                    : $this->jsonResponse($response,['error'=>'Not found'],404);
+    }
+
+    public function updateReport($request,$response,$args){
+        $updated = $this->reportModel->updateReport($args['id'],$request->getParsedBody());
+        return $updated ? $this->jsonResponse($response,['message'=>'Updated'])
+                        : $this->jsonResponse($response,['error'=>'Failed'],500);
+    }
+
+    public function deleteReport($request,$response,$args){
+        $deleted = $this->reportModel->deleteReport($args['id']);
+        return $deleted ? $this->jsonResponse($response,['message'=>'Deleted'])
+                        : $this->jsonResponse($response,['error'=>'Failed'],500);
     }
 }

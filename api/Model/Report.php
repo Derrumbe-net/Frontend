@@ -57,6 +57,31 @@ class Report {
             return false;
         }
     }
+
+        // UPDATE REPORT BY ID
+        public function updateReport($id,$data){
+            try{
+                $stmt = $this->conn->prepare(
+                    "UPDATE report SET landslide_id=:landslide_id,reported_at=:reported_at,description=:description,
+                     city=:city,image_url=:image_url,latitude=:latitude,longitude=:longitude,
+                     reporter_name=:reporter_name,reporter_phone=:reporter_phone,reporter_email=:reporter_email,
+                     physical_address=:physical_address WHERE report_id=:id"
+                );
+                $stmt->bindParam(':landslide_id', $data['landslide_id'], PDO::PARAM_INT);
+                $stmt->bindParam(':reported_at', $data['reported_at'], PDO::PARAM_STR);
+                $stmt->bindParam(':description', $data['description'], PDO::PARAM_STR);
+                $stmt->bindParam(':city', $data['city'], PDO::PARAM_STR);
+                $stmt->bindParam(':image_url', $data['image_url'], PDO::PARAM_STR);
+                $stmt->bindParam(':latitude', $data['latitude'], PDO::PARAM_STR);
+                $stmt->bindParam(':longitude', $data['longitude'], PDO::PARAM_STR);
+                $stmt->bindParam(':reporter_name', $data['reporter_name'], PDO::PARAM_STR);
+                $stmt->bindParam(':reporter_phone', $data['reporter_phone'], PDO::PARAM_STR);
+                $stmt->bindParam(':reporter_email', $data['reporter_email'], PDO::PARAM_STR);
+                $stmt->bindParam(':physical_address', $data['physical_address'], PDO::PARAM_STR);
+                $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+                return $stmt->execute();
+            }catch(PDOException $e){ error_log($e->getMessage()); return false; }
+        }
     
     // Standard Getters
     public function getReportById($id){
@@ -70,6 +95,13 @@ class Report {
         $stmt = $this->conn->query("SELECT * FROM report");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+        // DELETE REPORT BY ID
+        public function deleteReport($id){
+            $stmt = $this->conn->prepare("DELETE FROM report WHERE report_id=:id");
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            return $stmt->execute();
+        }
     
     // --- FTP METHODS ---
 
@@ -94,7 +126,7 @@ class Report {
                 return false;
             }
 
-            // Handle Subfolder: {id}_{date}
+            // Handle Subfolder: {date}_{id}
             if ($folder) {
                 if (!@ftp_chdir($conn_id, $folder)) {
                     // Create if missing
