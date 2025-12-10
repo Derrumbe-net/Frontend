@@ -19,7 +19,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Setup Node.js
+      # --- FRONTEND SETUP & TESTS ---
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -32,9 +32,8 @@ jobs:
         run: npm install
         working-directory: ./View
 
-      # Run frontend tests
-      - name: Run Frontend Tests
-        run: npm test --if-present
+      - name: Run Frontend Tests (Coverage)
+        run: npx vitest run --coverage --reporter=lcov
         working-directory: ./View
 
       # Lint frontend code
@@ -48,7 +47,7 @@ jobs:
         with:
           php-version: '8.3'
           extensions: mbstring, xml, dom, curl, pdo, pdo_mysql
-          coverage: none
+          coverage: pcov
 
       # Install backend dependencies
       - name: Install Backend Dependencies
@@ -59,14 +58,22 @@ jobs:
       - name: Validate PHP Syntax
         run: find . -name "*.php" -exec php -l {} \;
 
-      # Run PHPUnit tests
-      - name: Run PHP Unit Tests
-        run: ./vendor/bin/phpunit
+      - name: Run PHP Unit Tests (Coverage)
+        run: ./vendor/bin/phpunit --coverage-text --coverage-clover coverage.xml
         working-directory: ./api
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./View/coverage/lcov.info,./api/coverage.xml
+          fail_ci_if_error: true
+          verbose: true
 
   # 2️⃣ Build & deploy (runs only if test job succeeds)
   deploy:
     runs-on: ubuntu-latest
+    needs: test
     if: ${{ success() }}
     steps:
       - name: Checkout Repository

@@ -26,4 +26,9 @@
         <env name="DB_NAME" value="test_db"/>
     </php>
 
+    <source>
+        <include>
+            <directory suffix=".php">./src</directory> </include>
+    </source>
+
 </phpunit>
