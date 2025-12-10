@@ -146,11 +146,41 @@ class ReportController {
                     : $this->jsonResponse($response,['error'=>'Not found'],404);
     }
 
-    public function updateReport($request,$response,$args){
-        $updated = $this->reportModel->updateReport($args['id'],$request->getParsedBody());
-        return $updated ? $this->jsonResponse($response,['message'=>'Updated'])
-                        : $this->jsonResponse($response,['error'=>'Failed'],500);
+    private function sanitizeNumericFields(array $data) {
+        $numericFields = ['latitude', 'longitude'];
+
+        foreach ($numericFields as $field) {
+            if (isset($data[$field]) && $data[$field] === '') {
+                $data[$field] = null;  // MySQL accepts NULL
+            }
+        }
+
+        return $data;
     }
+
+    public function updateReport(Request $request, Response $response, array $args)
+    {
+        $id = $args['id'];
+        $data = $request->getParsedBody();
+
+        if (empty($data) || !is_array($data)) {
+            return $this->jsonResponse($response, ['error' => 'No valid data provided'], 400);
+        }
+
+        $data = $this->sanitizeNumericFields($data);
+
+        $updated = $this->reportModel->updateReport($id, $data);
+
+        if (!$updated) {
+            return $this->jsonResponse($response, ['error' => 'Failed to update report'], 500);
+        }
+
+        return $this->jsonResponse($response, [
+            'message' => 'Report updated successfully',
+            'report_id' => $id
+        ], 200);
+    }
+
 
     public function deleteReport($request,$response,$args){
         $deleted = $this->reportModel->deleteReport($args['id']);
