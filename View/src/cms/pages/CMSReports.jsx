@@ -326,7 +326,7 @@ function ReportForm({ report, onClose, refreshReports }) {
             const token = localStorage.getItem("cmsAdmin");
             if(!token) { Swal.fire("Error", "Sesión expirada", "error"); return; }
 
-            // 2. CHECK RESPONSE STATUS
+            // 1. Update Text Data (PUT)
             const res = await fetch(`${API_URL}/reports/${report.report_id}`, {
                 method: "PUT",
                 headers: {
@@ -336,33 +336,45 @@ function ReportForm({ report, onClose, refreshReports }) {
                 body: JSON.stringify(formData)
             });
 
-            // If server returns 400 or 500, throw error
             if (!res.ok) {
                 const errorData = await res.json();
-                throw new Error(errorData.error || "Error al actualizar");
+                throw new Error(errorData.error || "Error al actualizar datos del reporte");
             }
 
-            // Image uploading logic...
+            // 2. Upload Images (POST) - UPDATED LOGIC
             if (newFiles.length > 0) {
+                // Show a loading alert because uploads can take time
+                Swal.fire({
+                    title: 'Subiendo imágenes...',
+                    text: 'Por favor espere',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading() }
+                });
+
                 for (const file of newFiles) {
                     const uploadForm = new FormData();
                     uploadForm.append("image_file", file);
+
                     const imgRes = await fetch(`${API_URL}/reports/${report.report_id}/upload`, {
                         method: "POST",
                         headers: { Authorization: `Bearer ${token}` },
                         body: uploadForm
                     });
-                    if (!imgRes.ok) console.error("Error uploading one of the images");
+
+                    // IF UPLOAD FAILS, THROW ERROR IMMEDIATELY
+                    if (!imgRes.ok) {
+                        const imgError = await imgRes.json();
+                        throw new Error(`Error subiendo imagen (${file.name}): ${imgError.error || imgRes.statusText}`);
+                    }
                 }
             }
 
-            Swal.fire("Éxito", "Reporte actualizado correctamente.", "success");
+            Swal.fire("Éxito", "Reporte actualizado e imágenes subidas.", "success");
             refreshReports();
             onClose();
 
         } catch (error) {
             console.error(error);
-            // Now you will actually see the error popup if it fails
             Swal.fire("Error", error.message, "error");
         }
     };
