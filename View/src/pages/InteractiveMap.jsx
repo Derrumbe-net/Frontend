@@ -765,12 +765,22 @@ export default function InteractiveMap() {
         setShowPrecipLegend(false);
     };
 
+    // --- MOBILE & LABEL LOGIC (From 'demo2' branch) ---
     const isMobile = window.innerWidth < 768;
 
     let mapLabelText = "";
-    if (showSaturation) mapLabelText = "SOIL SATURATION PERCENTAGE";
-    else if (showPrecip12hr) mapLabelText = "PAST 12 HOUR PRECIPITATION (INCHES)";
-    else if (showLandslideForecast) mapLabelText = "LANDSLIDE FORECAST PROBABILITY";
+
+    if (selectedYear) {
+        mapLabelText = "HISTORICAL LANDSLIDE DATA";
+    } else if (showSaturation) {
+        mapLabelText = "SOIL SATURATION PERCENTAGE";
+    } else if (showPrecip12hr) {
+        mapLabelText = "PAST 12 HOUR PRECIPITATION (INCHES)";
+    } else if (showLandslideForecast) { 
+        mapLabelText = "LANDSLIDE FORECAST PROBABILITY";
+    } else {
+        mapLabelText = ""; // fallback if needed
+    }
 
     return (
         <main>

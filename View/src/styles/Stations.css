@@ -1,184 +1,358 @@
-/* Apply the font globally to this component */
-.stations-container {
+/* Using your color palette: #DFE8DA, #A4BC9B, #3B7D23 */
+
+.stations-page {
     font-family: 'Inter', sans-serif;
-    background-color: #DFE8DA; /* Matches landing__map background */
+    background-color: #DFE8DA; /* Same as Landing Map & Contact */
     min-height: 100vh;
-    padding: 3rem 2rem; /* Matches landing section padding */
+    padding: 3rem 2rem;
     color: #000;
-    box-sizing: border-box;
 }
 
-/* Title Styling - Matches your bold section headers */
-.stations-container h1 {
+.page-title {
     font-size: 2.5rem;
     font-weight: 800;
     margin-bottom: 0.5rem;
-    color: #000;
     margin-top: 0;
 }
 
-/* Description Styling - Matches landing__map-text p */
-.stations-container p {
+.page-intro {
     font-weight: 300;
     font-size: 1rem;
-    line-height: 1.6;
     margin-bottom: 2rem;
     max-width: 800px;
+    line-height: 1.6;
 }
 
-/* Grid Layout */
-.stations-layout {
+/* --- DASHBOARD GRID --- */
+.dashboard-container {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem; /* Matches gap in landing__map */
-    height: 55vh; /* Fixed height for dashboard feel */
-    min-height: 450px;
+    grid-template-columns: 1fr 450px; /* Map takes remaining space, Panel is fixed width */
+    gap: 2rem;
+    height: 70vh;
+    min-height: 600px;
+    margin-bottom: 3rem;
 }
 
-/* Common Card Styling for Columns */
-/* Similar to directory__card but for full panels */
-.map-column,
-.chart-column {
+/* --- LEFT: MAP PANEL --- */
+.map-panel {
     background: white;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Matches directory__card shadow */
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 4px; /* Matches buttons */
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Ensures corners stay rounded */
-    border: 1px solid rgba(0,0,0,0.05);
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
-/* Control Bars (Top of Map/Chart) */
-.map-controls,
-.chart-controls {
-    background-color: #A4BC9B; /* Matches landing__report background */
+.panel-controls {
+    background-color: #A4BC9B; /* Same as landing report section */
     padding: 1rem 1.5rem;
     display: flex;
     align-items: center;
     gap: 1rem;
-    border-bottom: 2px solid #3B7D23; /* Matches button/accent color */
+    border-bottom: 2px solid #3B7D23;
 }
 
-.map-controls label,
-.chart-controls label {
+.panel-controls label {
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
 }
 
-/* Styled Select Inputs */
-/* mimicking the btn--black and btn--contact aesthetic */
-select {
-    padding: 0.5rem 1rem;
+.clean-select {
+    padding: 0.4rem 0.8rem;
     border-radius: 4px;
-    border: 1px solid #000;
+    border: 1px solid #000; /* Matching Publications inputs */
     background-color: white;
     font-family: 'Inter', sans-serif;
     font-size: 0.9rem;
-    font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
 }
 
-select:hover {
-    border-color: #3B7D23;
-    color: #3B7D23;
-}
-
-select:focus {
-    outline: none;
-    border-color: #3B7D23;
-    box-shadow: 0 0 0 2px rgba(59, 125, 35, 0.2);
-}
-
-/* Map Wrapper */
-.stations-map-wrapper {
-    flex-grow: 1;
+.map-wrapper {
+    flex: 1;
     position: relative;
-    height: 100%; /* Important */
-    min-height: 0; /* Allows flex child to shrink properly */
+    z-index: 1;
 }
 
-/* Chart Information Text */
-.chart-controls span {
+/* --- RIGHT: DETAILS PANEL --- */
+.details-panel {
+    background: white;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: #666;
+    padding: 2rem;
+}
+
+.details-header {
+    background: #3B7D23;
+    color: white;
+    padding: 1.5rem;
+}
+
+.details-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+/* TABS */
+.details-tabs {
+    display: flex;
+    border-bottom: 2px solid #000;
+}
+
+.tab-btn {
+    flex: 1;
+    background: #f4f4f4;
+    border: none;
+    padding: 1rem;
     font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.tab-btn:hover {
+    background: #e0e0e0;
+}
+
+.tab-btn.active {
+    background: white;
+    color: #3B7D23;
+    border-bottom: 4px solid #3B7D23; /* Visual indicator */
+}
+
+/* CONTENT AREA */
+.details-content {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+/* Sensor Toggles (Mini Buttons) */
+.sensor-toggles {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    justify-content: center;
+}
+
+.sensor-btn {
+    background: transparent;
+    border: 1px solid #000;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sensor-btn.active {
+    background: #3B7D23;
+    color: white;
+    border-color: #3B7D23;
+}
+
+.panel-msg {
+    text-align: center;
+    color: #777;
+    margin-top: 2rem;
+}
+
+/* Info View */
+.station-img-container img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+}
+
+.station-grafico-img-container img {
+    width: 100%;
+    height: 525px;
+    object-fit: fill;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+}
+
+.no-img {
+    width: 100%;
+    height: 150px;
+    background: #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    margin-bottom: 1rem;
+}
+
+.meta-list {
+    list-style: none;
+    padding: 0;
+}
+
+.meta-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
     font-size: 0.9rem;
+}
+
+
+/* --- FOOTER --- */
+.stations-footer {
+    margin-top: 3rem;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    padding-top: 2rem;
+    background-color: transparent;
     color: #000;
 }
 
-/* --- START: Marker Styles for Saturation and Precipitation --- */
+/* Flex Wrapper for 2-Column Layout */
+.footer-layout-wrapper {
+    display: flex;
+    gap: 4rem; /* Generous gap between text and image */
+    align-items: flex-start; /* Align to top */
+}
 
-/* Base style for the Saturation marker */
-.saturation-marker {
+/* Left Column: Text Info */
+.footer-text-column {
+    flex: 2; /* Takes up 2/3rds of space */
+    min-width: 0; /* Prevents flex overflow */
+}
+
+/* Right Column: Image */
+.footer-image-column {
+    flex: 1; /* Takes up 1/3rd of space */
+    display: flex;
+    justify-content: center;
+    position: sticky;
+    top: 2rem; /* Optional: keeps image in view while scrolling text */
+}
+
+.schematic-img {
+    width: 100%;
+    max-width: 450px; /* Controls max size of schematic */
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background: white;
+    padding: 0.5rem;
+}
+
+/* Header Styles */
+.stations-footer h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    color: #1a1a1a;
+    margin-top: 0;
+}
+
+/* Secondary Header (Datos de la estación) Spacing */
+.secondary-footer-header {
+    margin-top: 3rem;
+    border-top: 1px solid rgba(0,0,0,0.1); /* Optional: visual separator inside text col */
+    padding-top: 2rem;
+}
+
+.stations-footer p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    color: #333;
+    text-align: justify;
+}
+
+/* Glossary List */
+.glossary-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.glossary-list li {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    color: #333;
+    text-align: justify;
+    padding-left: 1rem;
+    border-left: 3px solid #3B7D23; /* Green accent */
+}
+
+/* --- MAP MARKERS (CSS Only, No Emojis) --- */
+.map-marker {
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 55px;
-    height: 30px;
-    border-radius: 0;
+
+    /* ADD THESE TWO LINES: */
+    width: 100%;
+    height: 100%;
+
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
     color: white;
-    font-weight: bold;
-    font-size: 14px;
-    line-height: 1;
-    text-align: center;
-    border: 1px solid rgba(0, 0, 0, 0.4);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    background-color: #888; /* Fallback/Default color */
+    border: 1px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    box-sizing: border-box; /* Ensures border doesn't expand size */
 }
 
-/* Color classes based on saturation ranges (low: 0-80%) */
-.saturation-marker.low {
-    background-color: rgb(175, 152, 0, 0.9);
+.map-marker.saturation {
+    border-radius: 50%; /* Circle */
+    font-size: 12px;
+}
+.saturation.low { background-color: #E6B800; }
+.saturation.medium { background-color: #00B3FF; }
+.saturation.high { background-color: #001C68; }
+
+.map-marker.precip {
+    border-radius: 12px; /* Pill */
+    color: #333;
+    font-size: 11px;
 }
 
-/* Color classes based on saturation ranges (medium: 80-90%) */
-.saturation-marker.medium {
-    background-color: rgba(0, 179, 255, 0.9);
+.map-marker.status {
+    border-radius: 50%;
 }
 
-/* Color classes based on saturation ranges (high: 90-100%) */
-.saturation-marker.high {
-    background-color: rgb(0, 28, 104, 0.9);
-}
-
-/* Style for the Precipitation marker */
-.precip-marker {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 55px;
-    height: 30px;
-    border-radius: 0;
-    color: white; /* Text color is set to white */
-    font-weight: bold;
-    font-size: 14px;
-    line-height: 1;
-    text-align: center;
-    border: 1px solid rgba(0, 0, 0, 0.4);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    /* Background color is set dynamically via inline style in JS */
-}
-
-/* --- END: Marker Styles --- */
-
-
-/* Responsive Design */
+/* --- RESPONSIVE --- */
 @media (max-width: 900px) {
-    .stations-container {
+    .stations-page {
         padding: 1.5rem 1rem;
     }
 
-    .stations-layout {
+    .dashboard-container {
         grid-template-columns: 1fr;
-        height: 500px;
-        gap: 2rem;
+        height: auto;
     }
 
-    /* Define height for mobile map so it doesn't collapse */
-    .stations-map-wrapper {
+    .map-panel {
         height: 400px;
     }
 
-    .chart-column {
-        min-height: 100%;
+    .details-panel {
+        height: auto;
+        min-height: 400px;
+    }
+
+    .stations-footer {
+        grid-template-columns: 1fr;
+        gap: 2rem;
     }
 }

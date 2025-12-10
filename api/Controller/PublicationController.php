@@ -17,7 +17,7 @@ class PublicationController {
     public function createPublication($request, $response) {
         $data = $request->getParsedBody();
         $id = $this->publicationModel->createPublication($data);
-        if ($id) return $this->jsonResponse($response, ['message'=>'Publication created','id'=>$id], 201);
+        if ($id) return $this->jsonResponse($response, ['message'=>'Publication created', 'publication_id' => $id], 201);
         return $this->jsonResponse($response, ['error'=>'Failed'], 500);
     }
 

@@ -5,48 +5,49 @@ import searchIcon from "../assets/search-icon-png-9.png";
 
 // Local images
 import publication1 from "../assets/publications/publication1.webp";
-import pub1 from "../assets/publications/pub1.webp";
-import pub2 from "../assets/publications/pub2.webp";
-import pub3 from "../assets/publications/pub3.webp";
-import pub4 from "../assets/publications/pub4.webp";
-import pub5 from "../assets/publications/pub5.webp";
-import pub6 from "../assets/publications/pub6.webp";
-import pub7 from "../assets/publications/pub7.webp";
-import pub8 from "../assets/publications/pub8.webp";
-import pub9 from "../assets/publications/pub9.webp";
-import pub10 from "../assets/publications/pub10.webp";
-import pub11 from "../assets/publications/pub11.webp";
-import pub12 from "../assets/publications/pub12.webp";
-import pub13 from "../assets/publications/pub13.webp";
-import pub14 from "../assets/publications/pub14.webp";
-import pub15 from "../assets/publications/pub15.webp";
-import pub16 from "../assets/publications/pub16.webp";
-import pub17 from "../assets/publications/pub17.webp";
-import pub18 from "../assets/publications/pub18.webp";
-import pub19 from "../assets/publications/pub19.webp";
+import placeholder from "../assets/placeholder.png";
+// import pub1 from "../assets/publications/pub1.webp";
+// import pub2 from "../assets/publications/pub2.webp";
+// import pub3 from "../assets/publications/pub3.webp";
+// import pub4 from "../assets/publications/pub4.webp";
+// import pub5 from "../assets/publications/pub5.webp";
+// import pub6 from "../assets/publications/pub6.webp";
+// import pub7 from "../assets/publications/pub7.webp";
+// import pub8 from "../assets/publications/pub8.webp";
+// import pub9 from "../assets/publications/pub9.webp";
+// import pub10 from "../assets/publications/pub10.webp";
+// import pub11 from "../assets/publications/pub11.webp";
+// import pub12 from "../assets/publications/pub12.webp";
+// import pub13 from "../assets/publications/pub13.webp";
+// import pub14 from "../assets/publications/pub14.webp";
+// import pub15 from "../assets/publications/pub15.webp";
+// import pub16 from "../assets/publications/pub16.webp";
+// import pub17 from "../assets/publications/pub17.webp";
+// import pub18 from "../assets/publications/pub18.webp";
+// import pub19 from "../assets/publications/pub19.webp";
 
-// Map backend publication_id to local images
-const imageMap = {
-  1: pub1,
-  2: pub2,
-  3: pub3,
-  4: pub4,
-  5: pub5,
-  6: pub6,
-  7: pub7,
-  8: pub8,
-  9: pub9,
-  10: pub10,
-  11: pub11,
-  12: pub12, 
-  13: pub13, 
-  14: pub14,
-  15: pub15,
-  16: pub16,
-  17: pub17,
-  18: pub18,
-  19: pub19,
-}
+// // Map backend publication_id to local images
+// const imageMap = {
+//   1: pub1,
+//   2: pub2,
+//   3: pub3,
+//   4: pub4,
+//   5: pub5,
+//   6: pub6,
+//   7: pub7,
+//   8: pub8,
+//   9: pub9,
+//   10: pub10,
+//   11: pub11,
+//   12: pub12, 
+//   13: pub13, 
+//   14: pub14,
+//   15: pub15,
+//   16: pub16,
+//   17: pub17,
+//   18: pub18,
+//   19: pub19,
+// }
 
 function Publications() {
   const [publications, setPublications] = useState([]);
@@ -72,7 +73,9 @@ function Publications() {
             item.publication_id === 1
               ? publication1
               : item.publication_url || "#",
-          image: imageMap[item.publication_id] || publication1,
+          image: item.image_url
+            ? `${API_URL}/publications/${item.publication_id}/image`
+            : placeholder,
         }));
 
         setPublications(formattedData);
