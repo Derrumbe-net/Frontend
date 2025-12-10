@@ -76,7 +76,6 @@ class Report {
     public function uploadTextFile($fileName, $content, $folder = null) {
         $conn_id = false;
         try {
-            // 1. Connect
             $ftp_server = $_ENV['FTPS_SERVER'];
             $ftp_port   = $_ENV['FTPS_PORT'] ?? 21;
             
@@ -87,8 +86,8 @@ class Report {
             ftp_pasv($conn_id, true);
 
             // Navigate to Base Path
-            // Example Base: files/reports/images/
-            $base = $_ENV['FTPS_BASE_PATH_REPORTS'] ?? 'files/reports/images/';
+            // Example Base: files/landslides/
+            $base = $_ENV['FTPS_BASE_PATH_REPORTS'] ?? 'files/landslides/';
             $basePath = rtrim($base, '/') . '/'; 
             
             if (!@ftp_chdir($conn_id, $basePath)) {
@@ -97,7 +96,6 @@ class Report {
 
             // Handle Subfolder: {id}_{date}
             if ($folder) {
-                // Try to enter folder
                 if (!@ftp_chdir($conn_id, $folder)) {
                     // Create if missing
                     if (ftp_mkdir($conn_id, $folder)) {
@@ -117,7 +115,7 @@ class Report {
             fclose($tmpFile);
 
             if ($result) {
-                // Format: files/reports/images/{FOLDER}/{FILENAME}
+                // Format: files/landslides/{FOLDER}/{FILENAME}
                 $finalPath = $basePath . ($folder ? $folder . '/' : '') . $fileName;
                 return $finalPath;
             }
