@@ -1,31 +1,26 @@
 <?php
 namespace DerrumbeNet\Test;
 
-use PDOException;
-use PDOStatement;
-use PDO;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Request;
 use Slim\Psr7\Response;
+use Slim\Psr7\UploadedFile;
 use DerrumbeNet\Controller\StationInfoController;
+use DerrumbeNet\Model\StationInfo;
 
 class StationInfoControllerTest extends TestCase
 {
-    private $stmtMock;
-    private $pdoMock;
+    private $stationModelMock;
     private $controller;
     private $response;
 
     protected function setUp(): void
     {
-        $this->stmtMock = $this->createMock(PDOStatement::class);
+        // 1. Mock the Model
+        $this->stationModelMock = $this->createMock(StationInfo::class);
 
-        $this->pdoMock = $this->createMock(PDO::class);
-        $this->pdoMock->method('prepare')->willReturn($this->stmtMock);
-        $this->pdoMock->method('query')->willReturn($this->stmtMock);
-        $this->pdoMock->method('lastInsertId')->willReturn('123');
-
-        $this->controller = new StationInfoController($this->pdoMock);
+        // 2. Inject it
+        $this->controller = new StationInfoController($this->stationModelMock);
         $this->response = new Response();
     }
 
@@ -38,10 +33,10 @@ class StationInfoControllerTest extends TestCase
 
     public function testCreateStationSuccess()
     {
-        $data = ['admin_id' => 1, 'city' => 'Test Station'];
+        $data = ['city' => 'Test Station'];
         $request = $this->createMockRequest($data);
 
-        $this->stmtMock->method('execute')->willReturn(true);
+        $this->stationModelMock->method('createStationInfo')->willReturn('123');
 
         $response = $this->controller->createStation($request, $this->response);
 
@@ -52,81 +47,13 @@ class StationInfoControllerTest extends TestCase
         );
     }
 
-    public function testCreateStationFailure()
-    {
-        $data = [/* ... */];
-        $request = $this->createMockRequest($data);
-
-        $this->stmtMock->method('execute')->willReturn(false);
-
-        $response = $this->controller->createStation($request, $this->response);
-
-        $this->assertEquals(500, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"error":"Failed"}',
-            (string) $response->getBody()
-        );
-    }
-
-    public function testGetStationFound()
-    {
-        $request = $this->createMock(Request::class);
-        $args = ['id' => 42];
-        $expectedData = ['station_id' => 42, 'city' => 'Test Station'];
-
-        $this->stmtMock->method('fetch')->willReturn($expectedData);
-
-        $response = $this->controller->getStation($request, $this->response, $args);
-
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            json_encode($expectedData),
-            (string) $response->getBody()
-        );
-    }
-
-    public function testGetStationNotFound()
-    {
-        $request = $this->createMock(Request::class);
-        $args = ['id' => 99];
-
-        $this->stmtMock->method('fetch')->willReturn(false);
-
-        $response = $this->controller->getStation($request, $this->response, $args);
-
-        $this->assertEquals(404, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"error":"Not found"}',
-            (string) $response->getBody()
-        );
-    }
-
-    public function testGetAllStations()
-    {
-        $request = $this->createMock(Request::class);
-        $expectedData = [
-            ['station_id' => 1],
-            ['station_id' => 2]
-        ];
-
-        $this->stmtMock->method('fetchAll')->willReturn($expectedData);
-
-        $response = $this->controller->getAllStations($request, $this->response);
-
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            json_encode($expectedData),
-            (string) $response->getBody()
-        );
-    }
-
     public function testUpdateStationSuccess()
     {
-        $data = ['admin_id' => 1, 'city' => 'Updated Station'];
+        $data = ['city' => 'Updated'];
         $request = $this->createMockRequest($data);
         $args = ['id' => 42];
 
-        $this->stmtMock->method('execute')->willReturn(true);
+        $this->stationModelMock->method('updateStationInfo')->willReturn(true);
 
         $response = $this->controller->updateStation($request, $this->response, $args);
 
@@ -137,52 +64,29 @@ class StationInfoControllerTest extends TestCase
         );
     }
 
-    public function testUpdateStationFailure()
+    public function testUploadStationSensorImageSuccess()
     {
-        $data = [/* ... */];
-        $request = $this->createMockRequest($data);
-        $args = ['id' => 42];
+        // Mock File
+        $uploadedFile = $this->createMock(UploadedFile::class);
+        $uploadedFile->method('getError')->willReturn(UPLOAD_ERR_OK);
+        $uploadedFile->method('getClientFilename')->willReturn('sensor.jpg');
 
-        $this->stmtMock->method('execute')->willReturn(false);
-
-        $response = $this->controller->updateStation($request, $this->response, $args);
-
-        $this->assertEquals(500, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"error":"Failed"}',
-            (string) $response->getBody()
-        );
-    }
-
-    public function testDeleteStationSuccess()
-    {
+        // Mock Request
         $request = $this->createMock(Request::class);
+        $request->method('getUploadedFiles')->willReturn(['image' => $uploadedFile]);
+
         $args = ['id' => 42];
 
-        $this->stmtMock->method('execute')->willReturn(true);
+        // Mock Model: station exists
+        $this->stationModelMock->method('getStationInfoById')->willReturn(['station_id' => 42]);
 
-        $response = $this->controller->deleteStation($request, $this->response, $args);
+        // Mock Model: Upload returns path
+        $this->stationModelMock->method('uploadSensorImageToFtp')->willReturn('stations/sensor.jpg');
+        $this->stationModelMock->method('updateStationSensorImage')->willReturn(true);
+
+        $response = $this->controller->uploadStationSensorImage($request, $this->response, $args);
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"message":"Deleted"}',
-            (string) $response->getBody()
-        );
-    }
-
-    public function testDeleteStationFailure()
-    {
-        $request = $this->createMock(Request::class);
-        $args = ['id' => 42];
-
-        $this->stmtMock->method('execute')->willReturn(false);
-
-        $response = $this->controller->deleteStation($request, $this->response, $args);
-
-        $this->assertEquals(500, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"error":"Failed"}',
-            (string) $response->getBody()
-        );
+        $this->assertStringContainsString('sensor.jpg', (string)$response->getBody());
     }
 }

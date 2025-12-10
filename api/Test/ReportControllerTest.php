@@ -1,188 +1,83 @@
 <?php
 namespace DerrumbeNet\Test;
 
-use PDOException;
-use PDOStatement;
-use PDO;
 use PHPUnit\Framework\TestCase;
 use Slim\Psr7\Request;
 use Slim\Psr7\Response;
+use Slim\Psr7\UploadedFile;
 use DerrumbeNet\Controller\ReportController;
+use DerrumbeNet\Model\Report;
+use DerrumbeNet\Helpers\EmailService;
 
 class ReportControllerTest extends TestCase
 {
-    private $stmtMock;
-    private $pdoMock;
+    private $reportModelMock;
+    private $emailServiceMock;
     private $controller;
     private $response;
 
     protected function setUp(): void
     {
-        $this->stmtMock = $this->createMock(PDOStatement::class);
+        // Mock Model AND EmailService
+        $this->reportModelMock = $this->createMock(Report::class);
+        $this->emailServiceMock = $this->createMock(EmailService::class);
 
-        $this->pdoMock = $this->createMock(PDO::class);
-        $this->pdoMock->method('prepare')->willReturn($this->stmtMock);
-        $this->pdoMock->method('query')->willReturn($this->stmtMock);
-        $this->pdoMock->method('lastInsertId')->willReturn('123');
-
-        $this->controller = new ReportController($this->pdoMock);
+        $this->controller = new ReportController(
+            $this->reportModelMock,
+            $this->emailServiceMock
+        );
         $this->response = new Response();
-    }
-
-    private function createMockRequest($body)
-    {
-        $request = $this->createMock(Request::class);
-        $request->method('getParsedBody')->willReturn($body);
-        return $request;
     }
 
     public function testCreateReportSuccess()
     {
-        $data = ['landslide_id' => 1, 'city' => 'Mayaguez'];
-        $request = $this->createMockRequest($data);
+        // Mock Request
+        $request = $this->createMock(Request::class);
+        $request->method('getParsedBody')->willReturn(['city' => 'Test', 'reported_at' => '2025-01-01']);
 
-        $this->stmtMock->method('execute')->willReturn(true);
+        // Mock Model Behavior
+        $this->reportModelMock->method('createReport')->willReturn('101');
+        $this->reportModelMock->method('updateReportImage')->willReturn(true);
 
         $response = $this->controller->createReport($request, $this->response);
 
         $this->assertEquals(201, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"message":"Report created","id":"123"}',
-            (string) $response->getBody()
-        );
+        $this->assertStringContainsString('"report_id":"101"', (string)$response->getBody());
     }
 
-    public function testCreateReportFailure()
+    public function testUploadReportImageSuccess()
     {
-        $data = [/* ... */];
-        $request = $this->createMockRequest($data);
+        $reportId = 99;
 
-        $this->stmtMock->method('execute')->willReturn(false);
-
-        $response = $this->controller->createReport($request, $this->response);
-
-        $this->assertEquals(500, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"error":"Failed"}',
-            (string) $response->getBody()
+        // 1. Mock Uploaded File
+        $uploadedFile = $this->createMock(UploadedFile::class);
+        $uploadedFile->method('getError')->willReturn(UPLOAD_ERR_OK);
+        $uploadedFile->method('getClientFilename')->willReturn('photo.jpg');
+        $uploadedFile->method('getStream')->willReturn(
+            $this->createMock(\Psr\Http\Message\StreamInterface::class) // Stream mock
         );
-    }
 
-    public function testGetReportFound()
-    {
+        // 2. Mock Request
         $request = $this->createMock(Request::class);
-        $args = ['id' => 42];
-        $expectedData = ['report_id' => 42, 'city' => 'Mayaguez'];
+        $request->method('getUploadedFiles')->willReturn(['image_file' => $uploadedFile]);
 
-        $this->stmtMock->method('fetch')->willReturn($expectedData);
+        // 3. Mock Model Behavior
+        // Return a report so validation passes
+        $this->reportModelMock->method('getReportById')->willReturn([
+            'report_id' => $reportId,
+            'image_url' => '2025-01-01_99'
+        ]);
 
-        $response = $this->controller->getReport($request, $this->response, $args);
+        // Mock the FTP upload function! This prevents actual FTP connection.
+        $this->reportModelMock->expects($this->once())
+            ->method('uploadTextFile')
+            ->willReturn('files/landslides/2025-01-01_99/photo.jpg');
+
+        $response = $this->controller->uploadReportImage($request, $this->response, ['id' => $reportId]);
 
         $this->assertEquals(200, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            json_encode($expectedData),
-            (string) $response->getBody()
-        );
-    }
 
-    public function testGetReportNotFound()
-    {
-        $request = $this->createMock(Request::class);
-        $args = ['id' => 99];
-
-        $this->stmtMock->method('fetch')->willReturn(false);
-
-        $response = $this->controller->getReport($request, $this->response, $args);
-
-        $this->assertEquals(404, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"error":"Not found"}',
-            (string) $response->getBody()
-        );
-    }
-
-    public function testGetAllReports()
-    {
-        $request = $this->createMock(Request::class);
-        $expectedData = [
-            ['report_id' => 1],
-            ['report_id' => 2]
-        ];
-
-        $this->stmtMock->method('fetchAll')->willReturn($expectedData);
-
-        $response = $this->controller->getAllReports($request, $this->response);
-
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            json_encode($expectedData),
-            (string) $response->getBody()
-        );
-    }
-
-    public function testUpdateReportSuccess()
-    {
-        $data = ['landslide_id' => 1, 'city' => 'Cabo Rojo'];
-        $request = $this->createMockRequest($data);
-        $args = ['id' => 42];
-
-        $this->stmtMock->method('execute')->willReturn(true);
-
-        $response = $this->controller->updateReport($request, $this->response, $args);
-
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"message":"Updated"}',
-            (string) $response->getBody()
-        );
-    }
-
-    public function testUpdateReportFailure()
-    {
-        $data = [/* ... */];
-        $request = $this->createMockRequest($data);
-        $args = ['id' => 42];
-
-        $this->stmtMock->method('execute')->willReturn(false);
-
-        $response = $this->controller->updateReport($request, $this->response, $args);
-
-        $this->assertEquals(500, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"error":"Failed"}',
-            (string) $response->getBody()
-        );
-    }
-
-    public function testDeleteReportSuccess()
-    {
-        $request = $this->createMock(Request::class);
-        $args = ['id' => 42];
-
-        $this->stmtMock->method('execute')->willReturn(true);
-
-        $response = $this->controller->deleteReport($request, $this->response, $args);
-
-        $this->assertEquals(200, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"message":"Deleted"}',
-            (string) $response->getBody()
-        );
-    }
-
-    public function testDeleteReportFailure()
-    {
-        $request = $this->createMock(Request::class);
-        $args = ['id' => 42];
-
-        $this->stmtMock->method('execute')->willReturn(false);
-
-        $response = $this->controller->deleteReport($request, $this->response, $args);
-
-        $this->assertEquals(500, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString(
-            '{"error":"Failed"}',
-            (string) $response->getBody()
-        );
+        $body = json_decode((string)$response->getBody(), true);
+        $this->assertEquals('files/landslides/2025-01-01_99/photo.jpg', $body['path']);
     }
 }

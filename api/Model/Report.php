@@ -11,14 +11,16 @@ class Report {
 
     // --- DATABASE METHODS (Unchanged) ---
     public function createReport($data){
-        // ... (Keep your existing createReport logic) ...
         try {
             $stmt = $this->conn->prepare(
                 "INSERT INTO report (landslide_id, reported_at, description, city, image_url, latitude, longitude, reporter_name, reporter_phone, reporter_email, physical_address, is_validated) VALUES (:landslide_id, :reported_at, :description, :city, :image_url, :latitude, :longitude, :reporter_name, :reporter_phone, :reporter_email, :physical_address, 0)"
             );
-            // Bind params...
-            $stmt->execute($data); // Simplified for brevity in this display
-            return $this->conn->lastInsertId();
+
+            if ($stmt->execute($data)) {
+                return $this->conn->lastInsertId();
+            }
+            return false;
+
         } catch(PDOException $e) {
             error_log($e->getMessage());
             return false;
