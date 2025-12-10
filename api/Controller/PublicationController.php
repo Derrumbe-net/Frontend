@@ -32,9 +32,19 @@ class PublicationController {
     }
 
     public function updatePublication($request, $response, $args) {
-        $updated = $this->publicationModel->updatePublication($args['id'], $request->getParsedBody());
-        if ($updated) return $this->jsonResponse($response, ['message'=>'Updated']);
-        return $this->jsonResponse($response, ['error'=>'Failed'], 500);
+        $data = $request->getParsedBody();
+
+        if (empty($data) || !is_array($data)) {
+            return $this->jsonResponse($response, ['message'=>'No data provided for update'], 400);
+        }
+
+        $updated = $this->publicationModel->updatePublication($args['id'], $data);
+
+        if ($updated) {
+            return $this->jsonResponse($response, ['message'=>'Updated successfully']);
+        }
+
+        return $this->jsonResponse($response, ['error'=>'Failed to update'], 500);
     }
 
     public function deletePublication($request, $response, $args) {
