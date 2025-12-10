@@ -34,42 +34,21 @@ class ReportController {
             return $this->jsonResponse($response, ['error' => 'Failed to create report'], 500);
         }
 
-        // Generate Folder Name: {id}_{reported_at}
-        // Example: "15_2025-12-07"
-        $reportedAt = $data['reported_at'] ?? date('Y-m-d');
-        $safeDate = str_replace([':', ' '], ['-', '_'], $reportedAt);
-        $folderName = "{$reportId}_{$safeDate}";
+        $rawDate = $data['reported_at'] ?? date('Y-m-d');
+        
+        // YYYY-MM-DD format 
+        $dateFormatted = date('Y-m-d', strtotime($rawDate));
 
-        // Temporarily store the FOLDER NAME in the DB so Step 2 knows where to put the file
+        // Create folder name: {date}_{id}
+        $folderName = "{$dateFormatted}_{$reportId}";
+
         $this->reportModel->updateReportImage($reportId, $folderName);
 
-        // Return ID so frontend can call upload
         return $this->jsonResponse($response, [
             'message' => 'Report metadata created. Ready for upload.',
             'report_id' => $reportId,
             'target_folder' => $folderName
         ], 201);
-    }
-
-    public function updateReport(Request $request, Response $response, $args){
-        $id = $args['id'];
-        $data = $request->getParsedBody();
-
-        if (!$data) {
-            return $this->jsonResponse($response, ['error' => 'No data provided'], 400);
-        }
-
-        // Default values if frontend didn’t send them
-        $data['is_validated'] = isset($data['is_validated']) ? (int)$data['is_validated'] : 0;
-        $data['internal_notes'] = $data['internal_notes'] ?? null;
-
-        $updated = $this->reportModel->updateReport($id, $data);
-
-        if ($updated) {
-            return $this->jsonResponse($response, ['message' => 'Report updated']);
-        }
-
-        return $this->jsonResponse($response, ['error' => 'Failed to update report'], 500);
     }
 
     public function uploadReportImage(Request $request, Response $response, $args)
@@ -81,9 +60,10 @@ class ReportController {
             return $this->jsonResponse($response, ['error' => 'Report not found'], 404);
         }
     
-        $reportedAt = $report['reported_at'];
-        $safeDate = preg_replace('/[^A-Za-z0-9_-]/', '_', $reportedAt);
-        $targetFolder = "{$reportId}_{$safeDate}";
+        $rawDate = $report['reported_at'];
+        $dateFormatted = date('Y-m-d', strtotime($rawDate));
+        
+        $targetFolder = "{$dateFormatted}_{$reportId}";
     
         $files = $request->getUploadedFiles();
         $uploadedFile = $files['image_file'] ?? null;
@@ -101,14 +81,14 @@ class ReportController {
                 $content = $uploadedFile->getStream()->getContents();
                 $fileName = 'image_' . time() . '_' . uniqid() . '.' . $ext;
     
+                // This uploads the physical file
                 $fullPath = $this->reportModel->uploadTextFile($fileName, $content, $targetFolder);
     
                 if ($fullPath) {
-                    $this->reportModel->updateReportImage($reportId, $fullPath);
-    
+                    $this->reportModel->updateReportImage($reportId, $targetFolder);
                     return $this->jsonResponse($response, [
                         'message' => 'Image uploaded successfully',
-                        'path' => $fullPath
+                        'path' => $fullPath 
                     ]);
                 }
     
@@ -122,22 +102,26 @@ class ReportController {
     
         return $this->jsonResponse($response, ['error' => 'No valid file sent'], 400);
     }
-    
-    // ... Standard methods ...
-    public function getAllReports(Request $request, Response $response){
-        return $this->jsonResponse($response, $this->reportModel->getAllReports());
+
+    public function getAllReports($request,$response){
+        return $this->jsonResponse($response,$this->reportModel->getAllReports());
     }
 
-    public function getReport(Request $request, Response $response, $args){
-        $id = $args['id'];
-        $report = $this->reportModel->getReportById($id);
-
-        if (!$report) {
-            return $this->jsonResponse($response, ['error' => 'Report not found'], 404);
-        }
-
-        return $this->jsonResponse($response, $report);
+    public function getReport($request,$response,$args){
+        $rep = $this->reportModel->getReportById($args['id']);
+        return $rep ? $this->jsonResponse($response,$rep)
+                    : $this->jsonResponse($response,['error'=>'Not found'],404);
     }
 
-    // (Add updateReport/deleteReport/getReport as needed)
+    public function updateReport($request,$response,$args){
+        $updated = $this->reportModel->updateReport($args['id'],$request->getParsedBody());
+        return $updated ? $this->jsonResponse($response,['message'=>'Updated'])
+                        : $this->jsonResponse($response,['error'=>'Failed'],500);
+    }
+
+    public function deleteReport($request,$response,$args){
+        $deleted = $this->reportModel->deleteReport($args['id']);
+        return $deleted ? $this->jsonResponse($response,['message'=>'Deleted'])
+                        : $this->jsonResponse($response,['error'=>'Failed'],500);
+    }
 }
