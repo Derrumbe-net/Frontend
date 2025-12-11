@@ -7,9 +7,17 @@ use PHPMailer\PHPMailer\Exception;
 
 class EmailService {
 
+    private $mailer;
+    private $templateBaseDir;
+
+    public function __construct(PHPMailer $mailer = null, string $templateBaseDir = null) {
+        $this->mailer = $mailer;
+        $this->templateBaseDir = $templateBaseDir ?? __DIR__ . '/email_templates';
+    }
+
     /** Load an HTML template and replace {{variables}} */
     public function renderTemplate(string $templateName, array $vars = []): string {
-        $path = __DIR__ . "/email_templates/{$templateName}.html";
+        $path = $this->templateBaseDir . "/{$templateName}.html";
 
         if (!file_exists($path)) {
             throw new \Exception("Email template not found: {$path}");
@@ -26,9 +34,16 @@ class EmailService {
 
     /** Send email with PHPMailer */
     public function sendEmail(string $to, string $subject, string $body): bool {
-        $mail = new PHPMailer(true);
+        $mail = $this->mailer ?? new PHPMailer(true);
 
         try {
+            if ($this->mailer) {
+                $mail->clearAllRecipients();
+                $mail->clearAttachments();
+                $mail->clearCustomHeaders();
+            }
+
+            // Set SMTP Settings (Safe to run on Mocks)
             $mail->isSMTP();
             $mail->Host       = $_ENV['SMTP_HOST'];
             $mail->SMTPAuth   = true;

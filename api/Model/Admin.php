@@ -1,7 +1,7 @@
 <?php
 
 namespace DerrumbeNet\Model;
-use PDOException; // Added for explicit error handling
+use PDOException;
 use PDO;
 use PDOStatement;
 
@@ -160,14 +160,14 @@ class Admin {
             $stmt = $this->conn->prepare("UPDATE admin SET isAuthorized = :isAuthorized WHERE admin_id = :id");
             $stmt->bindParam(':isAuthorized', $isAuthorized, PDO::PARAM_BOOL);
             $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-    
+
             return $stmt->execute();
         } catch (PDOException $e) {
             error_log("Update Authorization Error: " . $e->getMessage());
             return false;
         }
     }
-    
+
     // UPDATE EMAIL
     public function updateEmail($id, $email) {
         try {

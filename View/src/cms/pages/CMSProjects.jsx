@@ -176,6 +176,7 @@ export default function CMSProjects() {
                             className="cms-icon-btn"
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage((prev) => prev - 1)}
+                            title="Página anterior"
                         >
                             <FaChevronLeft />
                         </button>
@@ -186,6 +187,7 @@ export default function CMSProjects() {
                             className="cms-icon-btn"
                             disabled={currentPage === totalPages || totalPages === 0}
                             onClick={() => setCurrentPage((prev) => prev + 1)}
+                            title="Siguiente página"
                         >
                             <FaChevronRight />
                         </button>

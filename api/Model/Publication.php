@@ -4,6 +4,7 @@ namespace DerrumbeNet\Model;
 
 use PDO;
 use PDOException;
+use Exception;
 
 class Publication {
     private $conn;
