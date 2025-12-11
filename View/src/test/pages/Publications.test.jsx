@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Publications from '../pages/Publications';
+import Publications from '../../pages/Publications.jsx';
 
 vi.mock("../assets/search-icon-png-9.png", () => ({ default: "search-icon" }));
 vi.mock("../assets/publications/publication1.webp", () => ({ default: "pub1.webp" }));

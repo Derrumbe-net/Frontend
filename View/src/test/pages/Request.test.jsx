@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import EducationalTalkRequest from "../pages/Request"; // Adjust path
+import EducationalTalkRequest from "../../pages/Request.jsx"; // Adjust path
 
 // Mock image
 vi.mock("../assets/educational_talk.webp", () => ({ default: "talk.webp" }));

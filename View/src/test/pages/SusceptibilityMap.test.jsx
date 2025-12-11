@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import SusceptibilityMap from '../pages/SusceptibilityMap';
+import SusceptibilityMap from '../../pages/SusceptibilityMap.jsx';
 
 describe('SusceptibilityMap Component', () => {
 

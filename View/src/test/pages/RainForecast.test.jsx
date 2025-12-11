@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import RainForecast from '../pages/RainForecast';
+import RainForecast from '../../pages/RainForecast.jsx';
 
 describe('RainForecast Component', () => {
 

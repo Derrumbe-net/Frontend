@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import Guide from '../pages/Guide';
+import Guide from '../../pages/Guide.jsx';
 vi.mock('react-pageflip', () => ({
     default: vi.fn(({ children }) => (
         <div data-testid="mock-flipbook">

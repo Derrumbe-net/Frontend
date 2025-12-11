@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import Report from '../pages/Report';
+import Report from '../../pages/Report.jsx';
 
 // Assets
 vi.mock("../assets/PRLHMO_LOGO.svg", () => ({ default: "logo.svg" }));

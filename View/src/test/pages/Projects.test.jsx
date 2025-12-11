@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import Projects from '../pages/Projects';
+import Projects from '../../pages/Projects.jsx';
 
 vi.mock("../assets/search-icon-png-9.png", () => ({ default: "search-icon" }));
 vi.mock("../assets/placeholder.png", () => ({ default: "placeholder.png" }));

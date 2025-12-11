@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import Stations from '../pages/Stations';
+import Stations from '../../pages/Stations.jsx';
 
 // 1. Stub Environment
 vi.stubGlobal('import', { meta: { env: { VITE_API_URL: 'http://test-api' } } });
