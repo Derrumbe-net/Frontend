@@ -16,19 +16,19 @@ return function (App $app, $db) {
     // Create the Controller (injecting Model)
     $projectController = new ProjectController($projectModel);
 
+    $app->get('/projects', [$projectController, 'getAllProjects']);
+    $app->get('/projects/{id}', [$projectController, 'getProject']);
+    $app->get('/projects/{id}/image', [$projectController, 'serveProjectImage']);
+
     // Define Routes using the instantiated Controller
     $app->group('/projects', function (RouteCollectorProxy $group) use ($projectController) {
 
         // Note: We use the array syntax [$object, 'methodName']
         $group->post('', [$projectController, 'createProject']);
-        $group->get('', [$projectController, 'getAllProjects']);
-
-        $group->get('/{id}', [$projectController, 'getProject']);
         $group->put('/{id}', [$projectController, 'updateProject']);
         $group->delete('/{id}', [$projectController, 'deleteProject']);
 
         // Image handling
         $group->post('/{id}/image', [$projectController, 'uploadProjectImage']);
-        $group->get('/{id}/image', [$projectController, 'serveProjectImage']);
     })->add($jwtMiddleware);
 };
