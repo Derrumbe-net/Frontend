@@ -134,7 +134,6 @@ export default function CMSSignUp() {
         ) : (
           // FORM VIEW
           <>
-            <h1>Sign Up</h1>
             
             <form onSubmit={handleSignUp}>
               
