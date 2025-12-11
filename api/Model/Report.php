@@ -9,7 +9,7 @@ class Report {
     private $conn;
     public function __construct($conn){ $this->conn = $conn; }
 
-public function createReport(array $data)
+    public function createReport(array $data)
     {
         $sql = "INSERT INTO report (
                     landslide_id, 
@@ -38,11 +38,11 @@ public function createReport(array $data)
                     :physical_address, 
                     :is_validated
                 )";
-
+    
         try {
             $stmt = $this->conn->prepare($sql);
-
-            $stmt->execute([
+    
+            $params = [
                 ':landslide_id'     => $data['landslide_id'] ?? null,
                 ':reported_at'      => $data['reported_at'] ?? date('Y-m-d H:i:s'),
                 ':description'      => $data['description'] ?? '',
@@ -55,13 +55,12 @@ public function createReport(array $data)
                 ':reporter_email'   => $data['reporter_email'] ?? '',
                 ':physical_address' => $data['physical_address'] ?? '',
                 ':is_validated'     => $data['is_validated'] ?? 0
-            ]);
-
-            if ($stmt->execute($data)) {
-                return $this->conn->lastInsertId();
-            }
-            return false;
-
+            ];
+    
+            $stmt->execute($params);
+    
+            return $this->conn->lastInsertId();
+    
         } catch (\PDOException $e) {
             error_log("Database Error in createReport: " . $e->getMessage());
             return false;
