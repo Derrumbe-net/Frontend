@@ -26,7 +26,7 @@ class EmailService {
         $html = file_get_contents($path);
 
         foreach ($vars as $key => $value) {
-            $html = str_replace("{{{$key}}}", $value, $html);
+            $html = str_replace("{{{$key}}}", htmlspecialchars($value), $html);
         }
 
         return $html;
