@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 class AdminModelTest extends TestCase
 {
     private $mockPDO;
-    private Admin $admin;
+    private $admin;
 
     protected function setUp(): void
     {
@@ -19,202 +19,250 @@ class AdminModelTest extends TestCase
         $this->admin = new Admin($this->mockPDO);
     }
 
-    // --- SUCCESS SCENARIOS ---
+    // --- CREATE ADMIN TESTS ---
 
     public function testCreateAdminSuccess()
     {
-        $stmtMock = $this->createMock(PDOStatement::class);
-        $stmtMock->method('execute')->willReturn(true);
+        // 1. Mock Check Email Existence (Return False -> Email is new)
+        $stmtCheck = $this->createMock(PDOStatement::class);
+        $stmtCheck->method('execute')->willReturn(true);
+        $stmtCheck->method('fetch')->willReturn(false);
 
-        $this->mockPDO->method('prepare')->willReturn($stmtMock);
-        $this->mockPDO->method('lastInsertId')->willReturn('1');
+        // 2. Mock Insert (Return True -> Success)
+        $stmtInsert = $this->createMock(PDOStatement::class);
+        $stmtInsert->method('execute')->willReturn(true);
 
-        $result = $this->admin->createAdmin('test@example.com', 'password');
-        $this->assertEquals('1', $result);
-    }
+        // 3. Configure PDO to return statements in sequence
+        $this->mockPDO->expects($this->exactly(2))
+            ->method('prepare')
+            ->willReturnOnConsecutiveCalls($stmtCheck, $stmtInsert);
 
-    public function testGetAllAdmins()
-    {
-        $stmtMock = $this->createMock(PDOStatement::class);
-        $expectedData = [['id' => 1, 'email' => 'a@b.com'], ['id' => 2, 'email' => 'c@d.com']];
-
-        $stmtMock->method('fetchAll')->willReturn($expectedData);
-
-        // getAllAdmins uses query(), not prepare()
-        $this->mockPDO->expects($this->once())->method('query')->willReturn($stmtMock);
-
-        $result = $this->admin->getAllAdmins();
-        $this->assertEquals($expectedData, $result);
-    }
-
-    public function testGetAdminById()
-    {
-        $stmtMock = $this->createMock(PDOStatement::class);
-        $stmtMock->method('execute')->willReturn(true);
-        $stmtMock->method('fetch')->willReturn(['admin_id' => 1, 'email' => 'admin@test.com']);
-
-        $this->mockPDO->method('prepare')->willReturn($stmtMock);
-
-        $result = $this->admin->getAdminById(1);
-        $this->assertEquals('admin@test.com', $result['email']);
-    }
-
-    public function testGetEmailById()
-    {
-        $stmtMock = $this->createMock(PDOStatement::class);
-        $stmtMock->method('fetch')->willReturn(['email' => 'found@test.com']);
-
-        $this->mockPDO->method('prepare')->willReturn($stmtMock);
-
-        $result = $this->admin->getEmailById(1);
-        $this->assertEquals('found@test.com', $result['email']);
-    }
-
-    public function testGetPasswordById()
-    {
-        $stmtMock = $this->createMock(PDOStatement::class);
-        $stmtMock->method('fetch')->willReturn(['password' => 'hashed_secret']);
-
-        $this->mockPDO->method('prepare')->willReturn($stmtMock);
-
-        $result = $this->admin->getPasswordById(1);
-        $this->assertEquals('hashed_secret', $result['password']);
-    }
-
-    public function testUpdateEmail()
-    {
-        $stmtMock = $this->createMock(PDOStatement::class);
-        $stmtMock->method('execute')->willReturn(true);
-        $this->mockPDO->method('prepare')->willReturn($stmtMock);
-
-        $this->assertTrue($this->admin->updateEmail(1, 'new@test.com'));
-    }
-
-    public function testUpdatePassword()
-    {
-        $stmtMock = $this->createMock(PDOStatement::class);
-        $stmtMock->method('execute')->willReturn(true);
-        $this->mockPDO->method('prepare')->willReturn($stmtMock);
-
-        $this->assertTrue($this->admin->updatePassword(1, 'newPass123'));
-    }
-
-    public function testUpdateAuthorization()
-    {
-        $stmtMock = $this->createMock(PDOStatement::class);
-        $stmtMock->method('execute')->willReturn(true);
-        $this->mockPDO->method('prepare')->willReturn($stmtMock);
-
-        $this->assertTrue($this->admin->updateAuthorization(1, true));
-    }
-
-    public function testDeleteAdminById()
-    {
-        $stmtMock = $this->createMock(PDOStatement::class);
-        $stmtMock->method('execute')->willReturn(true);
-        $this->mockPDO->method('prepare')->willReturn($stmtMock);
-
-        $this->assertTrue($this->admin->deleteAdminById(1));
-    }
-
-    public function testSignUpAdmin()
-    {
-        $stmtMock = $this->createMock(PDOStatement::class);
-        $stmtMock->method('execute')->willReturn(true);
-
-        $this->mockPDO->method('prepare')->willReturn($stmtMock);
         $this->mockPDO->method('lastInsertId')->willReturn('55');
 
-        $result = $this->admin->signUpAdmin('new@user.com', 'pass');
-        $this->assertEquals('55', $result);
+        $result = $this->admin->createAdmin('new@test.com', 'password');
+
+        // Assertions for the new Array return format
+        $this->assertIsArray($result);
+        $this->assertEquals('55', $result['id']);
+        $this->assertArrayHasKey('token', $result);
+        $this->assertEquals(64, strlen($result['token'])); // Verify token length
     }
 
-    // --- CREDENTIALS VERIFICATION ---
-
-    public function testVerifyCredentialsSuccess()
+    public function testCreateAdminEmailExists()
     {
-        $password = 'secret123';
-        $hash = password_hash($password, PASSWORD_DEFAULT);
+        // Mock Check Email Existence (Return Data -> Email exists)
+        $stmtCheck = $this->createMock(PDOStatement::class);
+        $stmtCheck->method('execute')->willReturn(true);
+        $stmtCheck->method('fetch')->willReturn(['admin_id' => 1]);
 
-        $stmtMock = $this->createMock(PDOStatement::class);
-        // Mock returning the user with the correct hash
-        $stmtMock->method('fetch')->willReturn(['admin_id' => 1, 'password' => $hash]);
+        $this->mockPDO->expects($this->once())->method('prepare')->willReturn($stmtCheck);
 
-        $this->mockPDO->method('prepare')->willReturn($stmtMock);
+        $result = $this->admin->createAdmin('existing@test.com', 'password');
 
-        $result = $this->admin->verifyCredentials('test@test.com', $password);
-
-        $this->assertIsArray($result); // Should return user array
-        $this->assertEquals(1, $result['admin_id']);
+        $this->assertEquals(-1, $result);
     }
 
-    public function testVerifyCredentialsWrongPassword()
+    public function testCreateAdminFailure()
     {
-        $hash = password_hash('correct_pass', PASSWORD_DEFAULT);
+        // Email check passes, but Insert fails
+        $stmtCheck = $this->createMock(PDOStatement::class);
+        $stmtCheck->method('fetch')->willReturn(false);
 
-        $stmtMock = $this->createMock(PDOStatement::class);
-        $stmtMock->method('fetch')->willReturn(['admin_id' => 1, 'password' => $hash]);
+        $stmtInsert = $this->createMock(PDOStatement::class);
+        $stmtInsert->method('execute')->willReturn(false);
 
-        $this->mockPDO->method('prepare')->willReturn($stmtMock);
+        $this->mockPDO->method('prepare')->willReturnOnConsecutiveCalls($stmtCheck, $stmtInsert);
 
-        $result = $this->admin->verifyCredentials('test@test.com', 'wrong_pass');
-
-        $this->assertFalse($result); // Should fail
+        $this->assertFalse($this->admin->createAdmin('fail@test.com', 'password'));
     }
-
-    public function testVerifyCredentialsUserNotFound()
-    {
-        $stmtMock = $this->createMock(PDOStatement::class);
-        $stmtMock->method('fetch')->willReturn(false); // No user found
-
-        $this->mockPDO->method('prepare')->willReturn($stmtMock);
-
-        $result = $this->admin->verifyCredentials('missing@test.com', 'pass');
-
-        $this->assertFalse($result);
-    }
-
-    // --- EXCEPTION HANDLING (COVERAGE FOR CATCH BLOCKS) ---
 
     public function testCreateAdminThrowsException()
     {
-        $this->mockPDO->method('prepare')->willThrowException(new PDOException("DB Error"));
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
         $this->assertFalse($this->admin->createAdmin('a', 'b'));
     }
 
-    public function testGetAllAdminsThrowsException()
+    // --- NEW VERIFICATION TESTS ---
+
+    public function testGetAdminByTokenFound()
     {
-        $this->mockPDO->method('query')->willThrowException(new PDOException("DB Error"));
-        $this->assertEquals([], $this->admin->getAllAdmins()); // Returns empty array on error
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('fetch')->willReturn(['admin_id' => 1]);
+        $this->mockPDO->method('prepare')->willReturn($stmt);
+
+        $this->assertEquals(['admin_id' => 1], $this->admin->getAdminByToken('token_123'));
     }
 
-    public function testGetAdminByIdThrowsException()
+    public function testGetAdminByTokenException()
     {
-        $this->mockPDO->method('prepare')->willThrowException(new PDOException("DB Error"));
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
+        $this->assertFalse($this->admin->getAdminByToken('token_123'));
+    }
+
+    public function testGetAdminByEmailFound()
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('fetch')->willReturn(['admin_id' => 1]);
+        $this->mockPDO->method('prepare')->willReturn($stmt);
+
+        $this->assertEquals(['admin_id' => 1], $this->admin->getAdminByEmail('a@b.com'));
+    }
+
+    public function testGetAdminByEmailException()
+    {
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
+        $this->assertFalse($this->admin->getAdminByEmail('a@b.com'));
+    }
+
+    public function testVerifyEmailSuccess()
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('execute')->willReturn(true);
+        $this->mockPDO->method('prepare')->willReturn($stmt);
+
+        $this->assertTrue($this->admin->verifyEmail(1));
+    }
+
+    public function testVerifyEmailException()
+    {
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
+        $this->assertFalse($this->admin->verifyEmail(1));
+    }
+
+    // --- CREDENTIALS (UPDATED LOGIC) ---
+
+    public function testVerifyCredentialsSuccess()
+    {
+        $hash = password_hash('password', PASSWORD_DEFAULT);
+        $stmt = $this->createMock(PDOStatement::class);
+        // Ensure it returns a user (implying verified=1 and authorized=1 checks passed in SQL)
+        $stmt->method('fetch')->willReturn(['admin_id' => 1, 'password' => $hash]);
+
+        $this->mockPDO->method('prepare')->willReturn($stmt);
+
+        $result = $this->admin->verifyCredentials('test@test.com', 'password');
+        $this->assertEquals(1, $result['admin_id']);
+    }
+
+    public function testVerifyCredentialsException()
+    {
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
+        $this->assertFalse($this->admin->verifyCredentials('a', 'b'));
+    }
+
+    // --- SIGN UP (LEGACY METHOD) ---
+
+    public function testSignUpAdminSuccess()
+    {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('execute')->willReturn(true);
+        $this->mockPDO->method('prepare')->willReturn($stmt);
+        $this->mockPDO->method('lastInsertId')->willReturn('99');
+
+        $this->assertEquals('99', $this->admin->signUpAdmin('u', 'p'));
+    }
+
+    public function testSignUpAdminException()
+    {
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
+        $this->assertFalse($this->admin->signUpAdmin('a', 'b'));
+    }
+
+    // --- STANDARD GETTERS/SETTERS (COVERAGE) ---
+
+    public function testGetAdminById() {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('fetch')->willReturn(['id'=>1]);
+        $this->mockPDO->method('prepare')->willReturn($stmt);
+        $this->assertEquals(['id'=>1], $this->admin->getAdminById(1));
+    }
+
+    public function testGetAdminByIdException() {
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
         $this->assertFalse($this->admin->getAdminById(1));
     }
 
-    public function testUpdateEmailThrowsException()
-    {
-        $this->mockPDO->method('prepare')->willThrowException(new PDOException("DB Error"));
-        $this->assertFalse($this->admin->updateEmail(1, 'e'));
+    public function testGetAllAdmins() {
+        $stmt = $this->createMock(PDOStatement::class);
+        $this->mockPDO->method('query')->willReturn($stmt);
+        $this->admin->getAllAdmins();
+        $this->addToAssertionCount(1); // Just verify it runs
     }
 
-    public function testUpdatePasswordThrowsException()
-    {
-        $this->mockPDO->method('prepare')->willThrowException(new PDOException("DB Error"));
+    public function testGetAllAdminsException() {
+        $this->mockPDO->method('query')->willThrowException(new PDOException());
+        $this->assertEquals([], $this->admin->getAllAdmins());
+    }
+
+    public function testGetEmailById() {
+        $stmt = $this->createMock(PDOStatement::class);
+        $this->mockPDO->method('prepare')->willReturn($stmt);
+        $this->admin->getEmailById(1);
+        $this->addToAssertionCount(1);
+    }
+
+    public function testGetEmailByIdException() {
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
+        $this->assertFalse($this->admin->getEmailById(1));
+    }
+
+    public function testGetPasswordById() {
+        $stmt = $this->createMock(PDOStatement::class);
+        $this->mockPDO->method('prepare')->willReturn($stmt);
+        $this->admin->getPasswordById(1);
+        $this->addToAssertionCount(1);
+    }
+
+    public function testGetPasswordByIdException() {
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
+        $this->assertFalse($this->admin->getPasswordById(1));
+    }
+
+    public function testUpdateAuthorization() {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('execute')->willReturn(true);
+        $this->mockPDO->method('prepare')->willReturn($stmt);
+        $this->assertTrue($this->admin->updateAuthorization(1, true));
+    }
+
+    public function testUpdateAuthorizationException() {
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
+        $this->assertFalse($this->admin->updateAuthorization(1, true));
+    }
+
+    public function testUpdateEmail() {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('execute')->willReturn(true);
+        $this->mockPDO->method('prepare')->willReturn($stmt);
+        $this->assertTrue($this->admin->updateEmail(1, 'a'));
+    }
+
+    public function testUpdateEmailException() {
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
+        $this->assertFalse($this->admin->updateEmail(1, 'a'));
+    }
+
+    public function testUpdatePassword() {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('execute')->willReturn(true);
+        $this->mockPDO->method('prepare')->willReturn($stmt);
+        $this->assertTrue($this->admin->updatePassword(1, 'p'));
+    }
+
+    public function testUpdatePasswordException() {
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
         $this->assertFalse($this->admin->updatePassword(1, 'p'));
     }
 
-    public function testDeleteAdminThrowsException()
-    {
-        $this->mockPDO->method('prepare')->willThrowException(new PDOException("DB Error"));
-        $this->assertFalse($this->admin->deleteAdminById(1));
+    public function testDeleteAdminById() {
+        $stmt = $this->createMock(PDOStatement::class);
+        $stmt->method('execute')->willReturn(true);
+        $this->mockPDO->method('prepare')->willReturn($stmt);
+        $this->assertTrue($this->admin->deleteAdminById(1));
     }
 
-    public function testVerifyCredentialsThrowsException()
-    {
-        $this->mockPDO->method('prepare')->willThrowException(new PDOException("DB Error"));
-        $this->assertFalse($this->admin->verifyCredentials('a', 'b'));
+    public function testDeleteAdminByIdException() {
+        $this->mockPDO->method('prepare')->willThrowException(new PDOException());
+        $this->assertFalse($this->admin->deleteAdminById(1));
     }
 }

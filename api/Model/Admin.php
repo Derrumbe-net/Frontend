@@ -1,10 +1,9 @@
 <?php
 
 namespace DerrumbeNet\Model;
-use PDOException; // Added for explicit error handling
+use PDOException;
 use PDO;
 use PDOStatement;
-use PDOException;
 
 use DerrumbeNet\Config\Database;
 

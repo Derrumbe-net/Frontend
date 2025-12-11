@@ -171,7 +171,12 @@ class AdminControllerTest extends TestCase
 
         $this->emailServiceMock->expects($this->once())
             ->method('sendEmail')
-            ->with($_ENV['SUPERADMIN_EMAIL'], "New Admin Signup Request", 'Email Body HTML');
+            ->with(
+                'newadmin@test.com', // Expected recipient (The new user)
+                $this->stringContains('Verify'), // Subject contains "Verify"
+                'Email Body HTML'
+            )
+            ->willReturn(true);
 
         $request = $this->createMockRequest(['email' => 'newadmin@test.com', 'password' => '123']);
         $response = $this->controller->signUpAdmin($request, $this->response);
