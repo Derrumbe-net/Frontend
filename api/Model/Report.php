@@ -12,17 +12,36 @@ class Report {
     public function createReport(array $data)
     {
         $sql = "INSERT INTO report (
-                    landslide_id, reported_at, description, city, image_url, 
-                    latitude, longitude, reporter_name, reporter_phone, 
-                    reporter_email, physical_address, is_validated
+                    landslide_id, 
+                    reported_at, 
+                    description, 
+                    city, 
+                    image_url, 
+                    latitude, 
+                    longitude, 
+                    reporter_name, 
+                    reporter_phone, 
+                    reporter_email, 
+                    physical_address, 
+                    is_validated
                 ) VALUES (
-                    :landslide_id, :reported_at, :description, :city, :image_url, 
-                    :latitude, :longitude, :reporter_name, :reporter_phone, 
-                    :reporter_email, :physical_address, :is_validated
+                    :landslide_id, 
+                    :reported_at, 
+                    :description, 
+                    :city, 
+                    :image_url, 
+                    :latitude, 
+                    :longitude, 
+                    :reporter_name, 
+                    :reporter_phone, 
+                    :reporter_email, 
+                    :physical_address, 
+                    :is_validated
                 )";
     
         try {
             $stmt = $this->conn->prepare($sql);
+    
             $params = [
                 ':landslide_id'     => $data['landslide_id'] ?? null,
                 ':reported_at'      => $data['reported_at'] ?? date('Y-m-d H:i:s'),
@@ -37,13 +56,12 @@ class Report {
                 ':physical_address' => $data['physical_address'] ?? '',
                 ':is_validated'     => $data['is_validated'] ?? 0
             ];
-
-            if ($stmt->execute($data)) {
-                return $this->conn->lastInsertId();
-            }
-            return false;
-
-        } catch (PDOException $e) {
+    
+            $stmt->execute($params);
+    
+            return $this->conn->lastInsertId();
+    
+        } catch (\PDOException $e) {
             error_log("Database Error in createReport: " . $e->getMessage());
             return false;
         }
@@ -134,11 +152,13 @@ class Report {
         try {
             $conn_id = $this->getFtpConnection();
 
+            // Navigate to Base Path
+            // Note: Ensuring we use the REPORTS base path
             $base = $_ENV['FTPS_BASE_PATH_REPORTS'] ?? 'files/landslides/';
             $basePath = rtrim($base, '/') . '/';
 
-            // Ensure base path
             if (!@ftp_chdir($conn_id, $basePath)) {
+                // Try creating base path if it doesn't exist? Or fail.
                 return false;
             }
 
@@ -174,24 +194,25 @@ class Report {
     }
 
     public function getReportImageList($folderName) {
-        $conn_id = null;
+        $conn_id = $this->getFtpConnection();
         $list = [];
 
         try {
-            $conn_id = $this->getFtpConnection();
             $base = $_ENV['FTPS_BASE_PATH_REPORTS'] ?? 'files/landslides/';
             $basePath = rtrim($base, '/') . '/';
             $targetPath = $basePath . $folderName;
 
+            // Try to navigate
             if (!@ftp_chdir($conn_id, $targetPath)) {
-                return [];
+                return []; // Folder doesn't exist yet
             }
 
-            $files = ftp_nlist($conn_id, ".");
+            $files = ftp_nlist($conn_id, "."); // List current directory
 
             if (is_array($files)) {
                 foreach ($files as $file) {
                     $name = basename($file);
+                    // Filter logic matching Landslide (and webp)
                     if ($name == '.' || $name == '..') continue;
                     if (preg_match('/\.(jpg|jpeg|png|webp|gif)$/i', $name)) {
                         $list[] = $name;
@@ -202,30 +223,32 @@ class Report {
         } catch (\Exception $e) {
             error_log($e->getMessage());
         } finally {
-            if ($conn_id) ftp_close($conn_id);
+            ftp_close($conn_id);
         }
 
         return $list;
     }
 
     public function getReportImageContent($folderName, $fileName) {
-        $conn_id = null;
+        $conn_id = $this->getFtpConnection();
+
         try {
-            $conn_id = $this->getFtpConnection();
             $base = $_ENV['FTPS_BASE_PATH_REPORTS'] ?? 'files/landslides/';
             $basePath = rtrim($base, '/') . '/';
+
+            // Construct full path manually to ensure accuracy
             $fullPath = $basePath . $folderName . '/' . $fileName;
 
             $tmpFile = tmpfile();
 
             if (!@ftp_fget($conn_id, $tmpFile, $fullPath, FTP_BINARY)) {
-                // Fallback attempt
+                // Try navigating if full path failed (sometimes FTP servers are picky)
                 if (@ftp_chdir($conn_id, $basePath . $folderName)) {
                     if (!@ftp_fget($conn_id, $tmpFile, $fileName, FTP_BINARY)) {
-                        throw new \Exception("FTP download failed");
+                        throw new \Exception("FTP download failed for $fileName");
                     }
                 } else {
-                    throw new \Exception("FTP path not found");
+                    throw new \Exception("FTP path not found: $fullPath");
                 }
             }
 
@@ -239,21 +262,32 @@ class Report {
             error_log($e->getMessage());
             return null;
         } finally {
-            if ($conn_id) ftp_close($conn_id);
+            ftp_close($conn_id);
         }
     }
 
     public function deleteImageFile($folderName, $fileName) {
-        $conn_id = null;
+        $conn_id = $this->getFtpConnection();
+
         try {
-            $conn_id = $this->getFtpConnection();
             $base = $_ENV['FTPS_BASE_PATH_REPORTS'] ?? 'files/landslides/';
             $basePath = rtrim($base, '/') . '/';
+
+            // Full path to the specific file
             $fullPath = $basePath . $folderName . '/' . $fileName;
 
+            // Attempt deletion
             if (@ftp_delete($conn_id, $fullPath)) {
                 return true;
             }
+
+            // Optional: Check if we need to navigate first (some servers are strict)
+            if (@ftp_chdir($conn_id, $basePath . $folderName)) {
+                if (@ftp_delete($conn_id, $fileName)) {
+                    return true;
+                }
+            }
+
             return false;
 
         } catch (\Exception $e) {
