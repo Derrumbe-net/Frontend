@@ -203,19 +203,19 @@ class StationInfoController {
             $station = $this->stationInfoModel->getStationInfoById($stationId);
 
             if (!$station) {
-                return $response->withStatus(404)->write('Station not found');
+                $response->getBody()->write('Station not found');
+                return $response->withStatus(404);
             }
 
             $column = ($type === 'sensor') ? 'sensor_image_url' : 'data_image_url';
             $fileName = $station[$column] ?? null;
 
             if (empty($fileName)) {
-                return $response->withStatus(404)->write('Image not defined for this station');
+                $response->getBody()->write('Image not defined for this station');
+                return $response->withStatus(404);
             }
 
-            // Fetch binary content.
-            // Note: $fileName here will be "stations/filename.jpg" (for sensor)
-            // The model simply appends this to "files/", resulting in "files/stations/filename.jpg"
+            // Fetch binary content
             $imageContent = $this->stationInfoModel->getStationImageContent($fileName);
 
             $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
@@ -232,7 +232,9 @@ class StationInfoController {
 
         } catch (\Exception $e) {
             error_log($e->getMessage());
-            return $response->withStatus(500)->write('Error fetching image');
+            // FIX: Write to body, then return response
+            $response->getBody()->write('Error fetching image');
+            return $response->withStatus(500);
         }
     }
 

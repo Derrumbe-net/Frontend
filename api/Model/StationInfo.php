@@ -498,4 +498,46 @@ class StationInfo
             throw new Exception("Database error during batch update.");
         }
     }
+
+    public function processStationFileAndUpdate($stationId)
+    {
+        try {
+            // 1. Get Station Info to find the file path
+            $station = $this->getStationInfoById($stationId);
+            if (!$station || empty($station['ftp_file_path'])) {
+                error_log("Station $stationId has no FTP file path defined.");
+                return false;
+            }
+
+            // 2. Fetch data from FTP using your existing helper
+            $data = $this->getStationFileData($station['ftp_file_path']);
+
+            if (empty($data)) {
+                error_log("No data found in file for Station $stationId");
+                return false;
+            }
+
+            // 3. Logic: Get the LATEST reading (last row) to update the live status
+            $latestReading = end($data);
+
+            // 4. Map CSV columns to DB columns
+            // (Adjust these keys based on your actual CSV headers)
+            $updateData = [
+                'precipitation'   => $latestReading['Rain(mm)'] ?? $latestReading['Precipitation'] ?? 0,
+                'soil_saturation' => $latestReading['SoilMoisture'] ?? $latestReading['Saturation'] ?? 0,
+                'wc1'             => $latestReading['WC1'] ?? null,
+                'wc2'             => $latestReading['WC2'] ?? null,
+                'wc3'             => $latestReading['WC3'] ?? null,
+                'wc4'             => $latestReading['WC4'] ?? null,
+                'last_updated'    => date('Y-m-d H:i:s') // Set current time
+            ];
+
+            // 5. Update the Database
+            return $this->updateStationInfo($stationId, $updateData);
+
+        } catch (Exception $e) {
+            error_log("Error processing station $stationId: " . $e->getMessage());
+            return false;
+        }
+    }
 }

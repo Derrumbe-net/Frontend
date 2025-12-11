@@ -13,9 +13,9 @@ class AdminController {
     private Admin $adminModel;
     private EmailService $emailService;
 
-    public function __construct($db) {
+    public function __construct($db, EmailService $emailService = null) {
         $this->adminModel = new Admin($db);
-        $this->emailService = new EmailService();
+        $this->emailService = $emailService ?? new EmailService();
     }
 
     private function jsonResponse($response, $data, $status = 200) {
