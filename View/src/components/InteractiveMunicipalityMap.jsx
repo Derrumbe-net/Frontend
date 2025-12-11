@@ -6,11 +6,12 @@ import "../styles/InteractiveMunicipalityMap_module.css";
 export default function InteractiveMunicipalityMap() {
   const [data, setData] = useState(null);
 
-  useEffect(() => {
-    fetch("/View/src/assets/puerto-rico-municipalities.geojson")
-      .then(res => res.json())
-      .then(json => setData(json));
-  }, []);
+    useEffect(() => {
+        fetch("/puerto-rico-municipalities.geojson")
+            .then(res => res.json())
+            .then(json => setData(json))
+            .catch(err => console.error("GeoJSON load error:", err));
+    }, []);
 
   const baseStyle = {
     color: "#ffffffff",
