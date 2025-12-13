@@ -3,30 +3,31 @@ import "../styles/Projects_module.css";
 
 import searchIcon from "../assets/search-icon-png-9.png";
 
-// 🖼️ Local images
-import actualproject1 from "../assets/projects/proyecto actual 1.webp";
-import actualproject2 from "../assets/projects/proyecto actual 2.webp";
-import actualproject3 from "../assets/projects/proyecto actual 3.webp";
-import actualproject4 from "../assets/projects/proyecto actual 4.webp";
-import actualproject5 from "../assets/projects/proyecto actual 5.webp";
+// Local images
+import placeholder from "../assets/placeholder.png";
+// import actualproject1 from "../assets/projects/proyecto actual 1.webp";
+// import actualproject2 from "../assets/projects/proyecto actual 2.webp";
+// import actualproject3 from "../assets/projects/proyecto actual 3.webp";
+// import actualproject4 from "../assets/projects/proyecto actual 4.webp";
+// import actualproject5 from "../assets/projects/proyecto actual 5.webp";
 
-import pastproject1 from "../assets/projects/proyecto pasado 1.webp";
-import pastproject2 from "../assets/projects/proyecto pasado 2.webp";
-import pastproject3 from "../assets/projects/proyecto pasado 3.webp";
-import pastproject4 from "../assets/projects/proyecto pasado 4.webp";
+// import pastproject1 from "../assets/projects/proyecto pasado 1.webp";
+// import pastproject2 from "../assets/projects/proyecto pasado 2.webp";
+// import pastproject3 from "../assets/projects/proyecto pasado 3.webp";
+// import pastproject4 from "../assets/projects/proyecto pasado 4.webp";
 
-// 🧩 Map backend project_id to local images
-const imageMap = {
-  1: pastproject1, // Evaluation of the Soil Mass Movement Risk Rating
-  2: pastproject2, // Quantifying controls on weathering
-  3: pastproject3, // Track I Center Catalyst
-  4: pastproject4, // RAPID Hurricane Fiona
-  6: actualproject1, // LandslideReady program
-  7: actualproject2, // Climate Adaptation Partnerships
-  8: actualproject3, // Landslide Hazard Reduction Project
-  10: actualproject4, // Hazard Science and Risk Communication
-  12: actualproject5, // Critical Zone Controls
-};
+// // Map backend project_id to local images
+// const imageMap = {
+//   1: pastproject1, 
+//   2: pastproject2,
+//   3: pastproject3,
+//   4: pastproject4,
+//   5: actualproject1,
+//   6: actualproject2,
+//   7: actualproject3,
+//   8: actualproject4,
+//   9: actualproject5,
+// };
 
 function Projects() {
   const [projects, setProjects] = useState([]);
@@ -37,12 +38,15 @@ function Projects() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch("https://derrumbe-test.derrumbe.net/api/projects");
+
+        const API_URL = `${import.meta.env.VITE_API_URL}`;
+        const response = await fetch(`${API_URL}/projects`);
+
         if (!response.ok) throw new Error(`Error: ${response.status} ${response.statusText}`);
 
         const data = await response.json();
 
-        // Normalize backend data + attach local images
+        // Backend data + local images
         const formattedData = data.map((item) => ({
           id: item.project_id,
           title: item.title,
@@ -53,7 +57,9 @@ function Projects() {
               ? "present"
               : "past",
           description: item.description,
-          image: imageMap[item.project_id] || "/placeholder.webp",
+          image: item.image_url
+                      ? `${API_URL}/projects/${item.project_id}/image`
+                      : placeholder,
         }));
 
         setProjects(formattedData);
@@ -88,7 +94,6 @@ function Projects() {
       </p>
 
       <div className="projects-controls">
-        {/* Search Bar */}
         <div className="search-container">
           <input
             type="text"
@@ -99,7 +104,6 @@ function Projects() {
           <img src={searchIcon} alt="Search" className="search-icon" />
         </div>
 
-        {/* Filter Dropdown */}
         <div className="filter-container">
           <select
             className="filter-dropdown"

@@ -1,6 +1,11 @@
 <?php
 require __DIR__ . '/./vendor/autoload.php';
 require_once __DIR__ . '/./Config/Database.php';
+
+ini_set('display_errors', 'Off');
+
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
+
 use Slim\Factory\AppFactory;
 use DerrumbeNet\Config\Database;
 
@@ -9,7 +14,7 @@ $app = AppFactory::create();
 
 // Middleware to parse JSON body
 $app->addBodyParsingMiddleware();
-
+ini_set('memory_limit', '512M');
 // Database connection
 $db = Database::getConnection();
 
@@ -24,7 +29,6 @@ $app->setBasePath($basePath);
 (require __DIR__ . '/Route/StationInfoRoutes.php')($app, $db);
 (require __DIR__ . '/Route/ReportRoutes.php')($app, $db);
 
-// Error handling middleware
-$app->addErrorMiddleware(true, true, true);
+$app->addErrorMiddleware(false, true, true);
 
 $app->run();

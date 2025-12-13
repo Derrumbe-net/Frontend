@@ -1,0 +1,124 @@
+/* ===== MODAL OVERLAY ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 5000;
+  padding: 20px;
+}
+
+/* ===== MODAL CONTAINER ===== */
+.modal-container {
+  background: white;
+  padding: 24px;
+  width: 420px;
+  max-width: 95%;
+  border-radius: 12px;
+  position: relative;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+  animation: popup 0.2s ease-out;
+  text-align: center;
+}
+
+@keyframes popup {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Close button */
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  font-size: 26px;
+  cursor: pointer;
+  color: #444;
+}
+
+.modal-close:hover {
+  color: #000;
+}
+
+/* ===== IMAGE PREVIEW ===== */
+.modal-image {
+  width: 100%;
+  border-radius: 10px;
+  margin: 14px 0;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* ===== BUTTON LAYOUT ===== */
+.modal-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.modal-button {
+  flex: 1;
+  padding: 12px;
+  background: #0a4;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  font-weight: bold;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.modal-button:hover {
+  background: #097c39;
+}
+
+.modal-button.secondary {
+  background: #555;
+}
+
+.modal-button.secondary:hover {
+  background: #333;
+}
+
+/* Custom zoom buttons */
+.municipality-zoom-controls {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+}
+
+/* Style of each button */
+.zoom-btn {
+  width: 38px;
+  height: 38px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: white;
+  font-size: 22px;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s ease, transform 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+/* Hover effect */
+.zoom-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.07);
+}
+
+/* Click effect */
+.zoom-btn:active {
+  transform: scale(0.96);
+}

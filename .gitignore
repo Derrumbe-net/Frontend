@@ -1,5 +1,9 @@
-*/.env
-.env
 index.html
 /assets
 .idea
+
+composer.lock
+composer.phar
+
+deploy.sh
+.env

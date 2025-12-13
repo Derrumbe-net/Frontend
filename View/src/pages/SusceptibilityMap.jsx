@@ -1,9 +1,43 @@
+import "../styles/SusceptibilityMap.css";
+
+const MAP_URL = "https://www.arcgis.com/apps/mapviewer/index.html?configurableview=true&webmap=8928a7fafc2c4a13864f505ed07c9e29&theme=light&center=-66.45005,18.2352&scale=1155581.108577"
+const FULL_SCREEN_URL = "https://www.arcgis.com/home/webmap/viewer.html?webmap=8928a7fafc2c4a13864f505ed07c9e29&extent=-67.4642,17.7278,-65.4359,18.7426";
+
 function SusceptibilityMap() {
-  return (
-    <div>
-      <h1>Mapa de Susceptibilidad a Dezlizamientos</h1>
-      <p>Aquí se demostrará el mapa interctivo de ARcGis al igual que losn mapas de suceptibilidad por municipios.</p>
-    </div>
-  );
+    return (
+        <div className="municipality-page">
+
+            <h1 className="municipality-title">Susceptibilidad a deslizamientos de tierra en Puerto Rico</h1>
+
+            <p className="municipality-intro">
+                En el <a href="https://pubs.usgs.gov/publication/ofr20201022"
+                         target="_blank"
+                         rel="noopener noreferrer"
+            >
+                informe 2020-2022 del Servicio Geológico de los Estados Unidos
+            </a>, se publicó un mapa moderno
+                y de alta resolución para mostrar la susceptibilidad a deslizamientos de tierra provocados por
+                lluvia intensa en la isla de Puerto Rico. A la izquierda puede ver los datos de susceptibilidad
+                en la versión interactiva del mapa (
+                <a
+                    href={FULL_SCREEN_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    Presione aquí para ver en pantalla completa
+                </a>
+                ).
+            </p>
+
+            <div className="municipality-map-wrapper">
+                <iframe
+                    title="Embedded ArcGIS Map"
+                    src={MAP_URL}
+                    className="municipality-map"
+                    allowFullScreen
+                />
+            </div>
+        </div>
+    );
 }
 export default SusceptibilityMap;

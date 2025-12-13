@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         bootstrap="vendor/autoload.php"
         colors="true"
-        stopOnFailure="false"
-        failOnWarning="false"
         testdox="true"
-        displayDetailsOnIncompleteTests="true"
-        displayDetailsOnSkippedTests="true"
-        displayDetailsOnTestsThatTriggerDeprecations="true"
-        displayDetailsOnTestsThatTriggerErrors="true"
-        displayDetailsOnTestsThatTriggerNotices="true"
-        displayDetailsOnTestsThatTriggerWarnings="true"
+        stopOnFailure="false"
 >
     <testsuites>
         <testsuite name="API Test Suite">
             <directory>./Test</directory>
         </testsuite>
     </testsuites>
+    <source>
+        <include>
+            <directory suffix=".php">./Controller</directory>
+            <directory suffix=".php">./Model</directory>
+            <directory suffix=".php">./Helpers</directory>
+            <directory suffix=".php">./Middleware</directory>
+        </include>
+    </source>
 
-    <php>
-        <!-- Use a test database or an in-memory SQLite one -->
-        <env name="DB_HOST" value="127.0.0.1"/>
-        <env name="DB_USER" value="root"/>
-        <env name="DB_PASSWORD" value=""/>
-        <env name="DB_NAME" value="test_db"/>
-    </php>
-
+    <coverage>
+        <report>
+            <html outputDirectory="coverage-html"/>
+            <text outputFile="coverage.txt"/>
+        </report>
+    </coverage>
 </phpunit>

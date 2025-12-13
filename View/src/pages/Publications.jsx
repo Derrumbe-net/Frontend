@@ -3,60 +3,63 @@ import "../styles/Publications_module.css";
 
 import searchIcon from "../assets/search-icon-png-9.png";
 
-// 🖼️ Local images
+// Local images
 import publication1 from "../assets/publications/publication1.webp";
-import pub1 from "../assets/publications/pub1.webp";
-import pub2 from "../assets/publications/pub2.webp";
-import pub3 from "../assets/publications/pub3.webp";
-import pub4 from "../assets/publications/pub4.webp";
-import pub5 from "../assets/publications/pub5.webp";
-import pub6 from "../assets/publications/pub6.webp";
-import pub7 from "../assets/publications/pub7.webp";
-import pub8 from "../assets/publications/pub8.webp";
-import pub9 from "../assets/publications/pub9.webp";
-import pub10 from "../assets/publications/pub10.webp";
-import pub11 from "../assets/publications/pub11.webp";
-import pub12 from "../assets/publications/pub12.webp";
-import pub13 from "../assets/publications/pub13.webp";
-import pub14 from "../assets/publications/pub14.webp";
-import pub15 from "../assets/publications/pub15.webp";
-import pub16 from "../assets/publications/pub16.webp";
-import pub17 from "../assets/publications/pub17.webp";
-import pub18 from "../assets/publications/pub18.webp";
-import pub19 from "../assets/publications/pub19.webp";
+import placeholder from "../assets/placeholder.png";
+// import pub1 from "../assets/publications/pub1.webp";
+// import pub2 from "../assets/publications/pub2.webp";
+// import pub3 from "../assets/publications/pub3.webp";
+// import pub4 from "../assets/publications/pub4.webp";
+// import pub5 from "../assets/publications/pub5.webp";
+// import pub6 from "../assets/publications/pub6.webp";
+// import pub7 from "../assets/publications/pub7.webp";
+// import pub8 from "../assets/publications/pub8.webp";
+// import pub9 from "../assets/publications/pub9.webp";
+// import pub10 from "../assets/publications/pub10.webp";
+// import pub11 from "../assets/publications/pub11.webp";
+// import pub12 from "../assets/publications/pub12.webp";
+// import pub13 from "../assets/publications/pub13.webp";
+// import pub14 from "../assets/publications/pub14.webp";
+// import pub15 from "../assets/publications/pub15.webp";
+// import pub16 from "../assets/publications/pub16.webp";
+// import pub17 from "../assets/publications/pub17.webp";
+// import pub18 from "../assets/publications/pub18.webp";
+// import pub19 from "../assets/publications/pub19.webp";
 
-// 🧩 Map backend publication_id to local images
-const imageMap = {
-  3: pub1, // Tracking a limestone bedrock landslide
-  4: pub2, // Chemical Weathering and Physical Erosion Fluxes
-  5: pub3, // Dynamic Landslide Susceptibility
-  6: pub4, // Neotectonic Mapping of Puerto Rico
-  7: pub5, // Volcanic arc weathering rates
-  8: pub6, // Pseudo-Three-Dimensional Back-Analysis
-  9: pub7, // Assessing Social Vulnerability
-  10: pub8, // Climato-tectonic evolution
-  11: pub9, // Geotechnical Impacts of Hurricane Fiona
-  12: pub10, // Principles for collaborative risk communication
-  13: pub11, // WIDESPREAD SHALLOW MASS WASTING
-  14: pub12, // Geotechnical Reconnaissance Jan 7, 2020 Earthquake
-  15: pub13, // Landslide Science in Puerto Rico
-  16: pub14, // Map depicting susceptibility
-  17: pub15, // Landslides triggered by Hurricane Maria
-  18: pub16, // Map of slope-failure locations
-  19: pub17, // Multi-Decadal Earth Dam Deformation Monitoring
-  20: pub18, // Geotechnical Impacts of Hurricane Maria (GEER)
-  21: pub19, // Comprehensive Hurricane María Mass Wasting Inventory
-};
+// // Map backend publication_id to local images
+// const imageMap = {
+//   1: pub1,
+//   2: pub2,
+//   3: pub3,
+//   4: pub4,
+//   5: pub5,
+//   6: pub6,
+//   7: pub7,
+//   8: pub8,
+//   9: pub9,
+//   10: pub10,
+//   11: pub11,
+//   12: pub12, 
+//   13: pub13, 
+//   14: pub14,
+//   15: pub15,
+//   16: pub16,
+//   17: pub17,
+//   18: pub18,
+//   19: pub19,
+// }
 
 function Publications() {
   const [publications, setPublications] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // 🧠 Fetch from backend
+  // Fetch from backend
   useEffect(() => {
     const fetchPublications = async () => {
       try {
-        const response = await fetch("https://derrumbe-test.derrumbe.net/api/publications");
+        const API_URL = `${import.meta.env.VITE_API_URL}`;
+        const response = await fetch(`${API_URL}/publications`);
+        
         if (!response.ok) throw new Error(`Error: ${response.status} ${response.statusText}`);
 
         const data = await response.json();
@@ -67,10 +70,12 @@ function Publications() {
           description: item.description || "",
           // override URL for publication 3 to open the poster image, TODO: THIS NEEDS TO CHANGE
           url:
-            item.publication_id === 3
+            item.publication_id === 1
               ? publication1
               : item.publication_url || "#",
-          image: imageMap[item.publication_id] || publication1, // fallback
+          image: item.image_url
+            ? `${API_URL}/publications/${item.publication_id}/image`
+            : placeholder,
         }));
 
         setPublications(formattedData);

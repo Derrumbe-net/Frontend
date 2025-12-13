@@ -4,6 +4,7 @@ namespace DerrumbeNet\Model;
 
 use PDO;
 use PDOException;
+use Exception;
 
 class Publication {
     private $conn;
@@ -21,7 +22,8 @@ class Publication {
             $stmt->bindParam(':publication_url', $data['publication_url'], PDO::PARAM_STR);
             $stmt->bindParam(':image_url', $data['image_url'], PDO::PARAM_STR);
             $stmt->bindParam(':description', $data['description'], PDO::PARAM_STR);
-            $stmt->execute();
+            // $stmt->execute();
+
             if ($stmt->execute()) {
                 return $this->conn->lastInsertId();
             } else {
@@ -59,18 +61,35 @@ class Publication {
     // UPDATE PUBLICATION
     public function updatePublication($id, $data) {
         try {
-            $stmt = $this->conn->prepare(
-                "UPDATE publication SET admin_id=:admin_id, title=:title, publication_url=:publication_url,
-                 image_url=:image_url, description=:description WHERE publication_id=:id"
-            );
-            $stmt->bindParam(':admin_id', $data['admin_id'], PDO::PARAM_INT);
-            $stmt->bindParam(':title', $data['title'], PDO::PARAM_STR);
-            $stmt->bindParam(':publication_url', $data['publication_url'], PDO::PARAM_STR);
-            $stmt->bindParam(':image_url', $data['image_url'], PDO::PARAM_STR);
-            $stmt->bindParam(':description', $data['description'], PDO::PARAM_STR);
-            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-            return $stmt->execute();
-        } catch(PDOException $e) { error_log($e->getMessage()); return false; }
+            $allowedColumns = ['admin_id', 'title', 'publication_url', 'image_url', 'description'];
+
+            $setClauses = [];
+            $params = [':id' => $id];
+
+            foreach ($allowedColumns as $column) {
+                if (array_key_exists($column, $data)) {
+                    $value = $data[$column];
+
+                    if ($value !== null && $value !== '') {
+                        $setClauses[] = "$column = :$column";
+                        $params[":$column"] = $value;
+                    }
+                }
+            }
+
+            if (empty($setClauses)) {
+                return true;
+            }
+
+            $sql = "UPDATE publication SET " . implode(', ', $setClauses) . " WHERE publication_id = :id";
+
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute($params);
+
+        } catch(PDOException $e) {
+            error_log($e->getMessage());
+            return false;
+        }
     }
     
     // DELETE PUBLICATION BY ID
@@ -78,5 +97,85 @@ class Publication {
         $stmt = $this->conn->prepare("DELETE FROM publication WHERE publication_id=:id");
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
+    }
+
+    // Update just the image_url column
+    public function updatePublicationImageColumn($id, $filename) {
+        try {
+            $stmt = $this->conn->prepare("UPDATE publication SET image_url=:image_url WHERE publication_id=:id");
+            $stmt->bindParam(':image_url', $filename, PDO::PARAM_STR);
+            $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+            return $stmt->execute();
+        } catch(PDOException $e) { error_log($e->getMessage()); return false; }
+    }
+
+    // Upload local file to FTP
+    public function uploadImageToFtp($localFilePath, $remoteFileName)
+    {
+        $ftp_server = $_ENV['FTPS_SERVER'];
+        $ftp_user = $_ENV['FTPS_USER'];
+        $ftp_pass = $_ENV['FTPS_PASS'];
+        $ftp_port = $_ENV['FTPS_PORT'];
+
+        // Define specific folder for publications
+        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
+        $target_dir = rtrim($base_remote_path, '/') . '/publications/';
+        $remote_file_path = $target_dir . $remoteFileName;
+
+        $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
+        if (!$conn_id) throw new Exception("Failed to connect to FTPS server");
+
+        if (!@ftp_login($conn_id, $ftp_user, $ftp_pass)) {
+            ftp_close($conn_id);
+            throw new Exception("FTPS login failed");
+        }
+
+        ftp_pasv($conn_id, true);
+
+        if (!ftp_put($conn_id, $remote_file_path, $localFilePath, FTP_BINARY)) {
+            ftp_close($conn_id);
+            throw new Exception("Unable to upload image to: $remote_file_path");
+        }
+
+        ftp_close($conn_id);
+        return $remoteFileName; // Return just the name or relative path
+    }
+
+    // Get content to serve
+    public function getPublicationImageContent($fileName)
+    {
+        $ftp_server = $_ENV['FTPS_SERVER'];
+        $ftp_user = $_ENV['FTPS_USER'];
+        $ftp_pass = $_ENV['FTPS_PASS'];
+        $ftp_port = $_ENV['FTPS_PORT'];
+
+        $base_remote_path = $_ENV['FTPS_BASE_PATH'] ?? 'files/';
+        $remote_file_path = rtrim($base_remote_path, '/') . '/publications/' . ltrim($fileName, '/');
+
+        $conn_id = ftp_ssl_connect($ftp_server, $ftp_port, 10);
+        if (!$conn_id) throw new Exception("Failed to connect to FTPS server");
+
+        if (!@ftp_login($conn_id, $ftp_user, $ftp_pass)) {
+            ftp_close($conn_id);
+            throw new Exception("FTPS login failed");
+        }
+
+        ftp_pasv($conn_id, true);
+
+        $tmpFile = tmpfile();
+
+        if (!@ftp_fget($conn_id, $tmpFile, $remote_file_path, FTP_BINARY)) {
+            fclose($tmpFile);
+            ftp_close($conn_id);
+            throw new Exception("Unable to download image: $remote_file_path");
+        }
+
+        rewind($tmpFile);
+        $content = stream_get_contents($tmpFile);
+
+        fclose($tmpFile);
+        ftp_close($conn_id);
+
+        return $content;
     }
 }

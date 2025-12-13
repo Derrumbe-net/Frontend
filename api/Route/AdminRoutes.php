@@ -1,19 +1,36 @@
 <?php
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
-
 use DerrumbeNet\Controller\AdminController;
-
+use DerrumbeNet\Middleware\JwtMiddleware;
+use DerrumbeNet\Middleware\SuperAdminMiddleware;
 
 return function (App $app, $db) {
     $adminController = new AdminController($db);
 
-    $app->group('/admins', function (RouteCollectorProxy $group) use ($adminController) {
+    // Load JWT secret and create middleware
+    $jwtSecret = $_ENV['JWT_SECRET'] ?? 'CHANGE_THIS_SECRET_KEY';
+    $jwtMiddleware = new JwtMiddleware($jwtSecret);
+    $superAdminMiddleware = new SuperAdminMiddleware();
+
+    // ---- Public routes (no authentication required) ----
+    $app->post('/admins/login', [$adminController, 'loginAdmin']);
+    $app->post('/admins/signup', [$adminController, 'signUpAdmin']);
+    
+    // --- NEW: Email Verification Route ---
+    // Handles the request when the user clicks the link in their email
+    $app->get('/admins/verify', [$adminController, 'verifyEmail']); 
+
+    // ---- Protected routes (require valid JWT) ----
+    $app->group('/admins', function (RouteCollectorProxy $group) use ($adminController, $superAdminMiddleware) {
         $group->post('', [$adminController, 'createAdmin']);
         $group->get('', [$adminController, 'getAllAdmins']);
         $group->get('/{id}', [$adminController, 'getAdmin']);
         $group->put('/{id}/email', [$adminController, 'updateEmail']);
         $group->put('/{id}/password', [$adminController, 'updatePassword']);
-        $group->delete('/{id}', [$adminController, 'deleteAdmin']);
-    });
+        $group->put('/{id}/isAuthorized', [$adminController, 'updateAuthorization'])
+            ->add($superAdminMiddleware);
+        $group->delete('/{id}', [$adminController, 'deleteAdmin'])
+            ->add($superAdminMiddleware);
+    })->add($jwtMiddleware);
 };

@@ -1,0 +1,162 @@
+/* --- Layout & Container --- */
+.cms-signup {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #e6ece3; 
+}
+
+.cms-signup-box {
+  background: #fff;
+  padding: 4rem 2.5rem 2.5rem 2.5rem;
+  border-radius: 20px; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  width: 90%;
+  max-width: 380px; 
+  text-align: center;
+  position: relative; 
+}
+
+.cms-signup-logo {
+  width: 180px;
+  height: 90px;
+  background-color: transparent;
+  position: absolute;
+  top: 0; 
+  left: 50%; 
+  transform: translate(-50%, -50%); 
+}
+
+.cms-signup-box h1 {
+  margin-bottom: 2rem;
+  font-size: 2rem;
+  color: #333;
+  font-weight: 600;
+}
+
+/* --- Form & Inputs --- */
+.cms-signup-box form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem; 
+}
+
+/* Base input style */
+.cms-signup-box input {
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 1rem; 
+  width: 100%; /* Ensure inputs fill container */
+  box-sizing: border-box;
+}
+
+.cms-signup-box input::placeholder {
+  color: #aaa;
+}
+
+/* Wrapper for Input + Eye Icon */
+.input-wrapper {
+  position: relative;
+  width: 100%;
+  /* margin-bottom is handled by the flex gap of the form, 
+     but we keep specific spacing logic here if needed */
+  margin-bottom: 0; 
+}
+
+/* specific adjustment for inputs inside the wrapper */
+.input-wrapper input {
+  padding-right: 40px; /* Make space for the eye icon */
+  margin-bottom: 0;
+}
+
+/* --- Buttons & Links --- */
+.cms-signup-box button[type="submit"] {
+  background-color: #6fa174; 
+  color: white;
+  border: none;
+  padding: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.cms-signup-box button[type="submit"]:hover {
+  background-color: #5a8a61;
+}
+
+.cms-signup-link {
+  display: inline-block; 
+  margin-top: 1.5rem;
+  color: #999;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.cms-signup-link:hover {
+  text-decoration: underline;
+}
+
+/* --- Eye Icon --- */
+.eye-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.eye-icon:hover {
+  color: #333;
+}
+
+/* --- Password Strength Meter --- */
+.strength-meter-container {
+  height: 6px;
+  width: 100%;
+  background-color: #e0e0e0;
+  border-radius: 3px;
+  margin: 5px 0 10px 0; /* Adjusted spacing */
+  overflow: hidden;
+}
+
+.strength-meter-fill {
+  height: 100%;
+  transition: width 0.3s ease-in-out, background-color 0.3s ease;
+}
+
+/* --- Password Checklist --- */
+.password-criteria {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.criteria-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.criteria-item.valid {
+  color: #28a745; /* Green */
+}
+
+.criteria-item.invalid {
+  color: #dc3545; /* Red */
+}

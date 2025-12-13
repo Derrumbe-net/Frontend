@@ -7,7 +7,7 @@ function App() {
   return (
     <div id="root" style={{ width: '100%', overflowX: 'hidden' }}>
       <Navbar />
-      <Outlet /> {/* or your routed content */}
+      <Outlet />
       <Footer />
     </div>
   );

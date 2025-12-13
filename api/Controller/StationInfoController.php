@@ -3,10 +3,13 @@
 namespace DerrumbeNet\Controller;
 
 use DerrumbeNet\Model\StationInfo;
+use Exception;
 
 class StationInfoController {
     private StationInfo $stationInfoModel;
-    public function __construct($db) { $this->stationInfoModel = new StationInfo($db); }
+    public function __construct(StationInfo $stationInfoModel) {
+        $this->stationInfoModel = $stationInfoModel;
+    }
 
     private function jsonResponse($response, $data, $status=200){
         $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
@@ -17,7 +20,7 @@ class StationInfoController {
     public function createStation($request,$response){
         $id = $this->stationInfoModel->createStationInfo($request->getParsedBody());
         return $id ? $this->jsonResponse($response,['message'=>'Station created','id'=>$id],201)
-                   : $this->jsonResponse($response,['error'=>'Failed'],500);
+            : $this->jsonResponse($response,['error'=>'Failed'],500);
     }
 
     public function getAllStations($request,$response){
@@ -27,19 +30,27 @@ class StationInfoController {
     public function getStation($request,$response,$args){
         $station = $this->stationInfoModel->getStationInfoById($args['id']);
         return $station ? $this->jsonResponse($response,$station)
-                        : $this->jsonResponse($response,['error'=>'Not found'],404);
+            : $this->jsonResponse($response,['error'=>'Not found'],404);
     }
 
-    public function updateStation($request,$response,$args){
-        $updated = $this->stationInfoModel->updateStationInfo($args['id'],$request->getParsedBody());
-        return $updated ? $this->jsonResponse($response,['message'=>'Updated'])
-                        : $this->jsonResponse($response,['error'=>'Failed'],500);
+    public function updateStation($request, $response, $args){
+        $body = $request->getParsedBody();
+
+        if (empty($body) || !is_array($body)) {
+            return $this->jsonResponse($response, ['error' => 'No data provided for update'], 400);
+        }
+
+        $updated = $this->stationInfoModel->updateStationInfo($args['id'], $body);
+
+        return $updated
+            ? $this->jsonResponse($response, ['message' => 'Updated'])
+            : $this->jsonResponse($response, ['error' => 'Failed to update (Station ID may not exist or no changes detected)'], 500);
     }
 
     public function deleteStation($request,$response,$args){
         $deleted = $this->stationInfoModel->deleteStationInfo($args['id']);
         return $deleted ? $this->jsonResponse($response,['message'=>'Deleted'])
-                        : $this->jsonResponse($response,['error'=>'Failed'],500);
+            : $this->jsonResponse($response,['error'=>'Failed'],500);
     }
 
     public function getAllStationFilesData($request, $response) {
@@ -53,9 +64,7 @@ class StationInfoController {
 
                     try {
                         $data = $this->stationInfoModel->getStationFileData($fileName);
-                        echo "<pre>";
-                        prettyPrintDatRows($data, 15);
-                        echo "</pre>";
+
                         $result[] = [
                             'station_id' => $station['station_id'],
                             'file_path'  => $fileName,
@@ -134,4 +143,146 @@ class StationInfoController {
         }
     }
 
+    public function uploadStationSensorImage($request, $response, $args) {
+        $stationId = $args['id'];
+        $uploadedFiles = $request->getUploadedFiles();
+
+        if (empty($uploadedFiles['image'])) {
+            return $this->jsonResponse($response, ['error' => 'No image file provided'], 400);
+        }
+
+        /** @var UploadedFileInterface $uploadedFile */
+        $uploadedFile = $uploadedFiles['image'];
+
+        if ($uploadedFile->getError() !== UPLOAD_ERR_OK) {
+            return $this->jsonResponse($response, ['error' => 'File upload error'], 500);
+        }
+
+        try {
+            // Validate station exists
+            $station = $this->stationInfoModel->getStationInfoById($stationId);
+            if (!$station) {
+                return $this->jsonResponse($response, ['error' => 'Station not found'], 404);
+            }
+
+            // Get original filename
+            $originalName = $uploadedFile->getClientFilename();
+
+            // Sanitize filename: replace unsafe chars with underscore
+            $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
+
+            $tempPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $filename;
+            $uploadedFile->moveTo($tempPath);
+
+            // Upload to FTP (target: files/stations/)
+            $relativePath = $this->stationInfoModel->uploadSensorImageToFtp($tempPath, $filename);
+
+            // Update Database with the relative path
+            $this->stationInfoModel->updateStationSensorImage($stationId, $relativePath);
+
+            // Cleanup local temp file
+            if (file_exists($tempPath)) {
+                unlink($tempPath);
+            }
+
+            return $this->jsonResponse($response, [
+                'message' => 'Sensor image uploaded successfully',
+                'sensor_image_url' => $relativePath
+            ]);
+
+        } catch (Exception $e) {
+            return $this->jsonResponse($response, ['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function serveStationImage($request, $response, $args) {
+        $stationId = $args['id'];
+        $type = $args['type']; // 'sensor' or 'data'
+
+        try {
+            $station = $this->stationInfoModel->getStationInfoById($stationId);
+
+            if (!$station) {
+                $response->getBody()->write('Station not found');
+                return $response->withStatus(404);
+            }
+
+            $column = ($type === 'sensor') ? 'sensor_image_url' : 'data_image_url';
+            $fileName = $station[$column] ?? null;
+
+            if (empty($fileName)) {
+                $response->getBody()->write('Image not defined for this station');
+                return $response->withStatus(404);
+            }
+
+            // Fetch binary content
+            $imageContent = $this->stationInfoModel->getStationImageContent($fileName);
+
+            $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $mimeType = match ($extension) {
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                'svg' => 'image/svg+xml',
+                default => 'image/jpeg',
+            };
+
+            $response->getBody()->write($imageContent);
+            return $response->withHeader('Content-Type', $mimeType);
+
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+            // FIX: Write to body, then return response
+            $response->getBody()->write('Error fetching image');
+            return $response->withStatus(500);
+        }
+    }
+
+    public function getStationWcHistory($request, $response, $args) {
+        $stationId = $args['id'] ?? null;
+        if (!$stationId) {
+            return $this->jsonResponse($response, ['error' => 'Station ID not provided'], 400);
+        }
+
+        try {
+            $data = $this->stationInfoModel->getStationWcHistoryData($stationId);
+
+            return $this->jsonResponse($response, [
+                'station_id' => $stationId,
+                'history'    => $data
+            ]);
+
+        } catch (Exception $e) {
+            return $this->jsonResponse($response, [
+                'error' => 'Failed to read station WC history',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function batchUpdateStations($request, $response) {
+        $data = $request->getParsedBody();
+
+        if (!isset($data['stations']) || !is_array($data['stations'])) {
+            return $this->jsonResponse($response, ['error' => 'Invalid payload. "stations" array required.'], 400);
+        }
+
+        $stationsToUpdate = $data['stations'];
+
+        if (empty($stationsToUpdate)) {
+            return $this->jsonResponse($response, ['message' => 'No stations to update.']);
+        }
+
+        try {
+            $count = $this->stationInfoModel->updateStationsBatch($stationsToUpdate);
+            return $this->jsonResponse($response, [
+                'message' => 'Batch update successful',
+                'updated_count' => $count
+            ]);
+        } catch (Exception $e) {
+            return $this->jsonResponse($response, [
+                'error' => 'Batch update failed',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

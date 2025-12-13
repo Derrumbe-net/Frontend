@@ -28,4 +28,4 @@ package-lock.json
 composer.lock
 composer.phar
 
-.env
+coverage/

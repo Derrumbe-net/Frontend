@@ -7,7 +7,6 @@ function Footer() {
     <footer className="footer">
       <div className="footer__inner">
         <div className="footer__top">
-          {/* Left Side: Logo + Text */}
           <div className="footer__left">
             <img src={logo} alt="PRLHMO Logo" className="footer__logo" />
             <div className="footer__text">
@@ -15,16 +14,12 @@ function Footer() {
               Hazard Mitigation Office
             </div>
           </div>
-
-          {/* Right Side: Facebook */}
           <div className="footer__right">
             <a href="https://www.facebook.com/SlidesPR" target="_blank" rel="noreferrer">
               <img src={facebook} alt="Facebook" className="footer__icon" />
             </a>
           </div>
         </div>
-
-        {/* Disclaimer */}
         <p className="footer__disclaimer">
           La información que se ofrece en este sitio web se proporciona “tal cual”, debe considerarse provisional y está sujeta a cambios. 
           La información no ha sido revisada ni avalada por ninguna agencia u organización. Los autores y editores de esta información 

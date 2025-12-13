@@ -1,0 +1,82 @@
+.cms-login {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #e6ece3; 
+}
+
+.cms-login-logo {
+  /* Adjust width/height to match your logo's needs */
+  width: 180px;
+  height: 90px;
+  background-color: transparent; /* Ensures no card content shows through */
+
+  position: absolute;
+  top: 0; /* Align to the top of the box */
+  left: 50%; /* Center horizontally */
+  transform: translate(-50%, -50%); /* Pull it up by 50% of its own height */
+}
+
+.cms-login-box {
+  background: #fff;
+  padding: 4rem 2.5rem 2.5rem 2.5rem;
+  border-radius: 20px; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05); /* Softer shadow */
+  width: 90%;
+  max-width: 380px; /* A bit wider */
+  text-align: center;
+  position: relative; 
+}
+
+.cms-login-box h1 {
+  margin-bottom: 2rem;
+  font-size: 2rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.cms-login-box form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem; 
+}
+
+.cms-login-box input {
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 1rem; 
+}
+
+.cms-login-box input::placeholder {
+  color: #aaa;
+}
+
+.cms-login-box button {
+  background-color: #6fa174; 
+  color: white;
+  border: none;
+  padding: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.cms-login-box button:hover {
+  background-color: #5a8a61;
+}
+
+.forgot-password {
+  display: inline-block; 
+  margin-top: 1.5rem;
+  color: #999;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}
