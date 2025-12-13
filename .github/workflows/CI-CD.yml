@@ -2,7 +2,7 @@ name: CI/CD
 
 on:
   push:
-    branches: [ "demo2" ]
+    branches: [ "main" ]
   pull_request:
   workflow_dispatch:
 
@@ -73,6 +73,7 @@ jobs:
 
   # 2️⃣ Build & deploy (runs only if test job succeeds)
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     if: ${{ success() }}
     steps:
