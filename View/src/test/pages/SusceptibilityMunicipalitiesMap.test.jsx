@@ -46,7 +46,7 @@ describe('SusceptibilityMunicipalitiesMap', () => {
         // Check for specific Heading inside Modal
         expect(screen.getByRole('heading', { name: 'San Juan', level: 2 })).toBeInTheDocument();
 
-        const img = screen.getByRole('img', { name: 'San Juan' });
+        const img = screen.getByRole('img', { name: 'Mapa de San Juan' });
         expect(img).toHaveAttribute('src', 'sanjuan.png');
 
         expect(screen.getByText('Descargar PNG')).toHaveAttribute('href', 'sanjuan.png');

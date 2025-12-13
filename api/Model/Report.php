@@ -57,10 +57,12 @@ class Report {
                 ':is_validated'     => $data['is_validated'] ?? 0
             ];
     
-            $stmt->execute($params);
-    
-            return $this->conn->lastInsertId();
-    
+            if ($stmt->execute($params)) {
+                return $this->conn->lastInsertId();
+            }
+            return false;
+
+
         } catch (\PDOException $e) {
             error_log("Database Error in createReport: " . $e->getMessage());
             return false;

@@ -90,7 +90,7 @@ describe('InteractiveMunicipalityMap', () => {
         render(<InteractiveMunicipalityMap />);
 
         // Verify fetch was called
-        expect(global.fetch).toHaveBeenCalledWith("/View/src/assets/puerto-rico-municipalities.geojson");
+        expect(global.fetch).toHaveBeenCalledWith("/puerto-rico-municipalities.geojson");
 
         // Wait for data to load and GeoJSON component to render
         await waitFor(() => {
@@ -141,14 +141,14 @@ describe('InteractiveMunicipalityMap', () => {
         }));
 
         // 3. Test Mouseover (Highlight)
-        handlers.mouseover();
+        handlers.mouseover({ target: mockLayer });
         expect(mockLayer.setStyle).toHaveBeenCalledWith(expect.objectContaining({
             fillColor: "#009100ff", // highlightStyle
             fillOpacity: 0.8
         }));
 
         // 4. Test Mouseout (Reset)
-        handlers.mouseout();
+        handlers.mouseout({ target: mockLayer });
         expect(mockLayer.setStyle).toHaveBeenCalledWith(expect.objectContaining({
             fillOpacity: 0.3 // baseStyle
         }));
