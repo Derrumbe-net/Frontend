@@ -59,19 +59,36 @@
   border-radius: 4px;
 }
 
-.filters label {
+/* .filters label {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 1rem;
   color: #ddd;
-}
+} */
 
-.filters input[type="checkbox"] {
+/* .filters input[type="checkbox"] {
   accent-color: white;
   width: 25px;
   height: 25px;
   cursor: pointer;
+} */
+
+.filters label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.filters input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    margin-right: 10px;
+    accent-color: #2e7d32; /* optional: your green theme */
 }
 
 .filter-title {

@@ -312,14 +312,47 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
     }, [stations]);
 
     /** SOIL SATURATION ICON **/
-    const createSaturationIcon = (saturation) => {
+    const createSaturationIcon = (saturation, lastUpdated) => {
+        const { isOffline, isStale, diffHours } = getStationStatus(lastUpdated);
+
+        // OFF STATE
+        if (isOffline) {
+            return L.divIcon({
+                html: `
+                    <div class="saturation-marker offline"
+                        title="No data for ${Math.floor(diffHours)}+ hours">
+                        OFF
+                    </div>
+                `,
+                className: "",
+                iconSize: [55, 30],
+                iconAnchor: [27, 15],
+            });
+        }
+
         let className = "saturation-marker";
         if (saturation >= 90) className += " high";
         else if (saturation >= 80) className += " medium";
         else className += " low";
+
         const rounded = Math.round(saturation);
+
         return L.divIcon({
-            html: `<div class="${className}">${rounded}%</div>`,
+            html: `
+                <div class="${className}"
+                    title="Last updated ${Math.floor(diffHours)} hour(s) ago">
+                    ${rounded}%
+                    ${isStale ? `
+                        <span class="stale-clock">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/>
+                                <line x1="12" y1="12" x2="12" y2="6" stroke="white" stroke-width="2"/>
+                                <line x1="12" y1="12" x2="16" y2="12" stroke="white" stroke-width="2"/>
+                            </svg>
+                        </span>
+                    ` : ""}
+                </div>
+            `,
             className: "",
             iconSize: [55, 30],
             iconAnchor: [27, 15],
@@ -467,12 +500,41 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
     );
 }
 
+const getStationStatus = (lastUpdated) => {
+    if (!lastUpdated) {
+        return {
+            isOffline: true,
+            isStale: false,
+            diffHours: null
+        };
+    }
+
+    const last = new Date(lastUpdated);
+    const now = new Date();
+    const diffHours = (now - last) / (1000 * 60 * 60);
+
+    return {
+        isOffline: diffHours >= 12,
+        isStale: diffHours >= 6 && diffHours < 12,
+        diffHours
+    };
+};
+
 const SoilSaturationLegend = () => (
     <div className="legend-container legend-bottom-right">
         <div className="legend-title">Soil Saturation</div>
-        <div className="legend-item"><span className="legend-color-box" style={{background:"#e0c853"}}></span><p>0–80%</p></div>
-        <div className="legend-item"><span className="legend-color-box" style={{background:"#63b3ff"}}></span><p>80–90%</p></div>
-        <div className="legend-item"><span className="legend-color-box" style={{background:"#001f57"}}></span><p>90–100%</p></div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#e0c853"}}></span>
+            <p>0% - 79%</p>
+        </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#63b3ff"}}></span>
+            <p>80% – 89%</p>
+        </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#001f57"}}></span>
+            <p>90% - 100%</p>
+        </div>
     </div>
 );
 
