@@ -10,6 +10,7 @@ import Locate from "@arcgis/core/widgets/Locate";
 import Graphic from "@arcgis/core/Graphic";
 import Point from "@arcgis/core/geometry/Point";
 import CoordinateConversion from "@arcgis/core/widgets/CoordinateConversion";
+import * as turf from "@turf/turf";
 
 const BASE_REPORT_URL = `${import.meta.env.VITE_API_URL}/reports`;
 
@@ -18,7 +19,7 @@ function Report() {
     name: "",
     phone: "",
     email: "",
-    date: "",
+    date: new Date().toISOString().split("T")[0],
     description: "",
     pueblo: "",
     carretera: "",
@@ -41,6 +42,7 @@ function Report() {
   const viewRef = useRef(null);
 
   const today = new Date().toISOString().split("T")[0];
+  const [municipalities, setMunicipalities] = useState(null);
 
   const fieldStyle = {
     backgroundColor: "#ffffff",
@@ -89,6 +91,13 @@ function Report() {
       }
     }
   }, [showCamera]);
+
+  useEffect(() => {
+    fetch("/puerto-rico-municipalities.geojson")
+      .then(res => res.json())
+      .then(data => setMunicipalities(data))
+      .catch(err => console.error("GeoJSON load error:", err));
+  }, []);
 
   const takePhoto = () => {
     const video = videoRef.current;
@@ -187,7 +196,9 @@ function Report() {
         symbol: markerSymbol,
       });
       view.graphics.add(marker);
+      console.log("MAP CLICK COORDS:", latitude, longitude);
       setCoords({ lat: latitude, lng: longitude });
+      detectMunicipality(latitude, longitude);
       view.goTo({ target: event.mapPoint, zoom: 15 }, { duration: 1000, easing: "ease-in-out" });
     });
     return () => view && view.destroy();
@@ -212,7 +223,9 @@ function Report() {
               symbol: { type: "simple-marker", color: "#ff4f00", size: 12, outline: { color: "#fff", width: 1.5 } },
             });
             view.graphics.add(marker);
+            console.log("MAP CLICK COORDS:", latitude, longitude);
             setCoords({ lat: latitude, lng: longitude });
+            detectMunicipality(latitude, longitude);
           });
         },
         (err) => console.error(err),
@@ -221,6 +234,25 @@ function Report() {
     };
     requestLocation();
   }, [form.allowLocation]);
+
+  const detectMunicipality = (lat, lng) => {
+    if (!municipalities) return;
+
+    const point = turf.point([lng, lat]);
+
+    for (const feature of municipalities.features) {
+      if (turf.booleanPointInPolygon(point, feature)) {
+        const municipalityName = feature.properties.NOMBRE;
+
+        setForm(prev => ({
+          ...prev,
+          pueblo: municipalityName
+        }));
+
+        break;
+      }
+    }
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();

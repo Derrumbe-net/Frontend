@@ -37,8 +37,14 @@ export default function InteractiveMunicipalityMap({ onMunicipalityClick }) {
 
         layer.setStyle(baseStyle);
 
+        // ADD TOOLTIP
+        layer.bindTooltip(name, {
+            direction: "top",
+            opacity: 0.9,
+            className: "municipality-tooltip"
+        });
+
         layer.on({
-            // FIX: Use the prop to notify the parent component of the click
             click: () => {
                 if (onMunicipalityClick) {
                     onMunicipalityClick({
@@ -47,13 +53,22 @@ export default function InteractiveMunicipalityMap({ onMunicipalityClick }) {
                     });
                 }
             },
+
             mouseover: (e) => {
                 const layer = e.target;
                 layer.setStyle(highlightStyle);
+
+                // show tooltip
+                layer.openTooltip();
+                layer.bringToFront();
             },
+
             mouseout: (e) => {
                 const layer = e.target;
                 layer.setStyle(baseStyle);
+
+                // hide tooltip
+                layer.closeTooltip();
             },
         });
     };

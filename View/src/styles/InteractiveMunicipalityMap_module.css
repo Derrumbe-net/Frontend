@@ -24,6 +24,16 @@
   text-align: center;
 }
 
+.municipality-tooltip {
+    background: rgba(0,0,0,0.8);
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
 @keyframes popup {
   from { transform: scale(0.8); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
