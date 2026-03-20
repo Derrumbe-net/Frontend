@@ -1,17 +1,13 @@
 import { useState } from "react";
 import InteractiveMunicipalityMap from "../components/InteractiveMunicipalityMap";
 import "../styles/SusceptibilityMunicipalitiesMap.css";
-
-// Assuming this path is correct and it exports an object of municipality image paths
 import municipalityPng from "../components/MunicipalityPNGs";
+import municipalityPdf from "../components/MunicipalityPDFs"; 
 
 function SusceptibilityMunicipalitiesMap() {
     const [activeMunicipality, setActiveMunicipality] = useState(null);
 
-    // Function to handle selection from dropdown or map click
     const handleMunicipalitySelect = (municipalityData) => {
-        // If it comes from the dropdown, it might just be the name string.
-        // If it comes from the map, it will be the full object.
         if (typeof municipalityData === 'string') {
             setActiveMunicipality({ name: municipalityData });
         } else {
@@ -21,14 +17,13 @@ function SusceptibilityMunicipalitiesMap() {
 
     return (
         <div className="municipality-page">
-
             <h1 className="municipality-title">Mapas Municipales</h1>
 
             <p className="municipality-intro">
                 Hemos preparado un mapa interactivo de susceptibilidad a deslizamientos de tierra por municipios.
                 Para explorar la información, puede seleccionar un municipio directamente en el mapa o buscarlo en el menú desplegable (dropdown).
                 Al hacer “clic” sobre municipio, se abrirá una ventana con una vista previa del mapa municipal
-                y las opciones de descargar la imagen o verla en pantalla completa.
+                y las opciones de **descargar el archivo PDF** o verlo en pantalla completa.
             </p>
 
             <p className="municipality-intro">
@@ -44,17 +39,13 @@ function SusceptibilityMunicipalitiesMap() {
                     className="municipality-dropdown"
                     onChange={(e) => {
                         if (e.target.value !== "") {
-                            // FIX: Use the unified handler
                             handleMunicipalitySelect(e.target.value);
                         }
                     }}
-                    // Optional: Set the selected value based on activeMunicipality state for visual consistency
                     value={activeMunicipality ? activeMunicipality.name : ""}
                 >
                     <option value="">-- Escoger Municipio --</option>
-
-                    {/* Sort the names for better user experience */}
-                    {Object.keys(municipalityPng).sort().map((name) => (
+                    {Object.keys(municipalityPdf).sort().map((name) => (
                         <option key={name} value={name}>
                             {name}
                         </option>
@@ -63,31 +54,24 @@ function SusceptibilityMunicipalitiesMap() {
             </div>
 
             <div className="municipality-map-wrapper">
-                {/* FIX: Pass the setter function as a prop to the map */}
                 <InteractiveMunicipalityMap onMunicipalityClick={handleMunicipalitySelect} />
             </div>
 
-            {/* FIX: Render the modal here, controlled by the activeMunicipality state */}
             {activeMunicipality && (
                 <MunicipalityModal
                     municipality={activeMunicipality}
                     onClose={() => setActiveMunicipality(null)}
                 />
             )}
-
         </div>
     );
 }
 
-export default SusceptibilityMunicipalitiesMap;
-
-
-// FIX: The MunicipalityModal component must be defined here or imported.
-// Since it was defined at the end of the original file, we keep it here.
 function MunicipalityModal({ municipality, onClose }) {
     const name = municipality.name;
-    // The key in municipalityPng is assumed to be the name (e.g., "Mayagüez")
-    const image = municipalityPng[name];
+    
+    const imagePreview = municipalityPng[name];
+    const pdfFile = municipalityPdf[name];
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -96,31 +80,33 @@ function MunicipalityModal({ municipality, onClose }) {
 
                 <h2>{name}</h2>
 
-                {image ? (
-                    <img src={image} alt={`Mapa de ${name}`} className="modal-image" />
+                {imagePreview ? (
+                    <img src={imagePreview} alt={`Vista previa de ${name}`} className="modal-image" />
                 ) : (
-                    <p>No preview available</p>
+                    <div className="no-preview">Vista previa no disponible</div>
                 )}
 
                 <div className="modal-buttons">
-                    {image && (
+                    {pdfFile ? (
                         <a
-                            href={image}
-                            download={`${name}.png`}
+                            href={pdfFile}
+                            download={`${name}_UPRM_SLIDES.pdf`}
                             className="modal-button"
                         >
-                            Descargar PNG
+                            Descargar PDF
                         </a>
+                    ) : (
+                        <span className="error-text">PDF no disponible</span>
                     )}
 
-                    {image && (
+                    {pdfFile && (
                         <a
-                            href={image}
+                            href={pdfFile}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="modal-button secondary"
                         >
-                            Ver en pantalla completa
+                            Ver PDF en pantalla completa
                         </a>
                     )}
                 </div>
@@ -128,3 +114,4 @@ function MunicipalityModal({ municipality, onClose }) {
         </div>
     );
 }
+export default SusceptibilityMunicipalitiesMap;
