@@ -1,17 +1,120 @@
 import { useEffect, useRef, useState } from "react";
 import "../styles/Report_module.css";
-
 import officeLogo from "../assets/PRLHMO_LOGO.svg";
 
-import "@arcgis/core/assets/esri/themes/light/main.css";
-import EsriMap from "@arcgis/core/Map";
-import MapView from "@arcgis/core/views/MapView";
-import Locate from "@arcgis/core/widgets/Locate";
-import Graphic from "@arcgis/core/Graphic";
-import Point from "@arcgis/core/geometry/Point";
-import CoordinateConversion from "@arcgis/core/widgets/CoordinateConversion";
+// --- LEAFLET IMPORTS ---
+import "leaflet/dist/leaflet.css";
+import "leaflet-geosearch/dist/geosearch.css";
+import L from "leaflet";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { GeoSearchControl, OpenStreetMapProvider } from "leaflet-geosearch";
+
+// Fix for default Leaflet icon not showing up in React
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 const BASE_REPORT_URL = `${import.meta.env.VITE_API_URL}/reports`;
+
+// --- MAP COMPONENTS ---
+
+// 1. Component to handle map clicks
+function MapClickHandler({ setCoords }) {
+  useMapEvents({
+    click(e) {
+      setCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
+    },
+  });
+  return null;
+}
+
+// 2. Component for the Search Bar
+function MapSearchControl({ setCoords }) {
+  const map = useMap();
+  useEffect(() => {
+    const provider = new OpenStreetMapProvider();
+    const searchControl = new GeoSearchControl({
+      provider: provider,
+      style: "bar",
+      showMarker: false, 
+      retainZoomLevel: false,
+      animateZoom: true,
+      autoClose: true,
+      searchLabel: "Buscar dirección o lugar...",
+      keepResult: true,
+    });
+
+    map.addControl(searchControl);
+
+    map.on("geosearch/showlocation", (e) => {
+      setCoords({ lat: e.location.y, lng: e.location.x });
+    });
+
+    return () => map.removeControl(searchControl);
+  }, [map, setCoords]);
+
+  return null;
+}
+
+// 3. Component for "Locate Me" / Re-Center button
+function MapLocateControl({ setCoords }) {
+  const map = useMap();
+
+  useEffect(() => {
+    // Handle map events for location
+    const onLocationFound = (e) => {
+      setCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
+      map.flyTo(e.latlng, 16);
+    };
+    
+    const onLocationError = () => {
+      alert("No se pudo acceder a tu ubicación.");
+    };
+
+    map.on("locationfound", onLocationFound);
+    map.on("locationerror", onLocationError);
+
+    // Create a native Leaflet control so it aligns perfectly with the zoom buttons
+    const locateControl = L.control({ position: "topleft" });
+
+    locateControl.onAdd = function () {
+      const div = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+      const a = L.DomUtil.create("a", "", div);
+      
+      a.href = "#";
+      a.title = "Encontrar mi ubicación";
+      
+      // Inject the SVG
+      a.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4" y1="12" x2="8" y2="12"></line><line x1="16" y1="12" x2="20" y2="12"></line></svg>`;
+
+      // Prevent clicking the button from clicking the map underneath
+      L.DomEvent.disableClickPropagation(div);
+
+      a.onclick = function (e) {
+        e.preventDefault();
+        map.locate();
+      };
+
+      return div;
+    };
+
+    locateControl.addTo(map);
+
+    // Cleanup
+    return () => {
+      map.off("locationfound", onLocationFound);
+      map.off("locationerror", onLocationError);
+      map.removeControl(locateControl);
+    };
+  }, [map, setCoords]);
+
+  return null; // Renders through Leaflet, not React DOM
+}
+
+// --- MAIN FORM COMPONENT ---
 
 function Report() {
   const [form, setForm] = useState({
@@ -22,23 +125,18 @@ function Report() {
     description: "",
     pueblo: "",
     carretera: "",
-    allowLocation: false,
   });
 
   const [message, setMessage] = useState(null);
   const [files, setFiles] = useState([]);
   const [coords, setCoords] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [showMap, setShowMap] = useState(false);
 
   const [showCamera, setShowCamera] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
-
   const dropRef = useRef(null);
-  const mapRef = useRef(null);
-  const viewRef = useRef(null);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -46,11 +144,11 @@ function Report() {
     backgroundColor: "#ffffff",
     opacity: 1,
     width: "100%",
-    boxSizing: "border-box", 
+    boxSizing: "border-box",
     padding: "10px",
     border: "1px solid #ccc",
     borderRadius: "4px",
-    fontSize: "16px"
+    fontSize: "16px",
   };
 
   const pueblos = [
@@ -65,12 +163,20 @@ function Report() {
     "Yabucoa", "Yauco"
   ];
 
+  // Log coordinates silently when they update
+  useEffect(() => {
+    if (coords) {
+      console.log("Coordenadas seleccionadas:", coords);
+    }
+  }, [coords]);
+
+  // Camera logic
   useEffect(() => {
     if (showCamera) {
       (async () => {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" } 
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" },
           });
           streamRef.current = stream;
           if (videoRef.current) {
@@ -97,18 +203,23 @@ function Report() {
     if (video && canvas) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext("2d");
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const fileName = `cam_capture_${Date.now()}.jpg`;
-        const file = new File([blob], fileName, { type: "image/jpeg" });
-        setFiles((prev) => [...prev, file]);
-        setShowCamera(false);
-      }, 'image/jpeg', 0.8);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return;
+          const fileName = `cam_capture_${Date.now()}.jpg`;
+          const file = new File([blob], fileName, { type: "image/jpeg" });
+          setFiles((prev) => [...prev, file]);
+          setShowCamera(false);
+        },
+        "image/jpeg",
+        0.8
+      );
     }
   };
 
+  // Drag and drop logic
   useEffect(() => {
     const el = dropRef.current;
     if (!el) return;
@@ -118,10 +229,14 @@ function Report() {
       const list = Array.from(e.dataTransfer.files || []);
       setFiles((prev) => [...prev, ...list]);
     };
-    ["dragenter", "dragover", "dragleave", "drop"].forEach((ev) => el.addEventListener(ev, prevent));
+    ["dragenter", "dragover", "dragleave", "drop"].forEach((ev) =>
+      el.addEventListener(ev, prevent)
+    );
     el.addEventListener("drop", onDrop);
     return () => {
-      ["dragenter", "dragover", "dragleave", "drop"].forEach((ev) => el.removeEventListener(ev, prevent));
+      ["dragenter", "dragover", "dragleave", "drop"].forEach((ev) =>
+        el.removeEventListener(ev, prevent)
+      );
       el.removeEventListener("drop", onDrop);
     };
   }, []);
@@ -141,86 +256,7 @@ function Report() {
       ...f,
       [name]: type === "checkbox" ? checked : value,
     }));
-    if (name === "allowLocation") setShowMap(checked);
   };
-
-  useEffect(() => {
-    if (!showMap) return;
-    const map = new EsriMap({ basemap: "satellite" });
-    const view = new MapView({
-      container: mapRef.current,
-      map,
-      center: [-66.5, 18.2],
-      zoom: 9,
-    });
-    viewRef.current = view;
-
-    const locate = new Locate({
-      view,
-      useHeadingEnabled: false,
-      goToOverride: (view, options) => {
-        options.target.scale = 5000;
-        return view.goTo(options.target);
-      },
-    });
-    view.ui.add(locate, "top-left");
-
-    const coordWidget = new CoordinateConversion({
-      view,
-      multipleConversions: false,
-    });
-    view.ui.add(coordWidget, "bottom-left");
-
-    const markerSymbol = {
-      type: "simple-marker",
-      color: "#ff4f00",
-      size: 12,
-      outline: { color: "#fff", width: 1.5 },
-    };
-
-    let marker;
-    view.on("click", (event) => {
-      const { latitude, longitude } = event.mapPoint;
-      if (marker) view.graphics.remove(marker);
-      marker = new Graphic({
-        geometry: new Point({ latitude, longitude }),
-        symbol: markerSymbol,
-      });
-      view.graphics.add(marker);
-      setCoords({ lat: latitude, lng: longitude });
-      view.goTo({ target: event.mapPoint, zoom: 15 }, { duration: 1000, easing: "ease-in-out" });
-    });
-    return () => view && view.destroy();
-  }, [showMap]);
-
-  useEffect(() => {
-    const requestLocation = async () => {
-      if (!form.allowLocation || !viewRef.current) return;
-      if (!("geolocation" in navigator)) {
-        alert("La geolocalización no está disponible.");
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          const view = viewRef.current;
-          view.when(() => {
-            view.goTo({ center: [longitude, latitude], zoom: 17 }, { duration: 2500, easing: "out-expo" });
-            view.graphics.removeAll();
-            const marker = new Graphic({
-              geometry: new Point({ latitude, longitude }),
-              symbol: { type: "simple-marker", color: "#ff4f00", size: 12, outline: { color: "#fff", width: 1.5 } },
-            });
-            view.graphics.add(marker);
-            setCoords({ lat: latitude, lng: longitude });
-          });
-        },
-        (err) => console.error(err),
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    };
-    requestLocation();
-  }, [form.allowLocation]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -229,11 +265,13 @@ function Report() {
     const errors = [];
     if (!form.pueblo) errors.push("Pueblo");
     if (!form.date) errors.push("Fecha");
-    if (!form.description) errors.push("Descripción Breve");
     if (!coords) errors.push("Ubicación (Coordenadas)");
 
     if (errors.length > 0) {
-      setMessage({ type: 'error', text: `Faltan campos requeridos: ${errors.join(", ")}` });
+      setMessage({
+        type: "error",
+        text: `Faltan campos requeridos: ${errors.join(", ")}`,
+      });
       window.scrollTo(0, 0);
       return;
     }
@@ -250,13 +288,13 @@ function Report() {
       reporter_name: form.name || "Anonymous",
       reporter_phone: form.phone || "",
       reporter_email: form.email || "",
-      image_url: ""
+      image_url: "",
     };
 
     try {
       const response = await fetch(BASE_REPORT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dbPayload),
       });
 
@@ -282,15 +320,13 @@ function Report() {
         }
       }
 
-      setMessage({ type: 'success', text: "¡Reporte e imágenes enviados exitosamente!" });
-      setForm({ name: "", phone: "", email: "", date: "", description: "", pueblo: "", carretera: "", allowLocation: false });
+      setMessage({ type: "success", text: "¡Reporte e imágenes enviados exitosamente!" });
+      setForm({ name: "", phone: "", email: "", date: "", description: "", pueblo: "", carretera: "" });
       setFiles([]);
       setCoords(null);
-      setShowMap(false);
-
     } catch (error) {
       console.error("Error submitting:", error);
-      setMessage({ type: 'error', text: `Error al enviar: ${error.message}` });
+      setMessage({ type: "error", text: `Error al enviar: ${error.message}` });
     } finally {
       setSubmitting(false);
     }
@@ -301,33 +337,33 @@ function Report() {
       {/* --- CAMERA OVERLAY MODAL --- */}
       {showCamera && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 9999,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
+          backgroundColor: "rgba(0,0,0,0.9)", zIndex: 9999,
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center"
         }}>
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            style={{ width: '100%', maxWidth: '600px', borderRadius: '10px', backgroundColor: '#000' }}
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            style={{ width: "100%", maxWidth: "600px", borderRadius: "10px", backgroundColor: "#000" }}
           />
-          <canvas ref={canvasRef} style={{ display: 'none' }} />
-          <div style={{ marginTop: '20px', display: 'flex', gap: '20px' }}>
-            <button 
-              type="button" 
+          <canvas ref={canvasRef} style={{ display: "none" }} />
+          <div style={{ marginTop: "20px", display: "flex", gap: "20px" }}>
+            <button
+              type="button"
               onClick={takePhoto}
               style={{
-                backgroundColor: 'white', border: '5px solid #ccc', borderRadius: '50%',
-                width: '70px', height: '70px', cursor: 'pointer'
+                backgroundColor: "white", border: "5px solid #ccc", borderRadius: "50%",
+                width: "70px", height: "70px", cursor: "pointer"
               }}
               aria-label="Tomar foto"
             />
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={() => setShowCamera(false)}
               style={{
-                backgroundColor: 'transparent', color: 'white', border: 'none',
-                fontSize: '18px', cursor: 'pointer'
+                backgroundColor: "transparent", color: "white", border: "none",
+                fontSize: "18px", cursor: "pointer"
               }}
             >
               Cancelar
@@ -350,14 +386,14 @@ function Report() {
         {message && (
           <div style={{
             padding: "1rem", marginBottom: "1rem", borderRadius: "5px",
-            backgroundColor: message.type === 'error' ? "#f8d7da" : "#d4edda",
-            color: message.type === 'error' ? "#721c24" : "#155724",
-            border: `1px solid ${message.type === 'error' ? "#f5c6cb" : "#c3e6cb"}`
+            backgroundColor: message.type === "error" ? "#f8d7da" : "#d4edda",
+            color: message.type === "error" ? "#721c24" : "#155724",
+            border: `1px solid ${message.type === "error" ? "#f5c6cb" : "#c3e6cb"}`
           }}>
             {message.text}
           </div>
         )}
-        
+
         <div className="form-row">
           <label htmlFor="name">Nombre <small style={{color: '#666'}}>(Opcional)</small>:</label>
           <input 
@@ -412,7 +448,7 @@ function Report() {
         </div>
 
         <div className="form-row">
-          <label htmlFor="description">Descripción: <small style={{color: '#d9534f'}}>*</small></label>
+          <label htmlFor="description">Descripción:<small style={{color: '#666'}}>(Opcional)</small>:</label>
           <textarea 
             id="description" 
             name="description" 
@@ -490,23 +526,100 @@ function Report() {
             placeholder="Ej. PR-123 Km 4.5, Barrio Salto Arriba"
           />
         </div>
-        
-        <div className="form-row form-row--inline">
-          <input id="allowLocation" name="allowLocation" type="checkbox" checked={form.allowLocation} onChange={onChange} />
-          <label htmlFor="allowLocation" className="inline-label">
-            Doy permiso a acceder mi localización <small style={{color: '#d9534f'}}>*</small>
+
+        <div className="form-row">
+          <label>
+            Ubicación <small style={{ color: "#d9534f" }}>* Busque una dirección, presione el ícono de GPS, o haga clic en el mapa.</small>
           </label>
+          
+          <style>{`
+            /* Push all map controls away from the borders to clear the 10px border-radius */
+            .leaflet-top {
+              top: 15px !important;
+            }
+            .leaflet-bottom {
+              bottom: 15px !important;
+            }
+            .leaflet-left {
+              left: 15px !important;
+            }
+            .leaflet-right {
+              right: 15px !important;
+            }
+            
+            /* Normalize Leaflet Bar Buttons (Ensures Zoom and Locate icons look identical) */
+            .leaflet-bar a {
+              background-color: #ffffff !important;
+              color: #333 !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              width: 30px !important;
+              height: 30px !important;
+              text-decoration: none !important;
+            }
+            .leaflet-bar a:hover {
+              background-color: #f4f4f4 !important;
+            }
+
+            .leaflet-control-geosearch form {
+              background: #ffffff !important;
+              border: 1px solid #ccc !important;
+              border-radius: 4px !important;
+              padding: 0 !important;
+              box-shadow: 0 1px 5px rgba(0,0,0,0.65) !important;
+            }
+            .leaflet-control-geosearch form input {
+              outline: none !important;
+              border: none !important;
+              border-radius: 4px !important;
+              background: transparent !important;
+              padding-left: 10px !important;
+            }
+            .leaflet-control-geosearch a.reset {
+              color: #333 !important;
+              background: transparent !important;
+            }
+            .leaflet-control-geosearch .results {
+              background: #ffffff !important;
+              border: 1px solid #ccc !important;
+              border-top: none !important;
+            }
+            .leaflet-control-geosearch .results > * {
+              border-bottom: 1px solid #eee !important;
+            }
+            .leaflet-control-geosearch .results > *:hover {
+              background: #f4f4f4 !important;
+              border-color: #f4f4f4 !important;
+            }
+          `}</style>
+
+          <div style={{ height: "400px", width: "100%", borderRadius: "10px", overflow: "hidden", border: "2px solid #a6b09f", marginTop: "10px", zIndex: 0 }}>
+            {/* LEAFLET MAP CONTAINER */}
+            <MapContainer 
+              center={[18.2, -66.5]} 
+              zoom={9} 
+              style={{ height: "100%", width: "100%" }}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <MapClickHandler setCoords={setCoords} />
+              <MapSearchControl setCoords={setCoords} />
+              <MapLocateControl setCoords={setCoords} />
+              
+              {coords && (
+                <Marker position={[coords.lat, coords.lng]} />
+              )}
+            </MapContainer>
+          </div>
         </div>
 
-        {showMap && (
-          <div className="form-row">
-            <label>Ubicación <small style={{color: '#d9534f'}}>* Haga clic en el mapa si la ubicación no es exacta</small>:</label>
-            <div ref={mapRef} style={{ height: "400px", width: "100%", borderRadius: "10px", overflow: "hidden", border: "2px solid #a6b09f" }}></div>
-          </div>
-        )}
-
         <div className="form-actions">
-          <button className="submit-btn" disabled={submitting}>{submitting ? "Enviando..." : "Enviar Reporte"}</button>
+          <button className="submit-btn" disabled={submitting}>
+            {submitting ? "Enviando..." : "Enviar Reporte"}
+          </button>
         </div>
       </form>
     </div>
