@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@arcgis/core": "^4.34.5",
+    "@turf/turf": "^7.3.4",
     "esri-leaflet": "^3.0.19",
     "highcharts": "^12.4.0",
     "highcharts-react-official": "^3.2.3",
