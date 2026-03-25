@@ -53,48 +53,125 @@ const Disclaimer = ({ onAgree }) => {
     );
 };
 
-const TimeControlBar = ({
-                            startTime,
-                            endTime,
-                            currentTime,
-                            isPlaying,
-                            onTogglePlay,
-                            onSeek
-                        }) => {
+const CtrlZoomHandler = ({ setShowZoomHint }) => {
+  const map = useMap();
 
-    const formatTime = (ts) => {
-        if (!ts) return "--:--";
-        return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const timeoutRef = useRef(null);
+  const lastShownRef = useRef(0);
+
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) return;
+
+    const container = map.getContainer();
+
+    const handleWheel = (e) => {
+      const now = Date.now();
+
+      if (e.ctrlKey) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -1 : 1;
+        map.setZoom(map.getZoom() + delta);
+        return;
+      }
+
+      if (now - lastShownRef.current > 30000) {
+        lastShownRef.current = now;
+
+        setShowZoomHint(true);
+
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+        timeoutRef.current = setTimeout(() => {
+          setShowZoomHint(false);
+        }, 2500);
+      }
     };
 
-    return (
-        <div className="time-control-bar">
-            <button
-                className="play-pause-btn"
-                onClick={onTogglePlay}
-                title={isPlaying ? "Pause Animation" : "Play Animation"}
-            >
-                {isPlaying ? "❚❚" : "▶"}
-            </button>
+    container.addEventListener("wheel", handleWheel, { passive: false });
 
-            <div className="time-slider-wrapper">
-                <div className="time-labels">
-                    <span>{formatTime(startTime)}</span>
-                    <span className="current-time-label">{formatTime(currentTime)}</span>
-                    <span>{formatTime(endTime)}</span>
-                </div>
-                <input
-                    type="range"
-                    className="time-slider-input"
-                    min={startTime}
-                    max={endTime}
-                    step={STEP_SIZE}
-                    value={currentTime}
-                    onChange={(e) => onSeek(Number(e.target.value))}
-                />
-            </div>
+    return () => {
+      container.removeEventListener("wheel", handleWheel);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [map, setShowZoomHint]);
+
+  return null;
+};
+
+const TimeControlBar = ({
+  startTime,
+  endTime,
+  currentTime,
+  isPlaying,
+  onTogglePlay,
+  onSeek,
+  setIsDragging,
+  setIsPlaying
+}) => {
+
+  const map = useMap();
+
+  const formatTime = (ts) => {
+    if (!ts) return "--:--";
+    return new Date(ts).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+
+  const handlePointerDown = (e) => {
+    e.stopPropagation();
+    setIsDragging(true);
+    setIsPlaying(false);
+    map.dragging.disable();
+  };
+
+  const handlePointerUp = (e) => {
+    e.stopPropagation();
+    setIsDragging(false);
+    setIsPlaying(true);
+    map.dragging.enable();
+  };
+
+  return (
+    <div
+      className="time-control-bar"
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+    >
+      <button
+        className="play-pause-btn"
+        onClick={onTogglePlay}
+        title={isPlaying ? "Pause Animation" : "Play Animation"}
+      >
+        {isPlaying ? "❚❚" : "▶"}
+      </button>
+
+      <div className="time-slider-wrapper">
+        <div className="time-labels">
+          <span>{formatTime(startTime)}</span>
+          <span className="current-time-label">
+            {formatTime(currentTime)}
+          </span>
+          <span>{formatTime(endTime)}</span>
         </div>
-    );
+
+        <input
+          type="range"
+          className="time-slider-input"
+          min={startTime}
+          max={endTime}
+          step={STEP_SIZE}
+          value={currentTime}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onChange={(e) => onSeek(Number(e.target.value))}
+        />
+      </div>
+    </div>
+  );
 };
 
 const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTime}) => {
@@ -633,6 +710,8 @@ export default function InteractiveMap() {
     const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
     const [showPrecipLegend, setShowPrecipLegend] = useState(false);
 
+    const [showZoomHint, setShowZoomHint] = useState(false);
+    const hasShownZoomHint = useRef(false);
 
     // --- RADAR / TIME LOGIC ---
     const [showForecast, setShowForecast] = useState(true);
@@ -706,25 +785,25 @@ export default function InteractiveMap() {
     const [radarTimeRange] = useState({ start: roundedStart, end: roundedEnd });
     const [currentTime, setCurrentTime] = useState(roundedStart);
     const [isPlaying, setIsPlaying] = useState(true);
+    const [isDragging, setIsDragging] = useState(false);
 
     useEffect(() => {
         let interval;
-        const step = typeof STEP_SIZE !== 'undefined' ? STEP_SIZE : 300000; // 5 mins
-        const speed = typeof FRAME_SPEED !== 'undefined' ? FRAME_SPEED : 1000; // 1 sec
 
-        if (showForecast && isPlaying) {
+        if (showForecast && isPlaying && !isDragging) {
             interval = setInterval(() => {
-                setCurrentTime(prevTime => {
-                    const nextTime = prevTime + step;
-                    if (nextTime > radarTimeRange.end) {
-                        return radarTimeRange.start;
-                    }
-                    return nextTime;
-                });
-            }, speed);
+            setCurrentTime(prevTime => {
+                const nextTime = prevTime + STEP_SIZE;
+                if (nextTime > radarTimeRange.end) {
+                return radarTimeRange.start;
+                }
+                return nextTime;
+            });
+            }, FRAME_SPEED);
         }
+
         return () => clearInterval(interval);
-    }, [isPlaying, showForecast, radarTimeRange]);
+    }, [isPlaying, showForecast, radarTimeRange, isDragging]);
 
     const handleSeek = (time) => {
         const step = typeof STEP_SIZE !== 'undefined' ? STEP_SIZE : 300000;
@@ -881,6 +960,14 @@ export default function InteractiveMap() {
                     attribution="Tiles © Esri"
                 />
 
+               {showZoomHint && (
+                <div className="zoom-hint">
+                    Press Ctrl + scroll to zoom
+                </div>
+                )} 
+
+                <CtrlZoomHandler setShowZoomHint={setShowZoomHint} hasShownZoomHint={hasShownZoomHint} />
+
                 <MapMenu
                     showStations={showStations} onToggleStations={toggleStations}
                     showPrecip={showPrecip} onTogglePrecip={togglePrecip}
@@ -930,6 +1017,8 @@ export default function InteractiveMap() {
                         isPlaying={isPlaying}
                         onTogglePlay={() => setIsPlaying(p => !p)}
                         onSeek={handleSeek}
+                        setIsDragging={setIsDragging}
+                        setIsPlaying={setIsPlaying}
                     />
                 )}
 
