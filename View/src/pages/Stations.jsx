@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Tooltip } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Tooltip, ZoomControl } from "react-leaflet";
 import L from "leaflet";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
@@ -242,7 +242,7 @@ function Stations() {
                     <div className="map-wrapper">
                         <MapContainer
                             center={[18.220833, -66.420149]}
-                            zoom={10}
+                            zoom={9.3}
                             style={{ height: "100%", width: "100%" }}
                             zoomControl={false}
                             scrollWheelZoom={false}
@@ -252,6 +252,7 @@ function Stations() {
                             keyboard={false}
                             dragging={true}
                         >
+                            <ZoomControl position="topright" />
                             <StationsMap
                                 stations={stations}
                                 selectedMetric={mapMetric}

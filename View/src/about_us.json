@@ -1,0 +1,49 @@
+{
+    "facultad": [
+        {
+            "id": "stephen",
+            "name": "Stephen Hughes",
+            "role": "Coordinador and PI",
+            "email": "kenneth.hughes@upr.edu",
+            "phone": "(787) 832-4020",
+            "ext": "6844, 2704",
+            "linkedin": "https://www.linkedin.com/in/stephen-hughes-1a35a091/",
+            "imageKey": "coordinator"
+        },
+        {
+            "id": "pedro",
+            "name": "Pedro Matos",
+            "role": "Assistant Researcher",
+            "email": "pedro.matos4@upr.edu",
+            "phone": "(787) 832-4040",
+            "ext": "6843",
+            "linkedin": "https://www.linkedin.com/in/matosllavonap",
+            "imageKey": "researcher1"
+        },
+        {
+            "id": "isabella",
+            "name": "Isabella Camara",
+            "role": "Assistant Researcher",
+            "email": "isabella.camara@upr.edu",
+            "phone": "(787) 832-4040",
+            "ext": "6844",
+            "linkedin": "https://www.linkedin.com/in/isabella-camara-torres-",
+            "imageKey": "researcher2"
+        }
+    ],
+    "graduados" : [
+        "Anishka Ruiz",
+        "Cesar Rodriguez",
+        "Tania Figueroa",
+        "Estafania Vicens",
+        "Eduardo Gonzalez",
+        "Karla Torres"
+    ],
+    "subgraduados" : [
+        "Gabriel A. Colon",
+        "Ednet C. Lopez",
+        "Mia V. Aponte",
+        "Anthony Y. Collazo",
+        "Kyleshaqull Fred"
+    ]
+}

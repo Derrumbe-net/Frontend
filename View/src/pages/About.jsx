@@ -6,7 +6,6 @@ import linkedinLogo from "../assets/LINKEDIN_LOGO.svg";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// SVG silhouette shown when a member has no photo uploaded
 const PLACEHOLDER =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 220'%3E%3Crect width='200' height='220' fill='%23e2e8f0'/%3E%3Ccircle cx='100' cy='75' r='40' fill='%23a0aec0'/%3E%3Cellipse cx='100' cy='185' rx='65' ry='50' fill='%23a0aec0'/%3E%3C/svg%3E";
 

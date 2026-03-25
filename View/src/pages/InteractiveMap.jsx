@@ -53,14 +53,60 @@ const Disclaimer = ({ onAgree }) => {
     );
 };
 
+const CtrlZoomHandler = ({ setShowZoomHint }) => {
+    const map = useMap();
+    const timeoutRef = useRef(null);
+    const lastShownRef = useRef(0);
+
+    useEffect(() => {
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) return;
+
+        const container = map.getContainer();
+
+        const handleWheel = (e) => {
+            const now = Date.now();
+
+            if (e.ctrlKey) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -1 : 1;
+                map.setZoom(map.getZoom() + delta);
+                return;
+            }
+
+            if (now - lastShownRef.current > 30000) {
+                lastShownRef.current = now;
+                setShowZoomHint(true);
+
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+                timeoutRef.current = setTimeout(() => {
+                    setShowZoomHint(false);
+                }, 2500);
+            }
+        };
+
+        container.addEventListener("wheel", handleWheel, { passive: false });
+
+        return () => {
+            container.removeEventListener("wheel", handleWheel);
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, [map, setShowZoomHint]);
+
+    return null;
+};
+
 const TimeControlBar = ({
-                            startTime,
-                            endTime,
-                            currentTime,
-                            isPlaying,
-                            onTogglePlay,
-                            onSeek
-                        }) => {
+    startTime,
+    endTime,
+    currentTime,
+    isPlaying,
+    onTogglePlay,
+    onSeek,
+    setIsDragging,
+    setIsPlaying
+}) => {
     const map = useMap();
     const containerRef = useRef(null);
 
@@ -91,19 +137,23 @@ const TimeControlBar = ({
         return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    const isDragging = useRef(false);
+    const isDraggingRef = useRef(false);
     const [dragValue, setDragValue] = useState(null);
     const displayTime = dragValue !== null ? dragValue : currentTime;
 
-    // Temporarily disable map dragging while the slider is being used
+    // Temporarily disable map dragging and pause animation while the slider is being used
     const startDrag = (val) => {
-        isDragging.current = true;
+        isDraggingRef.current = true;
+        if (setIsDragging) setIsDragging(true);
+        if (setIsPlaying) setIsPlaying(false);
         setDragValue(val ?? currentTime);
         if (map) map.dragging.disable();
     };
 
     const commitDrag = (val) => {
-        isDragging.current = false;
+        isDraggingRef.current = false;
+        if (setIsDragging) setIsDragging(false);
+        if (setIsPlaying) setIsPlaying(true);
         setDragValue(null);
         if (map) map.dragging.enable();
         onSeek(val);
@@ -113,7 +163,7 @@ const TimeControlBar = ({
 
     const handleChange = (e) => {
         const val = Number(e.target.value);
-        if (isDragging.current) {
+        if (isDraggingRef.current) {
             setDragValue(val); // visual only — no radar request
         } else {
             setDragValue(null);
@@ -122,13 +172,13 @@ const TimeControlBar = ({
     };
 
     const handleMouseUp = (e) => {
-        if (isDragging.current) commitDrag(Number(e.target.value));
+        if (isDraggingRef.current) commitDrag(Number(e.target.value));
     };
 
-    const handleTouchStart = (e) => startDrag(currentTime);
+    const handleTouchStart = () => startDrag(currentTime);
 
     const handleTouchEnd = (e) => {
-        if (isDragging.current) commitDrag(Number(e.target.value));
+        if (isDraggingRef.current) commitDrag(Number(e.target.value));
     };
 
     return (
@@ -400,14 +450,47 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
     }, []); // Empty deps: stable interval, reads fresh data via stationsRef
 
     /** SOIL SATURATION ICON **/
-    const createSaturationIcon = (saturation) => {
+    const createSaturationIcon = (saturation, lastUpdated) => {
+        const { isOffline, isStale, diffHours } = getStationStatus(lastUpdated);
+
+        // OFF STATE
+        if (isOffline) {
+            return L.divIcon({
+                html: `
+                    <div class="saturation-marker offline"
+                        title="No data for ${Math.floor(diffHours)}+ hours">
+                        OFF
+                    </div>
+                `,
+                className: "",
+                iconSize: [55, 30],
+                iconAnchor: [27, 15],
+            });
+        }
+
         let className = "saturation-marker";
         if (saturation >= 90) className += " high";
         else if (saturation >= 80) className += " medium";
         else className += " low";
+
         const rounded = Math.round(saturation);
+
         return L.divIcon({
-            html: `<div class="${className}">${rounded}%</div>`,
+            html: `
+                <div class="${className}"
+                    title="Last updated ${Math.floor(diffHours)} hour(s) ago">
+                    ${rounded}%
+                    ${isStale ? `
+                        <span class="stale-clock">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/>
+                                <line x1="12" y1="12" x2="12" y2="6" stroke="white" stroke-width="2"/>
+                                <line x1="12" y1="12" x2="16" y2="12" stroke="white" stroke-width="2"/>
+                            </svg>
+                        </span>
+                    ` : ""}
+                </div>
+            `,
             className: "",
             iconSize: [55, 30],
             iconAnchor: [27, 15],
@@ -558,17 +641,46 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
     );
 }
 
+const getStationStatus = (lastUpdated) => {
+    if (!lastUpdated) {
+        return {
+            isOffline: true,
+            isStale: false,
+            diffHours: null
+        };
+    }
+
+    const last = new Date(lastUpdated);
+    const now = new Date();
+    const diffHours = (now - last) / (1000 * 60 * 60);
+
+    return {
+        isOffline: diffHours >= 12,
+        isStale: diffHours >= 6 && diffHours < 12,
+        diffHours
+    };
+};
+
 const SoilSaturationLegend = () => (
-    <div className="legend-container legend-bottom-right">
+    <div className="legend-container legend-soil-saturation">
         <div className="legend-title">Soil Saturation</div>
-        <div className="legend-item"><span className="legend-color-box" style={{background:"#e0c853"}}></span><p>0–80%</p></div>
-        <div className="legend-item"><span className="legend-color-box" style={{background:"#63b3ff"}}></span><p>80–90%</p></div>
-        <div className="legend-item"><span className="legend-color-box" style={{background:"#001f57"}}></span><p>90–100%</p></div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#e0c853"}}></span>
+            <p>0% - 79%</p>
+        </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#63b3ff"}}></span>
+            <p>80% – 89%</p>
+        </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#001f57"}}></span>
+            <p>90% - 100%</p>
+        </div>
     </div>
 );
 
 const SusceptibilityLegend = () => (
-    <div className="legend-container legend-bottom-right-top">
+    <div className="legend-container legend-landslide-susceptibility">
         <div className="legend-title">Landslide Susceptibility</div>
         <div className="legend-item">
             <span className="legend-color-box" style={{background:"#C0C0C0"}}></span>
@@ -594,7 +706,7 @@ const SusceptibilityLegend = () => (
 );
 
 const PrecipLegend = () => (
-    <div className="legend-container legend-top-left legend-scrollable" >
+    <div className="legend-container legend-precipitation legend-scrollable" >
         <div className="legend-title">Precipitation (inches)</div>
         {[
             ["#9FEAFF", "0.01 - 0.05"], ["#7FD6FF", "0.05 - 0.10"], ["#5FC2FF", "0.10 - 0.15"], ["#0099FF", "0.15 - 0.20"],
@@ -662,6 +774,8 @@ export default function InteractiveMap() {
     const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
     const [showPrecipLegend, setShowPrecipLegend] = useState(false);
 
+    const [showZoomHint, setShowZoomHint] = useState(false);
+    const hasShownZoomHint = useRef(false);
 
     // --- RADAR / TIME LOGIC ---
     const [showForecast, setShowForecast] = useState(true);
@@ -734,26 +848,27 @@ export default function InteractiveMap() {
 
     const [radarTimeRange] = useState({ start: roundedStart, end: roundedEnd });
     const [currentTime, setCurrentTime] = useState(roundedStart);
+  
     const [isPlaying, setIsPlaying] = useState(false); // Start paused — user initiates playback
+    const [isDragging, setIsDragging] = useState(false);
 
     useEffect(() => {
         let interval;
-        const step = typeof STEP_SIZE !== 'undefined' ? STEP_SIZE : 300000; // 5 mins
-        const speed = typeof FRAME_SPEED !== 'undefined' ? FRAME_SPEED : 1000; // 1 sec
 
-        if (showForecast && isPlaying) {
+        if (showForecast && isPlaying && !isDragging) {
             interval = setInterval(() => {
-                setCurrentTime(prevTime => {
-                    const nextTime = prevTime + step;
-                    if (nextTime > radarTimeRange.end) {
-                        return radarTimeRange.start;
-                    }
-                    return nextTime;
-                });
-            }, speed);
+            setCurrentTime(prevTime => {
+                const nextTime = prevTime + STEP_SIZE;
+                if (nextTime > radarTimeRange.end) {
+                return radarTimeRange.start;
+                }
+                return nextTime;
+            });
+            }, FRAME_SPEED);
         }
+
         return () => clearInterval(interval);
-    }, [isPlaying, showForecast, radarTimeRange]);
+    }, [isPlaying, showForecast, radarTimeRange, isDragging]);
 
     const handleSeek = (time) => {
         const step = typeof STEP_SIZE !== 'undefined' ? STEP_SIZE : 300000;
@@ -896,7 +1011,7 @@ export default function InteractiveMap() {
             <MapContainer
                 id="map"
                 center={center}
-                zoom={isMobile ? 9 : 10}
+                zoom={isMobile ? 8 : 10}
                 minZoom={7}
                 maxZoom={18}
                 scrollWheelZoom={true}
@@ -909,6 +1024,14 @@ export default function InteractiveMap() {
                     url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                     attribution="Tiles © Esri"
                 />
+
+               {showZoomHint && (
+                <div className="zoom-hint">
+                    Press Ctrl + scroll to zoom
+                </div>
+                )} 
+
+                <CtrlZoomHandler setShowZoomHint={setShowZoomHint} hasShownZoomHint={hasShownZoomHint} />
 
                 <MapMenu
                     showStations={showStations} onToggleStations={toggleStations}
@@ -936,7 +1059,7 @@ export default function InteractiveMap() {
                     currentTime={currentTime}
                 />
 
-                <ZoomControl position="topright" />
+                {!isMobile && <ZoomControl position="topright" />}
 
                 {showStations && (
                     <PopulateStations
@@ -959,6 +1082,8 @@ export default function InteractiveMap() {
                         isPlaying={isPlaying}
                         onTogglePlay={() => setIsPlaying(p => !p)}
                         onSeek={handleSeek}
+                        setIsDragging={setIsDragging}
+                        setIsPlaying={setIsPlaying}
                     />
                 )}
 

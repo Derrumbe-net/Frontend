@@ -52,13 +52,13 @@ export default function MapMenu({
                     <img src={layersIcon} alt="Layers" className="menu-icon" />
                 </button>
 
-                <button
+                {/* <button
                     className={`icon-btn ${activeMenu === "settings" ? "active" : ""}`}
                     onClick={toggleSettings}
                     title="Monitoring Station Data"
                 >
                     <img src={settingsIcon} alt="Settings" className="menu-icon" />
-                </button>
+                </button> */}
 
                 <button
                     className={`icon-btn ${activeMenu === "history" ? "active" : ""}`}
@@ -71,82 +71,126 @@ export default function MapMenu({
 
             {activeMenu === "layers" && (
                 <div className="filters">
-                    <label>
-                        <input type="checkbox" checked={showStations} onChange={onToggleStations} />
-                        Stations
-                    </label>
 
-                    <label>
-                        <input type="checkbox" checked={showPrecip} onChange={onTogglePrecip} />
-                        12hr Precipitation Estimates
-                    </label>
+                    {/* --- STATIONS SECTION --- */}
+                    <div className="filter-title">Stations & Monitoring Data</div>
 
-                    <label>
-                        <input type="checkbox" checked={showForecast} onChange={onToggleForecast} />
-                        Weather Radar
-                    </label>
-
-                    <label>
-                        <input type="checkbox" checked={showSusceptibility} onChange={onToggleSusceptibility} />
-                        Landslide Susceptibility
-                    </label>
-                </div>
-            )}
-
-            {activeMenu === "settings" && (
-                <div className="filters">
-                    <div className="filter-title">Monitoring Station Data</div>
+                    <div className="nested-section">
 
                     <label>
                         <input
-                            type="checkbox"
-                            checked={showSaturation}
-                            onChange={onToggleSaturation}
+                        type="radio"
+                        name="stationData"
+                        checked={showSaturation}
+                        onChange={onToggleSaturation}
                         />
                         Soil Saturation (%)
                     </label>
 
                     <label>
                         <input
-                            type="checkbox"
-                            checked={showPrecip12hr}
-                            onChange={onTogglePrecip12hr}
+                        type="radio"
+                        name="stationData"
+                        checked={showPrecip12hr}
+                        onChange={onTogglePrecip12hr}
                         />
                         Precipitation (Last 12hr)
                     </label>
-
-                    <div className="filter-title" style={{ marginTop: "15px" }}>
-                        Legends
                     </div>
+
+                    {/* --- OTHER LAYERS --- */}
+                    <div className="filter-title" style={{ marginTop: "15px" }}>
+                    Other Layers
+                    </div>
+
                     <label>
-                        <input
-                            type="checkbox"
-                            checked={showSaturationLegend}
-                            onChange={onToggleSaturationLegend}
-                        />
-                        Soil Saturation
+                    <input type="checkbox" checked={showPrecip} onChange={onTogglePrecip} />
+                    12hr Precipitation Estimates
                     </label>
 
                     <label>
-                        <input
-                            type="checkbox"
-                            checked={showSusceptibilityLegend}
-                            onChange={onToggleSusceptibilityLegend}
-                        />
-                        Susceptibility
+                    <input type="checkbox" checked={showForecast} onChange={onToggleForecast} />
+                    Weather Radar
                     </label>
 
                     <label>
-                        <input
-                            type="checkbox"
-                            checked={showPrecipLegend}
-                            onChange={onTogglePrecipLegend}
-                        />
-                        Precipitation Estimates
+                    <input
+                        type="checkbox"
+                        checked={showSusceptibility}
+                        onChange={onToggleSusceptibility}
+                    />
+                    Landslide Susceptibility
+                    </label>
+
+                    {/* --- LEGENDS --- */}
+                    <div className="filter-title" style={{ marginTop: "15px" }}>
+                    Legends
+                    </div>
+
+                    <label>
+                    <input
+                        type="checkbox"
+                        checked={showSaturationLegend}
+                        onChange={onToggleSaturationLegend}
+                    />
+                    Soil Saturation
+                    </label>
+
+                    <label>
+                    <input
+                        type="checkbox"
+                        checked={showSusceptibilityLegend}
+                        onChange={onToggleSusceptibilityLegend}
+                    />
+                    Susceptibility
+                    </label>
+
+                    <label>
+                    <input
+                        type="checkbox"
+                        checked={showPrecipLegend}
+                        onChange={onTogglePrecipLegend}
+                    />
+                    Precipitation Estimates
                     </label>
 
                 </div>
             )}
+
+            {/* {activeMenu === "settings" && (
+                <div className="filters">
+
+                    <div className="filter-title">Legends</div>
+
+                    <label>
+                    <input
+                        type="checkbox"
+                        checked={showSaturationLegend}
+                        onChange={onToggleSaturationLegend}
+                    />
+                    Soil Saturation
+                    </label>
+
+                    <label>
+                    <input
+                        type="checkbox"
+                        checked={showSusceptibilityLegend}
+                        onChange={onToggleSusceptibilityLegend}
+                    />
+                    Susceptibility
+                    </label>
+
+                    <label>
+                    <input
+                        type="checkbox"
+                        checked={showPrecipLegend}
+                        onChange={onTogglePrecipLegend}
+                    />
+                    Precipitation Estimates
+                    </label>
+
+                </div>
+            )} */}
 
             {activeMenu === "history" && (
                 <div className="filters">

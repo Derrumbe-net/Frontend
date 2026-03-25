@@ -57,6 +57,29 @@ const StationPopup = ({ station }) => {
         }
     };
 
+    const formattedLastUpdated =
+        lastUpdated
+            ? new Date(lastUpdated).toLocaleString('en-US', {
+                timeZone: 'America/Puerto_Rico',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            })
+            : 'N/A';
+
+    const formattedSoilSaturation =
+        soilSaturation !== null && soilSaturation !== undefined
+            ? Math.ceil(Number(soilSaturation))
+            : 'N/A';
+
+    const formattedPrecip =
+        precip !== null && precip !== undefined
+            ? Number(precip).toFixed(2)
+            : '0.00';
+
     return (
         <Popup maxWidth={350}>
             <div className="custom-popup-content">
@@ -100,13 +123,15 @@ const StationPopup = ({ station }) => {
 
                     <ul>
                         <li>
-                            <strong>Last Updated:</strong> <span>{lastUpdated} AST</span>
+                            <strong>Last Updated:</strong> <span>{formattedLastUpdated} AST</span>
                         </li>
                         <li>
-                            <strong>Soil Saturation:</strong> <span>{soilSaturation}%</span>
+                            <strong>Soil Saturation:</strong>
+                            <span>{formattedSoilSaturation}%</span>
                         </li>
                         <li>
-                            <strong>12 HRS Precipitation:</strong> <span>{precip} inches</span>
+                            <strong>12 HRS Precipitation:</strong>
+                            <span>{formattedPrecip} inches</span>
                         </li>
                     </ul>
 
