@@ -448,7 +448,7 @@ function Report() {
         </div>
 
         <div className="form-row">
-          <label htmlFor="description">Descripción:<small style={{color: '#666'}}>(Opcional)</small>:</label>
+          <label htmlFor="description">Descripción: <small style={{color: '#666'}}>(Opcional)</small></label>
           <textarea 
             id="description" 
             name="description" 
@@ -457,7 +457,6 @@ function Report() {
             onChange={onChange} 
             style={fieldStyle}
             placeholder="Ej. Deslizamiento bloqueando el carril derecho. Se observan árboles caídos y terreno inestable..."
-            required
           />
         </div>
 
