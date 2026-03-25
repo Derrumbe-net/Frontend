@@ -9,7 +9,6 @@ import L from "leaflet";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import { GeoSearchControl, OpenStreetMapProvider } from "leaflet-geosearch";
 
-// Fix for default Leaflet icon not showing up in React
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -21,25 +20,25 @@ const BASE_REPORT_URL = `${import.meta.env.VITE_API_URL}/reports`;
 
 // --- MAP COMPONENTS ---
 
-// 1. Component to handle map clicks
-function MapClickHandler({ setCoords }) {
+function MapClickHandler({ setCoords, onCoordChange }) {
   useMapEvents({
     click(e) {
-      setCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
+      const { lat, lng } = e.latlng;
+      setCoords({ lat, lng });
+      if (onCoordChange) onCoordChange(lat, lng);
     },
   });
   return null;
 }
 
-// 2. Component for the Search Bar
-function MapSearchControl({ setCoords }) {
+function MapSearchControl({ setCoords, onCoordChange }) {
   const map = useMap();
   useEffect(() => {
     const provider = new OpenStreetMapProvider();
     const searchControl = new GeoSearchControl({
-      provider: provider,
+      provider,
       style: "bar",
-      showMarker: false, 
+      showMarker: false,
       retainZoomLevel: false,
       animateZoom: true,
       autoClose: true,
@@ -50,26 +49,29 @@ function MapSearchControl({ setCoords }) {
     map.addControl(searchControl);
 
     map.on("geosearch/showlocation", (e) => {
-      setCoords({ lat: e.location.y, lng: e.location.x });
+      const lat = e.location.y;
+      const lng = e.location.x;
+      setCoords({ lat, lng });
+      if (onCoordChange) onCoordChange(lat, lng);
     });
 
     return () => map.removeControl(searchControl);
-  }, [map, setCoords]);
+  }, [map, setCoords, onCoordChange]);
 
   return null;
 }
 
-// 3. Component for "Locate Me" / Re-Center button
-function MapLocateControl({ setCoords }) {
+function MapLocateControl({ setCoords, onCoordChange }) {
   const map = useMap();
 
   useEffect(() => {
-    // Handle map events for location
     const onLocationFound = (e) => {
-      setCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
+      const { lat, lng } = e.latlng;
+      setCoords({ lat, lng });
+      if (onCoordChange) onCoordChange(lat, lng);
       map.flyTo(e.latlng, 16);
     };
-    
+
     const onLocationError = () => {
       alert("No se pudo acceder a tu ubicación.");
     };
@@ -77,41 +79,27 @@ function MapLocateControl({ setCoords }) {
     map.on("locationfound", onLocationFound);
     map.on("locationerror", onLocationError);
 
-    // Create a native Leaflet control so it aligns perfectly with the zoom buttons
     const locateControl = L.control({ position: "topleft" });
-
     locateControl.onAdd = function () {
       const div = L.DomUtil.create("div", "leaflet-bar leaflet-control");
       const a = L.DomUtil.create("a", "", div);
-      
       a.href = "#";
       a.title = "Encontrar mi ubicación";
-      
-      // Inject the SVG
       a.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4" y1="12" x2="8" y2="12"></line><line x1="16" y1="12" x2="20" y2="12"></line></svg>`;
-
-      // Prevent clicking the button from clicking the map underneath
       L.DomEvent.disableClickPropagation(div);
-
-      a.onclick = function (e) {
-        e.preventDefault();
-        map.locate();
-      };
-
+      a.onclick = (e) => { e.preventDefault(); map.locate(); };
       return div;
     };
-
     locateControl.addTo(map);
 
-    // Cleanup
     return () => {
       map.off("locationfound", onLocationFound);
       map.off("locationerror", onLocationError);
       map.removeControl(locateControl);
     };
-  }, [map, setCoords]);
+  }, [map, setCoords, onCoordChange]);
 
-  return null; // Renders through Leaflet, not React DOM
+  return null;
 }
 
 // --- MAIN FORM COMPONENT ---
@@ -121,7 +109,7 @@ function Report() {
     name: "",
     phone: "",
     email: "",
-    date: "",
+    date: new Date().toISOString().split("T")[0],
     description: "",
     pueblo: "",
     carretera: "",
@@ -131,6 +119,7 @@ function Report() {
   const [files, setFiles] = useState([]);
   const [coords, setCoords] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [municipalities, setMunicipalities] = useState(null);
 
   const [showCamera, setShowCamera] = useState(false);
   const videoRef = useRef(null);
@@ -163,6 +152,52 @@ function Report() {
     "Yabucoa", "Yauco"
   ];
 
+  // Load GeoJSON for municipality detection
+  useEffect(() => {
+    fetch("/puerto-rico-municipalities.geojson")
+      .then(res => res.json())
+      .then(data => setMunicipalities(data))
+      .catch(err => console.error("GeoJSON load error:", err));
+  }, []);
+
+  // Auto-detect municipality from coordinates using ray casting
+  const detectMunicipality = (lat, lng) => {
+    if (!municipalities) return;
+
+    const pointInPolygon = (point, polygon) => {
+      const [px, py] = point;
+      let inside = false;
+      for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const [xi, yi] = polygon[i];
+        const [xj, yj] = polygon[j];
+        const intersect = ((yi > py) !== (yj > py)) &&
+          (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    };
+
+    const checkGeometry = (geometry, point) => {
+      if (geometry.type === "Polygon") {
+        return pointInPolygon(point, geometry.coordinates[0]);
+      } else if (geometry.type === "MultiPolygon") {
+        return geometry.coordinates.some(poly => pointInPolygon(point, poly[0]));
+      }
+      return false;
+    };
+
+    for (const feature of municipalities.features) {
+      if (checkGeometry(feature.geometry, [lng, lat])) {
+        setForm(prev => ({ ...prev, pueblo: feature.properties.NOMBRE }));
+        break;
+      }
+    }
+  };
+
+  const handleCoordChange = (lat, lng) => {
+    detectMunicipality(lat, lng);
+  };
+
   // Log coordinates silently when they update
   useEffect(() => {
     if (coords) {
@@ -179,9 +214,7 @@ function Report() {
             video: { facingMode: "environment" },
           });
           streamRef.current = stream;
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
+          if (videoRef.current) videoRef.current.srcObject = stream;
         } catch (err) {
           console.error("Camera Error:", err);
           alert("No se pudo acceder a la cámara.");
@@ -190,7 +223,7 @@ function Report() {
       })();
     } else {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
     }
@@ -199,7 +232,6 @@ function Report() {
   const takePhoto = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-
     if (video && canvas) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -208,9 +240,8 @@ function Report() {
       canvas.toBlob(
         (blob) => {
           if (!blob) return;
-          const fileName = `cam_capture_${Date.now()}.jpg`;
-          const file = new File([blob], fileName, { type: "image/jpeg" });
-          setFiles((prev) => [...prev, file]);
+          const file = new File([blob], `cam_capture_${Date.now()}.jpg`, { type: "image/jpeg" });
+          setFiles(prev => [...prev, file]);
           setShowCamera(false);
         },
         "image/jpeg",
@@ -224,38 +255,20 @@ function Report() {
     const el = dropRef.current;
     if (!el) return;
     const prevent = (e) => { e.preventDefault(); e.stopPropagation(); };
-    const onDrop = (e) => {
-      prevent(e);
-      const list = Array.from(e.dataTransfer.files || []);
-      setFiles((prev) => [...prev, ...list]);
-    };
-    ["dragenter", "dragover", "dragleave", "drop"].forEach((ev) =>
-      el.addEventListener(ev, prevent)
-    );
+    const onDrop = (e) => { prevent(e); setFiles(prev => [...prev, ...Array.from(e.dataTransfer.files || [])]); };
+    ["dragenter", "dragover", "dragleave", "drop"].forEach(ev => el.addEventListener(ev, prevent));
     el.addEventListener("drop", onDrop);
     return () => {
-      ["dragenter", "dragover", "dragleave", "drop"].forEach((ev) =>
-        el.removeEventListener(ev, prevent)
-      );
+      ["dragenter", "dragover", "dragleave", "drop"].forEach(ev => el.removeEventListener(ev, prevent));
       el.removeEventListener("drop", onDrop);
     };
   }, []);
 
-  const onFilePick = (e) => {
-    const list = Array.from(e.target.files || []);
-    setFiles((prev) => [...prev, ...list]);
-  };
-
-  const removeFile = (idx) => {
-    setFiles((prev) => prev.filter((_, i) => i !== idx));
-  };
-
+  const onFilePick = (e) => setFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
+  const removeFile = (idx) => setFiles(prev => prev.filter((_, i) => i !== idx));
   const onChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((f) => ({
-      ...f,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    setForm(f => ({ ...f, [name]: type === "checkbox" ? checked : value }));
   };
 
   const onSubmit = async (e) => {
@@ -268,10 +281,7 @@ function Report() {
     if (!coords) errors.push("Ubicación (Coordenadas)");
 
     if (errors.length > 0) {
-      setMessage({
-        type: "error",
-        text: `Faltan campos requeridos: ${errors.join(", ")}`,
-      });
+      setMessage({ type: "error", text: `Faltan campos requeridos: ${errors.join(", ")}` });
       window.scrollTo(0, 0);
       return;
     }
@@ -304,16 +314,11 @@ function Report() {
       const reportId = data.report_id;
 
       if (files.length > 0 && reportId) {
-        let uploadedCount = 0;
         for (const file of files) {
           const formData = new FormData();
           formData.append("image_file", file);
           try {
-            const uploadRes = await fetch(`${BASE_REPORT_URL}/${reportId}/upload`, {
-              method: "POST",
-              body: formData,
-            });
-            if (uploadRes.ok) uploadedCount++;
+            await fetch(`${BASE_REPORT_URL}/${reportId}/upload`, { method: "POST", body: formData });
           } catch (uploadErr) {
             console.error(`Error uploading ${file.name}`, uploadErr);
           }
@@ -334,38 +339,21 @@ function Report() {
 
   return (
     <div className="report-page">
-      {/* --- CAMERA OVERLAY MODAL --- */}
       {showCamera && (
         <div style={{
           position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
           backgroundColor: "rgba(0,0,0,0.9)", zIndex: 9999,
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center"
         }}>
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            style={{ width: "100%", maxWidth: "600px", borderRadius: "10px", backgroundColor: "#000" }}
-          />
+          <video ref={videoRef} autoPlay playsInline
+            style={{ width: "100%", maxWidth: "600px", borderRadius: "10px", backgroundColor: "#000" }} />
           <canvas ref={canvasRef} style={{ display: "none" }} />
           <div style={{ marginTop: "20px", display: "flex", gap: "20px" }}>
-            <button
-              type="button"
-              onClick={takePhoto}
-              style={{
-                backgroundColor: "white", border: "5px solid #ccc", borderRadius: "50%",
-                width: "70px", height: "70px", cursor: "pointer"
-              }}
-              aria-label="Tomar foto"
-            />
-            <button
-              type="button"
-              onClick={() => setShowCamera(false)}
-              style={{
-                backgroundColor: "transparent", color: "white", border: "none",
-                fontSize: "18px", cursor: "pointer"
-              }}
-            >
+            <button type="button" onClick={takePhoto}
+              style={{ backgroundColor: "white", border: "5px solid #ccc", borderRadius: "50%", width: "70px", height: "70px", cursor: "pointer" }}
+              aria-label="Tomar foto" />
+            <button type="button" onClick={() => setShowCamera(false)}
+              style={{ backgroundColor: "transparent", color: "white", border: "none", fontSize: "18px", cursor: "pointer" }}>
               Cancelar
             </button>
           </div>
@@ -396,91 +384,43 @@ function Report() {
 
         <div className="form-row">
           <label htmlFor="name">Nombre <small style={{color: '#666'}}>(Opcional)</small>:</label>
-          <input 
-            id="name" 
-            name="name" 
-            type="text" 
-            value={form.name} 
-            onChange={onChange} 
-            style={fieldStyle}
-            placeholder="Ej. Juan del Pueblo"
-          />
+          <input id="name" name="name" type="text" value={form.name} onChange={onChange} style={fieldStyle} placeholder="Ej. Juan del Pueblo" />
         </div>
 
         <div className="form-row">
           <label htmlFor="phone">Teléfono <small style={{color: '#666'}}>(Opcional)</small>:</label>
-          <input 
-            id="phone" 
-            name="phone" 
-            type="tel" 
-            value={form.phone} 
-            onChange={onChange} 
-            style={fieldStyle}
-            placeholder="Ej. 787-555-0123"
-          />
+          <input id="phone" name="phone" type="tel" value={form.phone} onChange={onChange} style={fieldStyle} placeholder="Ej. 787-555-0123" />
         </div>
 
         <div className="form-row">
           <label htmlFor="email">Email <small style={{color: '#666'}}>(Opcional)</small>:</label>
-          <input 
-            id="email" 
-            name="email" 
-            type="email" 
-            value={form.email} 
-            onChange={onChange} 
-            style={fieldStyle}
-            placeholder="Ej. juan@ejemplo.com"
-          />
+          <input id="email" name="email" type="email" value={form.email} onChange={onChange} style={fieldStyle} placeholder="Ej. juan@ejemplo.com" />
         </div>
 
         <div className="form-row">
           <label htmlFor="date">Fecha: <small style={{color: '#d9534f'}}>*</small></label>
-          <input 
-            id="date" 
-            name="date" 
-            type="date" 
-            value={form.date} 
-            onChange={onChange} 
-            style={fieldStyle}
-            required
-            max={today}
-          />
+          <input id="date" name="date" type="date" value={form.date} onChange={onChange} style={fieldStyle} required max={today} />
         </div>
 
         <div className="form-row">
           <label htmlFor="description">Descripción: <small style={{color: '#666'}}>(Opcional)</small></label>
-          <textarea 
-            id="description" 
-            name="description" 
-            rows={4} 
-            value={form.description} 
-            onChange={onChange} 
-            style={fieldStyle}
-            placeholder="Ej. Deslizamiento bloqueando el carril derecho. Se observan árboles caídos y terreno inestable..."
-          />
+          <textarea id="description" name="description" rows={4} value={form.description} onChange={onChange} style={fieldStyle}
+            placeholder="Ej. Deslizamiento bloqueando el carril derecho. Se observan árboles caídos y terreno inestable..." />
         </div>
 
         <div className="form-row">
-          <label> Añadir Foto/Video <small style={{color: '#666'}}>(Opcional)</small>:</label>
+          <label>Añadir Foto/Video <small style={{color: '#666'}}>(Opcional)</small>:</label>
           <div className="dropzone" ref={dropRef}>
             <div className="dropzone__hint">
               <span className="drop-cloud">☁️</span>
               <p>Arrastra fotos aquí</p>
-              
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px', flexWrap: 'wrap' }}>
                 <label className="pick-files-btn">
                   📁 Seleccionar
-                  <input type="file" multiple onChange={onFilePick} style={{ display: 'none', cursor: 'pointer'}} />
+                  <input type="file" multiple onChange={onFilePick} style={{ display: 'none', cursor: 'pointer' }} />
                 </label>
-                <button 
-                  type="button" 
-                  className="camera-btn"
-                  onClick={() => setShowCamera(true)}
-                  style={{
-                    backgroundColor: 'none' , color: 'black', border: 1, 
-                    padding: '8px 15px', borderRadius: '5px', cursor: 'pointer',
-                  }}
-                >
+                <button type="button" className="camera-btn" onClick={() => setShowCamera(true)}
+                  style={{ backgroundColor: 'none', color: 'black', border: 1, padding: '8px 15px', borderRadius: '5px', cursor: 'pointer' }}>
                   📷 Tomar Foto
                 </button>
               </div>
@@ -500,117 +440,62 @@ function Report() {
 
         <div className="form-row">
           <label htmlFor="pueblo">Pueblo <small style={{color: '#d9534f'}}>*</small></label>
-          <select 
-            id="pueblo" 
-            name="pueblo" 
-            value={form.pueblo} 
-            onChange={onChange} 
-            style={fieldStyle}
-            required
-          >
+          <select id="pueblo" name="pueblo" value={form.pueblo} onChange={onChange} style={fieldStyle} required>
             <option value="">Seleccione un pueblo...</option>
-            {pueblos.map((p) => <option key={p} value={p}>{p}</option>)}
+            {pueblos.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
 
         <div className="form-row">
           <label htmlFor="carretera">Carretera / Dirección <small style={{color: '#666'}}>(Opcional)</small>:</label>
-          <input 
-            id="carretera" 
-            name="carretera" 
-            type="text" 
-            value={form.carretera} 
-            onChange={onChange} 
-            style={fieldStyle}
-            placeholder="Ej. PR-123 Km 4.5, Barrio Salto Arriba"
-          />
+          <input id="carretera" name="carretera" type="text" value={form.carretera} onChange={onChange} style={fieldStyle}
+            placeholder="Ej. PR-123 Km 4.5, Barrio Salto Arriba" />
         </div>
 
         <div className="form-row">
           <label>
             Ubicación <small style={{ color: "#d9534f" }}>* Busque una dirección, presione el ícono de GPS, o haga clic en el mapa.</small>
           </label>
-          
-          <style>{`
-            /* Push all map controls away from the borders to clear the 10px border-radius */
-            .leaflet-top {
-              top: 15px !important;
-            }
-            .leaflet-bottom {
-              bottom: 15px !important;
-            }
-            .leaflet-left {
-              left: 15px !important;
-            }
-            .leaflet-right {
-              right: 15px !important;
-            }
-            
-            /* Normalize Leaflet Bar Buttons (Ensures Zoom and Locate icons look identical) */
-            .leaflet-bar a {
-              background-color: #ffffff !important;
-              color: #333 !important;
-              display: flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              width: 30px !important;
-              height: 30px !important;
-              text-decoration: none !important;
-            }
-            .leaflet-bar a:hover {
-              background-color: #f4f4f4 !important;
-            }
 
+          <style>{`
+            .leaflet-top { top: 15px !important; }
+            .leaflet-bottom { bottom: 15px !important; }
+            .leaflet-left { left: 15px !important; }
+            .leaflet-right { right: 15px !important; }
+            .leaflet-bar a {
+              background-color: #ffffff !important; color: #333 !important;
+              display: flex !important; align-items: center !important;
+              justify-content: center !important; width: 30px !important;
+              height: 30px !important; text-decoration: none !important;
+            }
+            .leaflet-bar a:hover { background-color: #f4f4f4 !important; }
             .leaflet-control-geosearch form {
-              background: #ffffff !important;
-              border: 1px solid #ccc !important;
-              border-radius: 4px !important;
-              padding: 0 !important;
+              background: #ffffff !important; border: 1px solid #ccc !important;
+              border-radius: 4px !important; padding: 0 !important;
               box-shadow: 0 1px 5px rgba(0,0,0,0.65) !important;
             }
             .leaflet-control-geosearch form input {
-              outline: none !important;
-              border: none !important;
-              border-radius: 4px !important;
-              background: transparent !important;
-              padding-left: 10px !important;
+              outline: none !important; border: none !important;
+              border-radius: 4px !important; background: transparent !important; padding-left: 10px !important;
             }
-            .leaflet-control-geosearch a.reset {
-              color: #333 !important;
-              background: transparent !important;
-            }
+            .leaflet-control-geosearch a.reset { color: #333 !important; background: transparent !important; }
             .leaflet-control-geosearch .results {
-              background: #ffffff !important;
-              border: 1px solid #ccc !important;
-              border-top: none !important;
+              background: #ffffff !important; border: 1px solid #ccc !important; border-top: none !important;
             }
-            .leaflet-control-geosearch .results > * {
-              border-bottom: 1px solid #eee !important;
-            }
-            .leaflet-control-geosearch .results > *:hover {
-              background: #f4f4f4 !important;
-              border-color: #f4f4f4 !important;
-            }
+            .leaflet-control-geosearch .results > * { border-bottom: 1px solid #eee !important; }
+            .leaflet-control-geosearch .results > *:hover { background: #f4f4f4 !important; border-color: #f4f4f4 !important; }
           `}</style>
 
           <div style={{ height: "400px", width: "100%", borderRadius: "10px", overflow: "hidden", border: "2px solid #a6b09f", marginTop: "10px", zIndex: 0 }}>
-            {/* LEAFLET MAP CONTAINER */}
-            <MapContainer 
-              center={[18.2, -66.5]} 
-              zoom={9} 
-              style={{ height: "100%", width: "100%" }}
-            >
+            <MapContainer center={[18.2, -66.5]} zoom={9} style={{ height: "100%", width: "100%" }}>
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <MapClickHandler setCoords={setCoords} />
-              <MapSearchControl setCoords={setCoords} />
-              <MapLocateControl setCoords={setCoords} />
-              
-              {coords && (
-                <Marker position={[coords.lat, coords.lng]} />
-              )}
+              <MapClickHandler setCoords={setCoords} onCoordChange={handleCoordChange} />
+              <MapSearchControl setCoords={setCoords} onCoordChange={handleCoordChange} />
+              <MapLocateControl setCoords={setCoords} onCoordChange={handleCoordChange} />
+              {coords && <Marker position={[coords.lat, coords.lng]} />}
             </MapContainer>
           </div>
         </div>

@@ -95,7 +95,8 @@ class StationInfo
                 'wc1', 'wc2', 'wc3', 'wc4',
                 'geological_unit', 'land_unit', 'elevation',
                 'slope', 'susceptibility', 'depth',
-                'station_installation_date', 'collaborator'
+                'station_installation_date', 'collaborator',
+                'ftp_file_path', 'history_data_url'
             ];
 
             $fieldsToUpdate = [];

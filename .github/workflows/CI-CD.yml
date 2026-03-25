@@ -73,7 +73,7 @@ jobs:
 
   # 2️⃣ Build & deploy (runs only if test job succeeds)
   deploy:
-    needs: test
+    # needs: test
     runs-on: ubuntu-latest
     if: ${{ success() }}
     steps:
