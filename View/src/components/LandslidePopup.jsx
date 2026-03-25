@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Re-added useEffect
+import React, { useState, useCallback } from 'react';
 import { Popup } from 'react-leaflet';
 import '../styles/StationPopup.css';
 
@@ -13,10 +13,13 @@ const ChevronRight = () => (
     </svg>
 );
 
+// Module-level cache: landslide_id → image array (persists across popup open/close)
+const imageCache = {};
+
 const LandslidePopup = ({ landslide }) => {
     const [images, setImages] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [loading, setLoading] = useState(true); // Start loading immediately
+    const [loading, setLoading] = useState(false);
     const [hasLoaded, setHasLoaded] = useState(false);
 
     const API_BASE_URL = `${import.meta.env.VITE_API_URL}`;
@@ -25,40 +28,43 @@ const LandslidePopup = ({ landslide }) => {
 
     const { landslide_id, landslide_date } = landslide;
 
-    // Trigger fetch immediately when component mounts (Popup opens)
-    useEffect(() => {
-        let isMounted = true; // Cleanup flag
+    // Fetch only when the popup is actually opened by the user.
+    // Also uses a cache so re-opening the same popup never re-fetches.
+    const handleOpen = useCallback(async () => {
+        // Already fetched for this landslide — use cache
+        if (imageCache[landslide_id] !== undefined) {
+            setImages(imageCache[landslide_id]);
+            setHasLoaded(true);
+            return;
+        }
 
-        const fetchImages = async () => {
-            setLoading(true);
-            setImages([]);
+        setLoading(true);
+        setImages([]);
+        setHasLoaded(false);
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/landslides/${landslide_id}/images`);
-                if (response.ok) {
-                    const data = await response.json();
-                    if (isMounted && data.images && Array.isArray(data.images)) {
-                        const formattedImages = data.images.map((imgName, index) => ({
-                            src: `${API_BASE_URL}/landslides/${landslide_id}/images/${imgName}`,
-                            label: `View ${index + 1}`
-                        }));
-                        setImages(formattedImages);
-                    }
-                }
-            } catch (error) {
-                console.error("Error connecting to API:", error);
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                    setHasLoaded(true);
-                    setCurrentIndex(0);
-                }
+        try {
+            const response = await fetch(`${API_BASE_URL}/landslides/${landslide_id}/images`);
+            if (response.ok) {
+                const data = await response.json();
+                const formatted = (data.images && Array.isArray(data.images))
+                    ? data.images.map((imgName, index) => ({
+                        src: `${API_BASE_URL}/landslides/${landslide_id}/images/${imgName}`,
+                        label: `View ${index + 1}`
+                    }))
+                    : [];
+                imageCache[landslide_id] = formatted; // store in cache
+                setImages(formatted);
+            } else {
+                imageCache[landslide_id] = []; // cache the empty result too
             }
-        };
-
-        fetchImages();
-
-        return () => { isMounted = false; };
+        } catch (error) {
+            console.error("Error fetching landslide images:", error);
+            imageCache[landslide_id] = [];
+        } finally {
+            setLoading(false);
+            setHasLoaded(true);
+            setCurrentIndex(0);
+        }
     }, [landslide_id, API_BASE_URL]);
 
     const formatDate = (dateString) => {
@@ -81,21 +87,18 @@ const LandslidePopup = ({ landslide }) => {
         setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
     };
 
-    const openInNewTab = (e) => {
+    const openInNewTab = () => {
         if (images.length > 0) {
             window.open(images[currentIndex].src, '_blank', 'noopener,noreferrer');
         }
     };
 
     return (
-        <Popup maxWidth={350}>
+        <Popup maxWidth={350} eventHandlers={{ add: handleOpen }}>
             <div className="custom-popup-content">
                 <div className="info roboto-condensed">
 
-                    {/* Header */}
-                    <h2 className="bebas-neue">
-                        Reported Landslide
-                    </h2>
+                    <h2 className="bebas-neue">Reported Landslide</h2>
 
                     {/* --- CAROUSEL SECTION --- */}
                     <div className="popup-carousel">
@@ -112,15 +115,13 @@ const LandslidePopup = ({ landslide }) => {
                                 backgroundColor: '#f0f0f0'
                             }}
                         >
-                            {/* Loading State */}
                             {loading && (
-                                <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
-                                    <div className="spinner" style={{marginBottom:'5px'}}></div>
-                                    <span style={{color:'#666', fontSize:'14px'}}>Fetching images...</span>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    <div className="spinner" style={{ marginBottom: '5px' }}></div>
+                                    <span style={{ color: '#666', fontSize: '14px' }}>Fetching images...</span>
                                 </div>
                             )}
 
-                            {/* Loaded State */}
                             {!loading && hasLoaded && (
                                 images.length > 0 ? (
                                     <>
@@ -129,25 +130,27 @@ const LandslidePopup = ({ landslide }) => {
                                             alt="Landslide"
                                             className="carousel-img clickable"
                                             title="Click to open in new tab"
-                                            style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover'
-                                            }}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                         />
                                         <div className="carousel-label">
                                             {currentIndex + 1} / {images.length}
                                         </div>
                                     </>
                                 ) : (
-                                    <div style={{color: '#666', fontSize: '14px', fontStyle: 'italic'}}>
+                                    <div style={{ color: '#666', fontSize: '14px', fontStyle: 'italic' }}>
                                         No images available
                                     </div>
                                 )
                             )}
+
+                            {/* Before popup is opened for first time, show a neutral placeholder */}
+                            {!loading && !hasLoaded && (
+                                <div style={{ color: '#aaa', fontSize: '14px', fontStyle: 'italic' }}>
+                                    Click marker to load images
+                                </div>
+                            )}
                         </div>
 
-                        {/* Controls (Only show if loaded and > 1 image) */}
                         {!loading && hasLoaded && images.length > 1 && (
                             <div className="carousel-controls">
                                 <button onClick={prevImage} className="carousel-btn left">
@@ -161,7 +164,6 @@ const LandslidePopup = ({ landslide }) => {
                     </div>
                     {/* --- END CAROUSEL --- */}
 
-                    {/* Data List */}
                     <ul>
                         <li>
                             <strong>Date:</strong>

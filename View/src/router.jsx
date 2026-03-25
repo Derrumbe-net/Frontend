@@ -27,6 +27,9 @@ import CMSPublications from './cms/pages/CMSPublications';
 import CMSReports from './cms/pages/CMSReports';
 import CMSStations from './cms/pages/CMSStations';
 import CMSManageUsers from './cms/pages/CMSManageUsers';
+import CMSTeamMembers from './cms/pages/CMSTeamMembers';
+import CMSFundingSources from './cms/pages/CMSFundingSources';
+import CMSOfficeInfo from './cms/pages/CMSOfficeInfo';
 
 // Auth protection
 import ProtectedRoute from './cms/layout/ProtectedRoute';
@@ -71,12 +74,15 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <CMSDashboard /> },
-      { path: 'proyectos', element: <CMSProjects /> },
-      { path: 'publicaciones', element: <CMSPublications /> },
-      { path: 'reportes', element: <CMSReports /> },
-      { path: 'estaciones', element: <CMSStations /> },
-      { path: 'usuarios', element: <CMSManageUsers /> },
+      { index: true,             element: <CMSDashboard /> },
+      { path: 'proyectos',       element: <CMSProjects /> },
+      { path: 'publicaciones',   element: <CMSPublications /> },
+      { path: 'reportes',        element: <CMSReports /> },
+      { path: 'estaciones',      element: <CMSStations /> },
+      { path: 'usuarios',        element: <CMSManageUsers /> },
+      { path: 'equipo',          element: <CMSTeamMembers /> }, 
+      { path: 'financiamiento',  element: <CMSFundingSources /> },
+      { path: 'contacto',        element: <CMSOfficeInfo /> },
     ],
   },
 ]);

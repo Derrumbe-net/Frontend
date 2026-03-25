@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import "../styles/Home_module.css";
 import { Link } from "react-router-dom";
 import heroImage from '../assets/landing_page_background.webp';
@@ -9,8 +10,26 @@ import uprmLogo from "../assets/UPRM_LOGO.png";
 import logo from '../assets/PRLHMO_LOGO.svg';
 import CCFLHLogo from "../assets/CCFLH_LOGO.svg";
 
+const API_URL = import.meta.env.VITE_API_URL;
 
 function Home() {
+  const [officeInfo, setOfficeInfo] = useState(null);
+
+  useEffect(() => {
+    fetch(`${API_URL}/office-info`)
+      .then((r) => r.json())
+      .then(setOfficeInfo)
+      .catch((err) => console.error("Error fetching office info:", err));
+  }, []);
+
+  // Render multi-line office location (newlines stored as \n in the DB)
+  const renderLocation = (text) => {
+    if (!text) return null;
+    return text.split("\n").map((line, i) => (
+      <span key={i}>{line}{i < text.split("\n").length - 1 && <br />}</span>
+    ));
+  };
+
   return (
     <div className="landing">
 
@@ -34,29 +53,20 @@ function Home() {
       </section>
 
       {/* SECTION: MAPA */}
-      <section className="landing__map"> 
-
+      <section className="landing__map">
         <div className="landing__map-text">
           <h2>Explora nuestro Mapa Interactivo de Monitoreo de Deslizamientos</h2>
           <p>
-            Herramienta interactiva que muestra, en tiempo real, datos de saturación del suelo, 
+            Herramienta interactiva que muestra, en tiempo real, datos de saturación del suelo,
             susceptibilidad a deslizamientos y estimaciones de precipitación en Puerto Rico.
           </p>
-          <a className="landing__map-link">
-            ¡Haz clic en el mapa!
-          </a>
+          <a className="landing__map-link">¡Haz clic en el mapa!</a>
         </div>
 
         <Link to="/mapa-interactivo">
-          <img
-            className="landing__map-image"
-            src={mapPreview}
-            alt="Mapa interactivo"
-            loading="lazy"
-          />
+          <img className="landing__map-image" src={mapPreview} alt="Mapa interactivo" loading="lazy" />
         </Link>
       </section>
-
 
       {/* SECTION: REPORTAR */}
       <section className="landing__report">
@@ -66,69 +76,63 @@ function Home() {
             Ayúdanos a mejorar el monitoreo reportando deslizamientos que observes
             en tu área. Tu apoyo puede brindar ayuda para la comunidad.
           </p>
-          <a href="/reportar" className="btn--black">
-            ¡Haz tu Reporte!
-          </a>
+          <a href="/reportar" className="btn--black">¡Haz tu Reporte!</a>
         </div>
         <div className="landing__report-image-wrapper">
-          <img
-            src={landslidePhoto}
-            alt="Ejemplo de deslizamiento"
-            className="landing__report-image"
-            loading="lazy"
-          />
+          <img src={landslidePhoto} alt="Ejemplo de deslizamiento" className="landing__report-image" loading="lazy" />
         </div>
       </section>
-
 
       {/* SECTION: NOTICIA */}
       <section className="landing__featured-news">
         <div className="landing__featured-news-image-wrapper">
-          <img
-            className="landing__featured-news-image"
-            src={newsImage}
-            alt="Deslizamiento en Alturas de Bélgica"
-            loading="lazy"
-          />
+          <img className="landing__featured-news-image" src={newsImage} alt="Deslizamiento en Alturas de Bélgica" loading="lazy" />
         </div>
-
         <div className="landing__featured-news-text">
           <h2>Noticia Destacada:</h2>
           <h3>Alturas de Bélgica, Guánica, PR</h3>
           <p className="landing__featured-news-date">Junio 2024 - Septiembre 2024</p>
-          <p>
-            Vea a continuación el lapso de tiempo más reciente del deslizamiento de tierra en Alturas de Bélgica, Guánica, PR.
-          </p>
-          <p>
-            This project is an effort of the Puerto Rico Landslide Hazard Mitigation Office and the NSF Collaborative Center for Landslide Geohazards.
-          </p>
-          <img
-            className="landing__featured-news-logo"
-            src={CCFLHLogo}
-            alt="Collaborative Center for Landslide Geohazards"
-          />
+          <p>Vea a continuación el lapso de tiempo más reciente del deslizamiento de tierra en Alturas de Bélgica, Guánica, PR.</p>
+          <p>This project is an effort of the Puerto Rico Landslide Hazard Mitigation Office and the NSF Collaborative Center for Landslide Geohazards.</p>
+          <img className="landing__featured-news-logo" src={CCFLHLogo} alt="Collaborative Center for Landslide Geohazards" />
         </div>
       </section>
 
-
-      {/* SECTION: CONTACTO */}
+      {/* SECTION: CONTACTO — driven by office_info table */}
       <section id="contact" className="landing__contact">
         <div className="landing__contact-text">
           <h2>Contáctenos</h2>
           <hr />
-          <p>
-            <strong>Email:</strong><br />
-            slidespr@uprm.edu
-          </p>
-          <p>
-            <strong>Teléfono:</strong><br />
-            787-832-4040 Ext. 6844
-          </p>
-          <p>
-            <strong>Oficina:</strong><br />
-            Residencia 4B<br />
-            Universidad de Puerto Rico, Recinto de Mayagüez
-          </p>
+          {officeInfo ? (
+            <>
+              {officeInfo.email && (
+                <p>
+                  <strong>Email:</strong><br />
+                  <a href={`mailto:${officeInfo.email}`} style={{ color: "inherit" }}>
+                    {officeInfo.email}
+                  </a>
+                </p>
+              )}
+              {officeInfo.phone && (
+                <p>
+                  <strong>Teléfono:</strong><br />
+                  {officeInfo.phone}{officeInfo.phone_ext ? ` ${officeInfo.phone_ext}` : ""}
+                </p>
+              )}
+              {officeInfo.office_location && (
+                <p>
+                  <strong>Oficina:</strong><br />
+                  {renderLocation(officeInfo.office_location)}
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <p><strong>Email:</strong><br />slidespr@uprm.edu</p>
+              <p><strong>Teléfono:</strong><br />787-832-4040 Ext. 6844</p>
+              <p><strong>Oficina:</strong><br />Residencia 4B<br />Universidad de Puerto Rico, Recinto de Mayagüez</p>
+            </>
+          )}
         </div>
         <div className="landing__contact-image-wrapper">
           <img className="landing__contact-image" src={officeImage} alt="Rótulo de oficina" loading="lazy" />

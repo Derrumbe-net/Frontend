@@ -54,124 +54,165 @@ const Disclaimer = ({ onAgree }) => {
 };
 
 const CtrlZoomHandler = ({ setShowZoomHint }) => {
-  const map = useMap();
+    const map = useMap();
+    const timeoutRef = useRef(null);
+    const lastShownRef = useRef(0);
 
-  const timeoutRef = useRef(null);
-  const lastShownRef = useRef(0);
+    useEffect(() => {
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) return;
 
-  useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    if (isMobile) return;
+        const container = map.getContainer();
 
-    const container = map.getContainer();
+        const handleWheel = (e) => {
+            const now = Date.now();
 
-    const handleWheel = (e) => {
-      const now = Date.now();
+            if (e.ctrlKey) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -1 : 1;
+                map.setZoom(map.getZoom() + delta);
+                return;
+            }
 
-      if (e.ctrlKey) {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? -1 : 1;
-        map.setZoom(map.getZoom() + delta);
-        return;
-      }
+            if (now - lastShownRef.current > 30000) {
+                lastShownRef.current = now;
+                setShowZoomHint(true);
 
-      if (now - lastShownRef.current > 30000) {
-        lastShownRef.current = now;
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
-        setShowZoomHint(true);
+                timeoutRef.current = setTimeout(() => {
+                    setShowZoomHint(false);
+                }, 2500);
+            }
+        };
 
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        container.addEventListener("wheel", handleWheel, { passive: false });
 
-        timeoutRef.current = setTimeout(() => {
-          setShowZoomHint(false);
-        }, 2500);
-      }
-    };
+        return () => {
+            container.removeEventListener("wheel", handleWheel);
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, [map, setShowZoomHint]);
 
-    container.addEventListener("wheel", handleWheel, { passive: false });
-
-    return () => {
-      container.removeEventListener("wheel", handleWheel);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, [map, setShowZoomHint]);
-
-  return null;
+    return null;
 };
 
 const TimeControlBar = ({
-  startTime,
-  endTime,
-  currentTime,
-  isPlaying,
-  onTogglePlay,
-  onSeek,
-  setIsDragging,
-  setIsPlaying
+    startTime,
+    endTime,
+    currentTime,
+    isPlaying,
+    onTogglePlay,
+    onSeek,
+    setIsDragging,
+    setIsPlaying
 }) => {
+    const map = useMap();
+    const containerRef = useRef(null);
 
-  const map = useMap();
+    // Disable ALL Leaflet pointer interception on the slider container.
+    // L.DomEvent.disableClickPropagation only stops clicks — we must also
+    // block pointerdown/mousedown at the DOM level so Leaflet never starts a
+    // map-drag when the user presses down on the slider thumb or track.
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        L.DomEvent.disableClickPropagation(el);
+        L.DomEvent.disableScrollPropagation(el);
+        const stopAll = (e) => e.stopPropagation();
+        el.addEventListener('pointerdown', stopAll);
+        el.addEventListener('mousedown',   stopAll);
+        el.addEventListener('touchstart',  stopAll, { passive: false });
+        el.addEventListener('touchmove',   stopAll, { passive: false });
+        return () => {
+            el.removeEventListener('pointerdown', stopAll);
+            el.removeEventListener('mousedown',   stopAll);
+            el.removeEventListener('touchstart',  stopAll);
+            el.removeEventListener('touchmove',   stopAll);
+        };
+    }, []);
 
-  const formatTime = (ts) => {
-    if (!ts) return "--:--";
-    return new Date(ts).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
+    const formatTime = (ts) => {
+        if (!ts) return "--:--";
+        return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
 
-  const handlePointerDown = (e) => {
-    e.stopPropagation();
-    setIsDragging(true);
-    setIsPlaying(false);
-    map.dragging.disable();
-  };
+    const isDraggingRef = useRef(false);
+    const [dragValue, setDragValue] = useState(null);
+    const displayTime = dragValue !== null ? dragValue : currentTime;
 
-  const handlePointerUp = (e) => {
-    e.stopPropagation();
-    setIsDragging(false);
-    setIsPlaying(true);
-    map.dragging.enable();
-  };
+    // Temporarily disable map dragging and pause animation while the slider is being used
+    const startDrag = (val) => {
+        isDraggingRef.current = true;
+        if (setIsDragging) setIsDragging(true);
+        if (setIsPlaying) setIsPlaying(false);
+        setDragValue(val ?? currentTime);
+        if (map) map.dragging.disable();
+    };
 
-  return (
-    <div
-      className="time-control-bar"
-      onPointerDown={(e) => e.stopPropagation()}
-      onPointerUp={(e) => e.stopPropagation()}
-    >
-      <button
-        className="play-pause-btn"
-        onClick={onTogglePlay}
-        title={isPlaying ? "Pause Animation" : "Play Animation"}
-      >
-        {isPlaying ? "❚❚" : "▶"}
-      </button>
+    const commitDrag = (val) => {
+        isDraggingRef.current = false;
+        if (setIsDragging) setIsDragging(false);
+        if (setIsPlaying) setIsPlaying(true);
+        setDragValue(null);
+        if (map) map.dragging.enable();
+        onSeek(val);
+    };
 
-      <div className="time-slider-wrapper">
-        <div className="time-labels">
-          <span>{formatTime(startTime)}</span>
-          <span className="current-time-label">
-            {formatTime(currentTime)}
-          </span>
-          <span>{formatTime(endTime)}</span>
+    const handleMouseDown = () => startDrag(currentTime);
+
+    const handleChange = (e) => {
+        const val = Number(e.target.value);
+        if (isDraggingRef.current) {
+            setDragValue(val); // visual only — no radar request
+        } else {
+            setDragValue(null);
+            onSeek(val);
+        }
+    };
+
+    const handleMouseUp = (e) => {
+        if (isDraggingRef.current) commitDrag(Number(e.target.value));
+    };
+
+    const handleTouchStart = () => startDrag(currentTime);
+
+    const handleTouchEnd = (e) => {
+        if (isDraggingRef.current) commitDrag(Number(e.target.value));
+    };
+
+    return (
+        <div className="time-control-bar" ref={containerRef}>
+            <button
+                className="play-pause-btn"
+                onClick={onTogglePlay}
+                title={isPlaying ? "Pause Animation" : "Play Animation"}
+            >
+                {isPlaying ? "❚❚" : "▶"}
+            </button>
+
+            <div className="time-slider-wrapper">
+                <div className="time-labels">
+                    <span>{formatTime(startTime)}</span>
+                    <span className="current-time-label">{formatTime(displayTime)}</span>
+                    <span>{formatTime(endTime)}</span>
+                </div>
+                <input
+                    type="range"
+                    className="time-slider-input"
+                    min={startTime}
+                    max={endTime}
+                    step={STEP_SIZE}
+                    value={displayTime}
+                    onChange={handleChange}
+                    onMouseDown={handleMouseDown}
+                    onMouseUp={handleMouseUp}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                />
+            </div>
         </div>
-
-        <input
-          type="range"
-          className="time-slider-input"
-          min={startTime}
-          max={endTime}
-          step={STEP_SIZE}
-          value={currentTime}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          onChange={(e) => onSeek(Number(e.target.value))}
-        />
-      </div>
-    </div>
-  );
+    );
 };
 
 const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTime}) => {
@@ -187,9 +228,12 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
             errorTileUrl: '', // Optional: hides the broken image icon if a tile is missing
         }).addTo(map);
 
-        const municipalities = EL.featureLayer({
-            url: 'https://services5.arcgis.com/TQ9qkk0dURXSP7LQ/arcgis/rest/services/LIMITES_LEGALES_MUNICIPIOS/FeatureServer/0',
-            style: () => ({ color: 'black', weight: 1, fillOpacity: 0 }),
+        // Use dynamicMapLayer instead of featureLayer to avoid per-pan feature queries.
+        // featureLayer re-queries the FeatureServer on every map move/zoom.
+        const municipalities = EL.dynamicMapLayer({
+            url: 'https://services5.arcgis.com/TQ9qkk0dURXSP7LQ/arcgis/rest/services/LIMITES_LEGALES_MUNICIPIOS/MapServer',
+            opacity: 1,
+            f: 'image',
         }).addTo(map);
 
         return () => {
@@ -224,12 +268,18 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
         };
     }, [map, showForecast]);
 
+    // Debounce radar time updates: waits 500ms after last tick before sending
+    // a request to the NOAA ImageServer — prevents one request per animation frame.
     useEffect(() => {
-        if (showForecast && radarLayerRef.current && currentTime) {
-            const end = currentTime;
-            const start = end - STEP_SIZE;
-            radarLayerRef.current.setTimeRange(new Date(start), new Date(end));
-        }
+        if (!showForecast || !radarLayerRef.current || !currentTime) return;
+        const timer = setTimeout(() => {
+            if (radarLayerRef.current) {
+                const end = currentTime;
+                const start = end - STEP_SIZE;
+                radarLayerRef.current.setTimeRange(new Date(start), new Date(end));
+            }
+        }, 500);
+        return () => clearTimeout(timer);
     }, [currentTime, showForecast]);
 
 
@@ -268,6 +318,9 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
 const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast }) => {
     const [stations, setStations] = useState([]);
     const initialSyncDone = useRef(false);
+    // Keep a ref to stations so the heartbeat can read latest data
+    // without needing stations in its dependency array
+    const stationsRef = useRef([]);
 
     const fetchStations = () => {
         fetch(BASE_STATIONS_URL)
@@ -275,7 +328,10 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 if (!response.ok) throw new Error(`Error: ${response.status}`);
                 return response.json();
             })
-            .then((data) => setStations(data))
+            .then((data) => {
+                setStations(data);
+                stationsRef.current = data;
+            })
             .catch((err) => console.error("API Fetch Error:", err));
     };
 
@@ -318,10 +374,13 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
     };
 
     // --- HEARTBEAT LOGIC ---
+    // Uses stationsRef so the interval is registered only ONCE and never
+    // torn down / re-created on every stations state update.
     useEffect(() => {
-        if (stations.length === 0) return;
-
         const checkDataConsistency = async () => {
+            const currentStations = stationsRef.current;
+            if (currentStations.length === 0) return;
+
             console.log("Heartbeat: Checking data consistency...");
             try {
                 const response = await fetch(BASE_FILES_DATA_URL);
@@ -329,22 +388,18 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 
                 const filesData = await response.json();
                 const batchPayload = [];
-
                 const localUpdates = {};
 
                 filesData.forEach(fileRecord => {
-                    const station = stations.find(s => s.station_id === fileRecord.station_id);
-
+                    const station = currentStations.find(s => s.station_id === fileRecord.station_id);
                     if (station && fileRecord.data) {
                         const metrics = calculateMetricsFromRawData(fileRecord.data, station);
-
                         if (metrics) {
                             batchPayload.push({
                                 station_id: station.station_id,
                                 precipitation: metrics.calculatedPrecip,
                                 soil_saturation: metrics.calculatedSaturation
                             });
-
                             localUpdates[station.station_id] = {
                                 precipitation: metrics.calculatedPrecip,
                                 soil_saturation: metrics.calculatedSaturation
@@ -361,32 +416,38 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                     });
                     console.log(`Heartbeat: Updated ${batchPayload.length} stations.`);
 
-                    setStations(prevStations => prevStations.map(s => {
-                        if (localUpdates[s.station_id]) {
-                            return {
-                                ...s,
-                                ...localUpdates[s.station_id],
-                                last_updated: new Date().toISOString() // Update timestamp locally
-                            };
-                        }
-                        return s;
-                    }));
+                    setStations(prevStations => {
+                        const updated = prevStations.map(s => {
+                            if (localUpdates[s.station_id]) {
+                                return { ...s, ...localUpdates[s.station_id], last_updated: new Date().toISOString() };
+                            }
+                            return s;
+                        });
+                        stationsRef.current = updated;
+                        return updated;
+                    });
                 }
-
             } catch (error) {
                 console.error("Error performing batch update:", error);
             }
         };
 
-        if (!initialSyncDone.current) {
-            checkDataConsistency();
-            initialSyncDone.current = true;
-        }
+        // Delay initial sync slightly to ensure fetchStations has populated stationsRef
+        const initTimer = setTimeout(() => {
+            if (!initialSyncDone.current) {
+                checkDataConsistency();
+                initialSyncDone.current = true;
+            }
+        }, 2000);
 
-        const interval = setInterval(checkDataConsistency, 300000); // 300,000 ms = 5 mins
+        // Register interval once — never torn down by state changes
+        const interval = setInterval(checkDataConsistency, 300000); // 5 mins
 
-        return () => clearInterval(interval);
-    }, [stations]);
+        return () => {
+            clearTimeout(initTimer);
+            clearInterval(interval);
+        };
+    }, []); // Empty deps: stable interval, reads fresh data via stationsRef
 
     /** SOIL SATURATION ICON **/
     const createSaturationIcon = (saturation, lastUpdated) => {
@@ -528,6 +589,9 @@ const createLandslideIcon = () => {
 const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
     const [allLandslides, setAllLandslides] = useState([]);
     const customIcon = createLandslideIcon();
+    // Stable ref so the fetch effect runs exactly once regardless of parent re-renders
+    const setAvailableYearsRef = useRef(setAvailableYears);
+    useEffect(() => { setAvailableYearsRef.current = setAvailableYears; }, [setAvailableYears]);
 
     useEffect(() => {
         fetch(BASE_LANDSLIDES_URL)
@@ -549,12 +613,12 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
                     .filter(year => !isNaN(year) && year !== null)
                     .sort((a, b) => b - a);
 
-                setAvailableYears(uniqueYears);
+                setAvailableYearsRef.current(uniqueYears);
             })
             .catch((err) => {
                 console.error("API Fetch Error:", err);
             });
-    }, [setAvailableYears]);
+    }, []); // Run once on mount — setAvailableYears is accessed via ref
 
     const filteredLandslides = allLandslides.filter(landslide => {
         if (selectedYear === 'all') {
@@ -784,7 +848,8 @@ export default function InteractiveMap() {
 
     const [radarTimeRange] = useState({ start: roundedStart, end: roundedEnd });
     const [currentTime, setCurrentTime] = useState(roundedStart);
-    const [isPlaying, setIsPlaying] = useState(true);
+  
+    const [isPlaying, setIsPlaying] = useState(false); // Start paused — user initiates playback
     const [isDragging, setIsDragging] = useState(false);
 
     useEffect(() => {
@@ -949,7 +1014,7 @@ export default function InteractiveMap() {
                 zoom={isMobile ? 8 : 10}
                 minZoom={7}
                 maxZoom={18}
-                scrollWheelZoom={false}
+                scrollWheelZoom={true}
                 zoomControl={false}
                 style={{ height: '100vh', width: '100%' }}
             >
