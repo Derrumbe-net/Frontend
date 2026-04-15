@@ -29,3 +29,5 @@ composer.lock
 composer.phar
 
 coverage/
+
+.env
