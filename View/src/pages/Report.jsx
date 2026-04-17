@@ -279,6 +279,7 @@ function Report() {
     if (!form.pueblo) errors.push("Pueblo");
     if (!form.date) errors.push("Fecha");
     if (!coords) errors.push("Ubicación (Coordenadas)");
+    if (files.length === 0) errors.push("Foto/Video");
 
     if (errors.length > 0) {
       setMessage({ type: "error", text: `Faltan campos requeridos: ${errors.join(", ")}` });
@@ -409,7 +410,7 @@ function Report() {
         </div>
 
         <div className="form-row">
-          <label>Añadir Foto/Video <small style={{color: '#666'}}>(Opcional)</small>:</label>
+          <label> Añadir Foto/Video <small style={{color: '#d9534f'}}>*</small>:</label>
           <div className="dropzone" ref={dropRef}>
             <div className="dropzone__hint">
               <span className="drop-cloud">☁️</span>

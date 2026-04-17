@@ -97,6 +97,41 @@ const CtrlZoomHandler = ({ setShowZoomHint }) => {
     return null;
 };
 
+const MobileTouchHandler = () => {
+    const map = useMap();
+
+    useEffect(() => {
+        const isMobile = window.innerWidth < 768;
+        if (!isMobile) return;
+
+        const container = map.getContainer();
+
+        const handleTouchStart = (e) => {
+            if (e.touches.length === 2) {
+                // Two fingers → disable map drag so page can scroll
+                map.dragging.disable();
+            } else {
+                // One finger → map pans normally
+                map.dragging.enable();
+            }
+        };
+
+        const handleTouchEnd = () => {
+            map.dragging.enable();
+        };
+
+        container.addEventListener("touchstart", handleTouchStart, { passive: true });
+        container.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+        return () => {
+            container.removeEventListener("touchstart", handleTouchStart);
+            container.removeEventListener("touchend", handleTouchEnd);
+        };
+    }, [map]);
+
+    return null;
+};
+
 const TimeControlBar = ({
     startTime,
     endTime,
@@ -110,10 +145,6 @@ const TimeControlBar = ({
     const map = useMap();
     const containerRef = useRef(null);
 
-    // Disable ALL Leaflet pointer interception on the slider container.
-    // L.DomEvent.disableClickPropagation only stops clicks — we must also
-    // block pointerdown/mousedown at the DOM level so Leaflet never starts a
-    // map-drag when the user presses down on the slider thumb or track.
     useEffect(() => {
         const el = containerRef.current;
         if (!el) return;
@@ -138,22 +169,27 @@ const TimeControlBar = ({
     };
 
     const isDraggingRef = useRef(false);
+    const wasPlayingRef = useRef(false); // ← remember pre-drag play state
+    const dragValueRef = useRef(null);   // ← track drag value for touch
     const [dragValue, setDragValue] = useState(null);
     const displayTime = dragValue !== null ? dragValue : currentTime;
 
-    // Temporarily disable map dragging and pause animation while the slider is being used
     const startDrag = (val) => {
         isDraggingRef.current = true;
+        wasPlayingRef.current = isPlaying; // ← capture current play state
         if (setIsDragging) setIsDragging(true);
-        if (setIsPlaying) setIsPlaying(false);
-        setDragValue(val ?? currentTime);
+        if (setIsPlaying) setIsPlaying(false); // pause during drag
+        const startVal = val ?? currentTime;
+        dragValueRef.current = startVal;
+        setDragValue(startVal);
         if (map) map.dragging.disable();
     };
 
     const commitDrag = (val) => {
         isDraggingRef.current = false;
         if (setIsDragging) setIsDragging(false);
-        if (setIsPlaying) setIsPlaying(true);
+        if (setIsPlaying) setIsPlaying(wasPlayingRef.current); // ← restore pre-drag state
+        dragValueRef.current = null;
         setDragValue(null);
         if (map) map.dragging.enable();
         onSeek(val);
@@ -164,8 +200,10 @@ const TimeControlBar = ({
     const handleChange = (e) => {
         const val = Number(e.target.value);
         if (isDraggingRef.current) {
-            setDragValue(val); // visual only — no radar request
+            dragValueRef.current = val;
+            setDragValue(val);
         } else {
+            dragValueRef.current = null;
             setDragValue(null);
             onSeek(val);
         }
@@ -177,8 +215,10 @@ const TimeControlBar = ({
 
     const handleTouchStart = () => startDrag(currentTime);
 
-    const handleTouchEnd = (e) => {
-        if (isDraggingRef.current) commitDrag(Number(e.target.value));
+    const handleTouchEnd = () => {
+        if (isDraggingRef.current) {
+            commitDrag(dragValueRef.current ?? currentTime); // ← use ref, not e.target.value
+        }
     };
 
     return (
@@ -705,25 +745,45 @@ const SusceptibilityLegend = () => (
     </div>
 );
 
-const PrecipLegend = () => (
-    <div className="legend-container legend-precipitation legend-scrollable" >
-        <div className="legend-title">Precipitation (inches)</div>
-        {[
-            ["#9FEAFF", "0.01 - 0.05"], ["#7FD6FF", "0.05 - 0.10"], ["#5FC2FF", "0.10 - 0.15"], ["#0099FF", "0.15 - 0.20"],
-            ["#00CC00", "0.20 - 0.40"], ["#00B200", "0.40 - 0.60"], ["#009900", "0.60 - 0.80"], ["#007F00", "0.80 - 1.00"],
-            ["#FFFF66", "1.00 - 1.25"], ["#FFD24D", "1.25 - 1.50"], ["#FFB733", "1.50 - 1.75"], ["#FF9900", "1.75 - 2.00"],
-            ["#FF6600", "2.00 - 2.50"], ["#FF3300", "2.50 - 3.00"], ["#CC0000", "3.00 - 3.50"], ["#FF3399", "3.50 - 4.00"],
-            ["#FF00FF", "4.00 - 4.50"], ["#CC00CC", "4.50 - 5.00"], ["#990099", "5.00 - 5.50"], ["#660066", "5.50 - 6.00"],
-            ["#330033", "6.00 - 6.50"], ["#3333FF", "6.50 - 7.00"], ["#0000CC", "7.00 - 8.00"], ["#000066", "Above 8.00"],
-        ].map(([color, label]) => (
-            <div className="legend-item" key={label}>
-                <span className="legend-color-box" style={{background: color}}></span>
-                <p>{label}</p>
-            </div>
-        ))}
-    </div>
-);
+const PrecipLegend = () => {
+    const ref = useRef(null);
 
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+
+        const stopProp = (e) => e.stopPropagation();
+
+        el.addEventListener("touchstart", stopProp, { passive: false });
+        el.addEventListener("touchmove", stopProp, { passive: false });
+        el.addEventListener("wheel", stopProp, { passive: false });
+
+        return () => {
+            el.removeEventListener("touchstart", stopProp);
+            el.removeEventListener("touchmove", stopProp);
+            el.removeEventListener("wheel", stopProp);
+        };
+    }, []);
+
+    return (
+        <div ref={ref} className="legend-container legend-precipitation legend-scrollable">
+            <div className="legend-title">Precipitation (inches)</div>
+            {[
+                ["#9FEAFF", "0.01 - 0.05"], ["#7FD6FF", "0.05 - 0.10"], ["#5FC2FF", "0.10 - 0.15"], ["#0099FF", "0.15 - 0.20"],
+                ["#00CC00", "0.20 - 0.40"], ["#00B200", "0.40 - 0.60"], ["#009900", "0.60 - 0.80"], ["#007F00", "0.80 - 1.00"],
+                ["#FFFF66", "1.00 - 1.25"], ["#FFD24D", "1.25 - 1.50"], ["#FFB733", "1.50 - 1.75"], ["#FF9900", "1.75 - 2.00"],
+                ["#FF6600", "2.00 - 2.50"], ["#FF3300", "2.50 - 3.00"], ["#CC0000", "3.00 - 3.50"], ["#FF3399", "3.50 - 4.00"],
+                ["#FF00FF", "4.00 - 4.50"], ["#CC00CC", "4.50 - 5.00"], ["#990099", "5.00 - 5.50"], ["#660066", "5.50 - 6.00"],
+                ["#330033", "6.00 - 6.50"], ["#3333FF", "6.50 - 7.00"], ["#0000CC", "7.00 - 8.00"], ["#000066", "Above 8.00"],
+            ].map(([color, label]) => (
+                <div className="legend-item" key={label}>
+                    <span className="legend-color-box" style={{background: color}}></span>
+                    <p>{label}</p>
+                </div>
+            ))}
+        </div>
+    );
+};
 
 export default function InteractiveMap() {
     const center = [18.220833, -66.420149];
@@ -886,8 +946,8 @@ export default function InteractiveMap() {
         setShowStations(newValue);
 
         if (newValue) {
-            // Stations turned ON → Landslides OFF
-            setSelectedYear(null);
+            // Stations turned ON → clear any selected year
+            setSelectedYear("");
 
             // Default station display
             setShowSaturation(true);
@@ -897,33 +957,24 @@ export default function InteractiveMap() {
             setShowSaturationLegend(true);
             setShowPrecipLegend(false);
             setShowSusceptibilityLegend(false);
-
-            // Disable other overlays
-            setShowPrecip(false);
-            setShowSusceptibility(false);
         }
     };
-
 
     const togglePrecip = () => setShowPrecip(v => !v);
     const toggleSusceptibility = () => setShowSusceptibility(v => !v);
 
-    // Mutually Exclusive Toggles for Station Data
+    // Mutually Exclusive Toggles for Station Data (radio behavior)
     const toggleSaturation = () => {
-        if (showSaturation) {
-            setShowSaturation(false);
-        } else {
-            setShowSaturation(true);
-            setShowPrecip12hr(false);
-        }
+        setSelectedYear("");
+        setShowStations(true);
+        setShowSaturation(true);
+        setShowPrecip12hr(false);
     };
     const togglePrecip12hr = () => {
-        if (showPrecip12hr) {
-            setShowPrecip12hr(false);
-        } else {
-            setShowPrecip12hr(true);
-            setShowSaturation(false);
-        }
+        setSelectedYear("");
+        setShowStations(true);
+        setShowPrecip12hr(true);
+        setShowSaturation(false);
     };
 
     const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
@@ -931,36 +982,25 @@ export default function InteractiveMap() {
     const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
     const toggleForecast = () => setShowForecast(v => !v);
 
-   const handleYearChange = (year) => {
+    const handleYearChange = (year) => {
         setSelectedYear(year);
 
         if (year) {
-            // Disable station layers
             setShowStations(false);
             setShowSaturation(false);
             setShowPrecip12hr(false);
-
-            // Disable station legends
             setShowSaturationLegend(false);
             setShowPrecipLegend(false);
-
-            // Disable overlays irrelevant to Landslide mode
-            setShowPrecip(false);
-            setShowSusceptibility(false);
-            setShowSusceptibilityLegend(false);
-
         } else {
-            // Return to default station mode
             setShowStations(true);
             setShowSaturation(true);
-            setShowPrecip12hr(true);
+            setShowPrecip12hr(false);
 
             setShowSaturationLegend(true);
             setShowSusceptibilityLegend(false);
             setShowPrecipLegend(false);
         }
     };
-
 
     const resetLayers = () => {
         setShowStations(false);
@@ -970,19 +1010,18 @@ export default function InteractiveMap() {
         setShowSaturation(false);
         setShowPrecip12hr(false);
 
-        // Reset legends
         setShowSaturationLegend(false);
         setShowSusceptibilityLegend(false);
         setShowPrecipLegend(false);
     };
 
     const resetToDefault = () => {
+        setShowStations(true);
         setShowSaturation(true);
-        setShowStations(true); 
+        setShowPrecip12hr(false);
         setShowPrecip(false);
         setShowSusceptibility(false);
-        setShowForecast(true);
-        setShowPrecip12hr(true);
+        setShowForecast(false);
 
         setShowSaturationLegend(true);
         setShowSusceptibilityLegend(false);
@@ -1032,6 +1071,7 @@ export default function InteractiveMap() {
                 )} 
 
                 <CtrlZoomHandler setShowZoomHint={setShowZoomHint} hasShownZoomHint={hasShownZoomHint} />
+                <MobileTouchHandler />
 
                 <MapMenu
                     showStations={showStations} onToggleStations={toggleStations}

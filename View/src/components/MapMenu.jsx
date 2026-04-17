@@ -35,8 +35,8 @@ export default function MapMenu({
 
     const toggleLayers = () =>
         setActiveMenu(prev => (prev === "layers" ? null : "layers"));
-    const toggleSettings = () =>
-        setActiveMenu(prev => (prev === "settings" ? null : "settings"));
+    // const toggleSettings = () =>
+    //     setActiveMenu(prev => (prev === "settings" ? null : "settings"));
     const toggleHistory = () =>
         setActiveMenu(prev => (prev === "history" ? null : "history"));
 
@@ -201,12 +201,9 @@ export default function MapMenu({
                             type="checkbox"
                             checked={selectedYear === "all"}
                             onChange={() => {
-                                // If turning on: clear layers
                                 if (selectedYear !== "all") {
-                                    resetLayers();
                                     onYearChange("all");
                                 } else {
-                                    // Turning off "all"
                                     onYearChange("");
                                     resetToDefault();
                                 }
@@ -222,7 +219,6 @@ export default function MapMenu({
                                 checked={selectedYear === String(year)}
                                 onChange={() => {
                                     if (selectedYear !== String(year)) {
-                                        resetLayers();
                                         onYearChange(String(year));
                                     } else {
                                         // Unchecking current year

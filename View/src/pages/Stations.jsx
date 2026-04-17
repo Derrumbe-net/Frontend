@@ -15,6 +15,8 @@ const getSensorImageUrl = (stationId) => `${BASE_STATIONS_URL}/${stationId}/imag
 
 const getDataImageUrl = (stationId) => `${BASE_STATIONS_URL}/${stationId}/image/data`;
 
+const isMobile = window.innerWidth < 768;
+
 /* --- MAP ICONS --- */
 const createSaturationIcon = (saturation) => {
     let className = "map-marker saturation";
@@ -242,7 +244,7 @@ function Stations() {
                     <div className="map-wrapper">
                         <MapContainer
                             center={[18.220833, -66.420149]}
-                            zoom={9.3}
+                            zoom={isMobile ? 8.3 : 9.3}
                             style={{ height: "100%", width: "100%" }}
                             zoomControl={false}
                             scrollWheelZoom={false}
@@ -361,8 +363,6 @@ function Stations() {
             {/* --- FOOTER: 2 COLUMNS --- */}
             <div className="stations-footer">
                 <div className="footer-layout-wrapper">
-
-                    {/* LEFT COL: All Text Information */}
                     <div className="footer-text-column">
                         <h2>Sensores y equipos de la estación</h2>
                         <p>
@@ -374,42 +374,41 @@ function Stations() {
                         <p>
                             Los sensores sobre el suelo miden la temperatura del aire, la presión barométrica y la lluvia. Cada estación está controlada por un registrador de datos que recopila datos cada 5 minutos y transmite datos cada hora a través de un módem celular a nuestro servidor local entre las 7:00 y las 20:00 AST. Debido a que las estaciones funcionan con energía solar y batería, los datos generalmente no se transmiten durante la noche para ahorrar energía.
                         </p>
-
-                        <h2 className="secondary-footer-header">Datos de la estación</h2>
-                        <p>
-                            Los datos medidos incluyen el contenido volumétrico de agua, la succión del suelo, el nivel de agua subterránea, la temperatura del suelo, la temperatura del aire, la presión barométrica y la lluvia.
-                        </p>
-
-                        <ul className="glossary-list">
-                            <li>
-                                <strong>El contenido volumétrico de agua (VWC)</strong> es la relación entre el volumen de agua y el volumen total del suelo. Los valores normalmente no superan los 0,5 cm³/cm³. El contenido volumétrico de agua se puede utilizar para calcular la saturación del suelo.
-                            </li>
-                            <li>
-                                <strong>La succión del suelo</strong> es la presión negativa de los poros dentro del suelo. Cuando la presión de los poros del suelo es positiva, no hay succión. Nuestros sensores solo miden presiones negativas de hasta 0 kPa. Cuando los sensores leen ~0 kPa, la presión de los poros del suelo podría ser positiva.
-                            </li>
-                            <li>
-                                <strong>El nivel de agua subterránea del suelo</strong> se mide con un piezómetro de cuerda vibrante. El piezómetro mide la presión del agua subterránea por encima de su posición. Las unidades informadas están en centímetros de agua. Las lecturas del piezómetro se corrigen según las variaciones de presión atmosférica del barómetro sobre el suelo.
-                            </li>
-                            <li>
-                                <strong>La temperatura del suelo</strong> también se mide con nuestro instrumento piezómetro. Las unidades informadas son grados Celsius.
-                            </li>
-                            <li>
-                                <strong>La temperatura del aire</strong> se mide con un termómetro situado sobre la superficie. Las unidades que se indican son grados Celsius. Los valores de temperatura del aire que se indican pueden ser excesivamente altos si el sensor está expuesto directamente al sol.
-                            </li>
-                            <li>
-                                <strong>La presión atmosférica</strong> se mide con un barómetro situado sobre la superficie.
-                            </li>
-                            <li>
-                                <strong>La cantidad y la tasa de lluvia</strong> se miden con un pluviómetro de cubeta basculante. Las unidades que se indican son milímetros.
-                            </li>
-                        </ul>
                     </div>
-
-                    {/* RIGHT COL: Image Only */}
                     <div className="footer-image-column">
                         <img src={stationSchematic} alt="Esquema de sensores de la estación" className="schematic-img" />
                     </div>
+                </div>
 
+                <div className="footer-full-width">
+                    <h2 className="secondary-footer-header">Datos de la estación</h2>
+                    <p>
+                        Los datos medidos incluyen el contenido volumétrico de agua, la succión del suelo, el nivel de agua subterránea, la temperatura del suelo, la temperatura del aire, la presión barométrica y la lluvia.
+                    </p>
+
+                    <ul className="glossary-list">
+                        <li>
+                            <strong>El contenido volumétrico de agua (VWC)</strong> es la relación entre el volumen de agua y el volumen total del suelo. Los valores normalmente no superan los 0,5 cm³/cm³. El contenido volumétrico de agua se puede utilizar para calcular la saturación del suelo.
+                        </li>
+                        <li>
+                            <strong>La succión del suelo</strong> es la presión negativa de los poros dentro del suelo. Cuando la presión de los poros del suelo es positiva, no hay succión. Nuestros sensores solo miden presiones negativas de hasta 0 kPa. Cuando los sensores leen ~0 kPa, la presión de los poros del suelo podría ser positiva.
+                        </li>
+                        <li>
+                            <strong>El nivel de agua subterránea del suelo</strong> se mide con un piezómetro de cuerda vibrante. El piezómetro mide la presión del agua subterránea por encima de su posición. Las unidades informadas están en centímetros de agua. Las lecturas del piezómetro se corrigen según las variaciones de presión atmosférica del barómetro sobre el suelo.
+                        </li>
+                        <li>
+                            <strong>La temperatura del suelo</strong> también se mide con nuestro instrumento piezómetro. Las unidades informadas son grados Celsius.
+                        </li>
+                        <li>
+                            <strong>La temperatura del aire</strong> se mide con un termómetro situado sobre la superficie. Las unidades que se indican son grados Celsius. Los valores de temperatura del aire que se indican pueden ser excesivamente altos si el sensor está expuesto directamente al sol.
+                        </li>
+                        <li>
+                            <strong>La presión atmosférica</strong> se mide con un barómetro situado sobre la superficie.
+                        </li>
+                        <li>
+                            <strong>La cantidad y la tasa de lluvia</strong> se miden con un pluviómetro de cubeta basculante. Las unidades que se indican son milímetros.
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>

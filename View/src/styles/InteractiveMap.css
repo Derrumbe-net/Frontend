@@ -165,8 +165,10 @@
 /* For long precipitation legend */
 .legend-scrollable {
   max-height: 260px;
-  overflow-y: auto;
   padding-right: 5px;
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  max-height: 250px;
 }
 
 /* Scrollbar styling */
