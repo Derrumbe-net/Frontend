@@ -145,6 +145,10 @@ const TimeControlBar = ({
     const map = useMap();
     const containerRef = useRef(null);
 
+    // Disable ALL Leaflet pointer interception on the slider container.
+    // L.DomEvent.disableClickPropagation only stops clicks — we must also
+    // block pointerdown/mousedown at the DOM level so Leaflet never starts a
+    // map-drag when the user presses down on the slider thumb or track.
     useEffect(() => {
         const el = containerRef.current;
         if (!el) return;
@@ -169,27 +173,22 @@ const TimeControlBar = ({
     };
 
     const isDraggingRef = useRef(false);
-    const wasPlayingRef = useRef(false); // ← remember pre-drag play state
-    const dragValueRef = useRef(null);   // ← track drag value for touch
     const [dragValue, setDragValue] = useState(null);
     const displayTime = dragValue !== null ? dragValue : currentTime;
 
+    // Temporarily disable map dragging and pause animation while the slider is being used
     const startDrag = (val) => {
         isDraggingRef.current = true;
-        wasPlayingRef.current = isPlaying; // ← capture current play state
         if (setIsDragging) setIsDragging(true);
-        if (setIsPlaying) setIsPlaying(false); // pause during drag
-        const startVal = val ?? currentTime;
-        dragValueRef.current = startVal;
-        setDragValue(startVal);
+        if (setIsPlaying) setIsPlaying(false);
+        setDragValue(val ?? currentTime);
         if (map) map.dragging.disable();
     };
 
     const commitDrag = (val) => {
         isDraggingRef.current = false;
         if (setIsDragging) setIsDragging(false);
-        if (setIsPlaying) setIsPlaying(wasPlayingRef.current); // ← restore pre-drag state
-        dragValueRef.current = null;
+        if (setIsPlaying) setIsPlaying(true);
         setDragValue(null);
         if (map) map.dragging.enable();
         onSeek(val);
@@ -200,10 +199,8 @@ const TimeControlBar = ({
     const handleChange = (e) => {
         const val = Number(e.target.value);
         if (isDraggingRef.current) {
-            dragValueRef.current = val;
-            setDragValue(val);
+            setDragValue(val); // visual only — no radar request
         } else {
-            dragValueRef.current = null;
             setDragValue(null);
             onSeek(val);
         }
@@ -215,10 +212,8 @@ const TimeControlBar = ({
 
     const handleTouchStart = () => startDrag(currentTime);
 
-    const handleTouchEnd = () => {
-        if (isDraggingRef.current) {
-            commitDrag(dragValueRef.current ?? currentTime); // ← use ref, not e.target.value
-        }
+    const handleTouchEnd = (e) => {
+        if (isDraggingRef.current) commitDrag(Number(e.target.value));
     };
 
     return (
