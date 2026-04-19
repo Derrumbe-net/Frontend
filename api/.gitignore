@@ -1,7 +1,0 @@
-.idea
-.env
-/vendor/
-*swp
-shell.nix
-.phpunit.result.cache
-coverage-*/
