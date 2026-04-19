@@ -2,7 +2,7 @@ import { useState } from "react";
 import InteractiveMunicipalityMap from "../components/InteractiveMunicipalityMap";
 import "../styles/SusceptibilityMunicipalitiesMap.css";
 import municipalityPng from "../components/MunicipalityPNGs";
-import municipalityPdf from "../components/MunicipalityPDFs"; 
+//import municipalityPdf from "../components/MunicipalityPDFs"; 
 
 function SusceptibilityMunicipalitiesMap() {
     const [activeMunicipality, setActiveMunicipality] = useState(null);
@@ -71,7 +71,7 @@ function MunicipalityModal({ municipality, onClose }) {
     const name = municipality.name;
     
     const imagePreview = municipalityPng[name];
-    const pdfFile = municipalityPdf[name];
+    //const pdfFile = municipalityPdf[name];
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -85,7 +85,7 @@ function MunicipalityModal({ municipality, onClose }) {
                 ) : (
                     <div className="no-preview">Vista previa no disponible</div>
                 )}
-
+                /*
                 <div className="modal-buttons">
                     {pdfFile ? (
                         <a
@@ -110,6 +110,7 @@ function MunicipalityModal({ municipality, onClose }) {
                         </a>
                     )}
                 </div>
+                */
             </div>
         </div>
     );

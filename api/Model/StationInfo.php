@@ -464,8 +464,7 @@ class StationInfo
 
             $sql = "UPDATE station_info SET 
                     precipitation = :precip, 
-                    soil_saturation = :sat, 
-                    last_updated = NOW() 
+                    soil_saturation = :sat 
                     WHERE station_id = :id";
 
             $stmt = $this->conn->prepare($sql);
@@ -521,8 +520,37 @@ class StationInfo
             // 3. Logic: Get the LATEST reading (last row) to update the live status
             $latestReading = end($data);
 
-            // 4. Map CSV columns to DB columns
-            // (Adjust these keys based on your actual CSV headers)
+            $timestampKey = null;
+            foreach (array_keys($latestReading) as $key) {
+                if (stripos($key, 'timestamp') !== false || stripos($key, 'timestmp') !== false) {
+                    $timestampKey = $key;
+                    break;
+                }
+            }
+
+            if (!$timestampKey && !empty($latestReading)) {
+                $timestampKey = array_key_first($latestReading);
+            }
+
+            $fileTimestamp = $latestReading[$timestampKey] ?? null;
+            $formattedLastUpdated = null;
+
+            if ($fileTimestamp) {
+                $cleanString = trim($fileTimestamp, '" ');
+                
+                try {
+                    $dateObj = new \DateTime($cleanString);
+                    $formattedLastUpdated = $dateObj->format('Y-m-d H:i:s');
+                } catch (\Exception $e) {
+                    error_log("Invalid date format in file for station $stationId: $cleanString");
+                }
+            }
+
+            if (!$formattedLastUpdated) {
+                $fallbackDate = new \DateTime('now', new \DateTimeZone('America/Puerto_Rico')); // Added backslashes
+                $formattedLastUpdated = $fallbackDate->format('Y-m-d H:i:s');
+            }
+
             $updateData = [
                 'precipitation'   => $latestReading['Rain(mm)'] ?? $latestReading['Precipitation'] ?? 0,
                 'soil_saturation' => $latestReading['SoilMoisture'] ?? $latestReading['Saturation'] ?? 0,
@@ -530,7 +558,7 @@ class StationInfo
                 'wc2'             => $latestReading['WC2'] ?? null,
                 'wc3'             => $latestReading['WC3'] ?? null,
                 'wc4'             => $latestReading['WC4'] ?? null,
-                'last_updated'    => date('Y-m-d H:i:s') // Set current time
+                'last_updated'    => $formattedLastUpdated
             ];
 
             // 5. Update the Database

@@ -27,6 +27,7 @@ class Database {
 
             try {
                 self::$conn = new PDO($dsn, $username, $password);
+                self::$conn->exec("SET time_zone = '-04:00';");
                 self::$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
                 self::$conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
             } catch (PDOException $e) {

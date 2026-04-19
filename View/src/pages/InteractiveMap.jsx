@@ -121,14 +121,14 @@ const TimeControlBar = ({
         L.DomEvent.disableScrollPropagation(el);
         const stopAll = (e) => e.stopPropagation();
         el.addEventListener('pointerdown', stopAll);
-        el.addEventListener('mousedown',   stopAll);
-        el.addEventListener('touchstart',  stopAll, { passive: false });
-        el.addEventListener('touchmove',   stopAll, { passive: false });
+        el.addEventListener('mousedown', stopAll);
+        el.addEventListener('touchstart', stopAll, { passive: false });
+        el.addEventListener('touchmove', stopAll, { passive: false });
         return () => {
             el.removeEventListener('pointerdown', stopAll);
-            el.removeEventListener('mousedown',   stopAll);
-            el.removeEventListener('touchstart',  stopAll);
-            el.removeEventListener('touchmove',   stopAll);
+            el.removeEventListener('mousedown', stopAll);
+            el.removeEventListener('touchstart', stopAll);
+            el.removeEventListener('touchmove', stopAll);
         };
     }, []);
 
@@ -215,7 +215,7 @@ const TimeControlBar = ({
     );
 };
 
-const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTime}) => {
+const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTime }) => {
     const map = useMap();
     const radarLayerRef = useRef(null);
 
@@ -303,7 +303,7 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
             susceptibilityLayer = EL.tiledMapLayer({
                 url: "https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Susceptibilidad_Derrumbe_PR/MapServer",
                 opacity: 0.5,
-                minZoom: 7, 
+                minZoom: 7,
                 maxZoom: 16
             }).addTo(map);
         }
@@ -364,7 +364,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         let avgSaturation = 0;
         if (wcRatios.length > 0) {
             const sumRatio = wcRatios.reduce((a, b) => a + b, 0);
-            avgSaturation = (sumRatio / wcRatios.length) * 100;
+            avgSaturation = Math.min((sumRatio / wcRatios.length) * 100, 100); 
         }
 
         return {
@@ -413,13 +413,12 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ stations: batchPayload })
-                    });
-                    console.log(`Heartbeat: Updated ${batchPayload.length} stations.`);
+                    });;
 
                     setStations(prevStations => {
                         const updated = prevStations.map(s => {
                             if (localUpdates[s.station_id]) {
-                                return { ...s, ...localUpdates[s.station_id], last_updated: new Date().toISOString() };
+                                return { ...s, ...localUpdates[s.station_id] };
                             }
                             return s;
                         });
@@ -469,11 +468,14 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         }
 
         let className = "saturation-marker";
-        if (saturation >= 90) className += " high";
-        else if (saturation >= 80) className += " medium";
+        
+        const cappedSaturation = Math.min(saturation, 100);
+
+        if (cappedSaturation >= 90) className += " high";
+        else if (cappedSaturation >= 80) className += " medium";
         else className += " low";
 
-        const rounded = Math.round(saturation);
+        const rounded = Math.round(cappedSaturation);
 
         return L.divIcon({
             html: `
@@ -549,7 +551,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                     icon = createForecastIcon(station.landslide_forecast);
                 }
                 else if (showSaturation && station.soil_saturation != null) {
-                    icon = createSaturationIcon(station.soil_saturation);
+                    icon = createSaturationIcon(station.soil_saturation, station.last_updated); // <-- Added parameter
                 }
                 else if (showPrecip12hr && station.precipitation != null) {
                     icon = createPrecipIcon(station.precipitation);
@@ -557,7 +559,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 else {
                     // Fallback Priorities (default view)
                     if (station.soil_saturation != null) {
-                        icon = createSaturationIcon(station.soil_saturation);
+                        icon = createSaturationIcon(station.soil_saturation, station.last_updated); // <-- Added parameter
                     }
                     else if (station.precipitation != null) {
                         icon = createPrecipIcon(station.precipitation);
@@ -650,8 +652,17 @@ const getStationStatus = (lastUpdated) => {
         };
     }
 
-    const last = new Date(lastUpdated);
+    let formattedDate = lastUpdated;
+    if (!formattedDate.includes('T')) {
+        formattedDate = formattedDate.replace(' ', 'T');
+    }
+    if (!formattedDate.includes('-04:00') && !formattedDate.includes('Z')) {
+        formattedDate += '-04:00';
+    }
+
+    const last = new Date(formattedDate);
     const now = new Date();
+    
     const diffHours = (now - last) / (1000 * 60 * 60);
 
     return {
@@ -665,15 +676,15 @@ const SoilSaturationLegend = () => (
     <div className="legend-container legend-soil-saturation">
         <div className="legend-title">Soil Saturation</div>
         <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#e0c853"}}></span>
+            <span className="legend-color-box" style={{ background: "#e0c853" }}></span>
             <p>0% - 79%</p>
         </div>
         <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#63b3ff"}}></span>
+            <span className="legend-color-box" style={{ background: "#63b3ff" }}></span>
             <p>80% – 89%</p>
         </div>
         <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#001f57"}}></span>
+            <span className="legend-color-box" style={{ background: "#001f57" }}></span>
             <p>90% - 100%</p>
         </div>
     </div>
@@ -683,23 +694,23 @@ const SusceptibilityLegend = () => (
     <div className="legend-container legend-landslide-susceptibility">
         <div className="legend-title">Landslide Susceptibility</div>
         <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#C0C0C0"}}></span>
+            <span className="legend-color-box" style={{ background: "#C0C0C0" }}></span>
             <p>Low</p>
         </div>
         <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#FFFF00"}}></span>
+            <span className="legend-color-box" style={{ background: "#FFFF00" }}></span>
             <p>Moderate</p>
         </div>
         <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#FF9900"}}></span>
+            <span className="legend-color-box" style={{ background: "#FF9900" }}></span>
             <p>High</p>
         </div>
         <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#FF0000"}}></span>
+            <span className="legend-color-box" style={{ background: "#FF0000" }}></span>
             <p>Very High</p>
         </div>
         <div className="legend-item">
-            <span className="legend-color-box" style={{background:"#0000FF"}}></span>
+            <span className="legend-color-box" style={{ background: "#0000FF" }}></span>
             <p>Exceptionally High</p>
         </div>
     </div>
@@ -717,7 +728,7 @@ const PrecipLegend = () => (
             ["#330033", "6.00 - 6.50"], ["#3333FF", "6.50 - 7.00"], ["#0000CC", "7.00 - 8.00"], ["#000066", "Above 8.00"],
         ].map(([color, label]) => (
             <div className="legend-item" key={label}>
-                <span className="legend-color-box" style={{background: color}}></span>
+                <span className="legend-color-box" style={{ background: color }}></span>
                 <p>{label}</p>
             </div>
         ))}
@@ -811,7 +822,7 @@ export default function InteractiveMap() {
         }
     }, []);
 
-    
+
     // --- EFFECT: PERSIST SETTINGS TO COOKIE ---
     useEffect(() => {
         const settingsToSave = {
@@ -848,7 +859,7 @@ export default function InteractiveMap() {
 
     const [radarTimeRange] = useState({ start: roundedStart, end: roundedEnd });
     const [currentTime, setCurrentTime] = useState(roundedStart);
-  
+
     const [isPlaying, setIsPlaying] = useState(false); // Start paused — user initiates playback
     const [isDragging, setIsDragging] = useState(false);
 
@@ -857,13 +868,13 @@ export default function InteractiveMap() {
 
         if (showForecast && isPlaying && !isDragging) {
             interval = setInterval(() => {
-            setCurrentTime(prevTime => {
-                const nextTime = prevTime + STEP_SIZE;
-                if (nextTime > radarTimeRange.end) {
-                return radarTimeRange.start;
-                }
-                return nextTime;
-            });
+                setCurrentTime(prevTime => {
+                    const nextTime = prevTime + STEP_SIZE;
+                    if (nextTime > radarTimeRange.end) {
+                        return radarTimeRange.start;
+                    }
+                    return nextTime;
+                });
             }, FRAME_SPEED);
         }
 
@@ -931,7 +942,7 @@ export default function InteractiveMap() {
     const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
     const toggleForecast = () => setShowForecast(v => !v);
 
-   const handleYearChange = (year) => {
+    const handleYearChange = (year) => {
         setSelectedYear(year);
 
         if (year) {
@@ -978,7 +989,7 @@ export default function InteractiveMap() {
 
     const resetToDefault = () => {
         setShowSaturation(true);
-        setShowStations(true); 
+        setShowStations(true);
         setShowPrecip(false);
         setShowSusceptibility(false);
         setShowForecast(true);
@@ -1025,11 +1036,11 @@ export default function InteractiveMap() {
                     attribution="Tiles © Esri"
                 />
 
-               {showZoomHint && (
-                <div className="zoom-hint">
-                    Press Ctrl + scroll to zoom
-                </div>
-                )} 
+                {showZoomHint && (
+                    <div className="zoom-hint">
+                        Press Ctrl + scroll to zoom
+                    </div>
+                )}
 
                 <CtrlZoomHandler setShowZoomHint={setShowZoomHint} hasShownZoomHint={hasShownZoomHint} />
 
@@ -1040,7 +1051,7 @@ export default function InteractiveMap() {
 
                     showSaturation={showSaturation} onToggleSaturation={toggleSaturation}
                     showPrecip12hr={showPrecip12hr} onTogglePrecip12hr={togglePrecip12hr}
-        
+
                     showSaturationLegend={showSaturationLegend} onToggleSaturationLegend={toggleSaturationLegend}
                     showSusceptibilityLegend={showSusceptibilityLegend} onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
                     showPrecipLegend={showPrecipLegend} onTogglePrecipLegend={togglePrecipLegend}
@@ -1077,7 +1088,7 @@ export default function InteractiveMap() {
                 {showForecast && (
                     <TimeControlBar
                         startTime={radarTimeRange.start}
-                        endTime={radarTimeRange.end} 
+                        endTime={radarTimeRange.end}
                         currentTime={currentTime}
                         isPlaying={isPlaying}
                         onTogglePlay={() => setIsPlaying(p => !p)}

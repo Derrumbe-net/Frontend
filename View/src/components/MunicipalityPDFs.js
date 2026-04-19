@@ -1,3 +1,4 @@
+/*
 import Adjuntas from "../assets/map_pdfs/adjuntas_UPRM_SLIDES-PR_10-mar-2021.pdf";
 import Aguada from "../assets/map_pdfs/aguada_UPRM_SLIDES-PR_23-mar-2021.pdf";
 import Aguadilla from "../assets/map_pdfs/aguadilla_UPRM_SLIDES-PR_20-OCT-2022.pdf";
@@ -68,13 +69,13 @@ import SantaIsabel from "../assets/map_pdfs/santaisabel_UPRM_SLIDES-PR_23-mar-20
 import ToaAlta from "../assets/map_pdfs/toaalta_UPRM_SLIDES-PR_04-oct-2022.pdf";
 import ToaBaja from "../assets/map_pdfs/toabaja_UPRM_SLIDES-PR_08-mar-2021.pdf";
 import TrujilloAlto from "../assets/map_pdfs/trujilloalto_UPRM_SLIDES-PR_16-mar-2021.pdf";
-import Utuado from "../assets/map_pdfs/utuado_UPRM_SLIDES-PR_17-oct-2021.pdf"; 
-import VegaAlta from "../assets/map_pdfs/vegaalta_UPRM_SLIDES-PR_14-oct-2022.pdf";
-import VegaBaja from "../assets/map_pdfs/vegabaja_UPRM_SLIDES-PR_14-oct-2022.pdf";
-import Villalba from "../assets/map_pdfs/villalba_UPRM_SLIDES-PR_27-aug-2020.pdf";
-import Yabucoa from "../assets/map_pdfs/yabucoa_UPRM_SLIDES-PR_12-feb-2021.pdf";
-import Yauco from "../assets/map_pdfs/yauco_UPRM_SLIDES-PR_19-apr-2021.pdf";
-import PuertoRicoGeneral from "../assets/map_pdfs/PuertoRico_GuiaDerrumbe_2020.pdf";
+import Utuado from "../assets/map_pdfs/utuado_UPRM_SLIDES-PR_17-oct-2021.pdf";
+//import VegaAlta from "../assets/map_pdfs/vegaalta_UPRM_SLIDES-PR_14-oct-2022.pdf";
+//import VegaBaja from "../assets/map_pdfs/vegabaja_UPRM_SLIDES-PR_14-oct-2022.pdf";
+//import Villalba from "../assets/map_pdfs/villalba_UPRM_SLIDES-PR_27-aug-2020.pdf";
+//import Yabucoa from "../assets/map_pdfs/yabucoa_UPRM_SLIDES-PR_12-feb-2021.pdf";
+//import Yauco from "../assets/map_pdfs/yauco_UPRM_SLIDES-PR_19-apr-2021.pdf";
+//import PuertoRicoGeneral from "../assets/map_pdfs/PuertoRico_GuiaDerrumbe_2020.pdf";
 
 export default {
   Adjuntas: Adjuntas,
@@ -148,10 +149,12 @@ export default {
   "Toa Baja": ToaBaja,
   "Trujillo Alto": TrujilloAlto,
   Utuado: Utuado,
-  "Vega Alta": VegaAlta,
-  "Vega Baja": VegaBaja,
-  Villalba: Villalba,
-  Yabucoa: Yabucoa,
-  Yauco: Yauco,
+  //"Vega Alta": VegaAlta,
+  //"Vega Baja": VegaBaja,
+  //Villalba: Villalba,
+  //Yabucoa: Yabucoa,
+  //Yauco: Yauco,
   "Puerto Rico": PuertoRicoGeneral,
 };
+*/
+
