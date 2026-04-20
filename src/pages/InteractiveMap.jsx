@@ -53,22 +53,171 @@ const Disclaimer = ({ onAgree }) => {
     );
 };
 
+const CtrlZoomHandler = ({ setShowZoomHint }) => {
+    const map = useMap();
+    const timeoutRef = useRef(null);
+    const lastShownRef = useRef(0);
+
+    useEffect(() => {
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) return;
+
+        const container = map.getContainer();
+
+        const handleWheel = (e) => {
+            const now = Date.now();
+
+            if (e.ctrlKey) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -1 : 1;
+                map.setZoom(map.getZoom() + delta);
+                return;
+            }
+
+            if (now - lastShownRef.current > 30000) {
+                lastShownRef.current = now;
+                setShowZoomHint(true);
+
+                if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+                timeoutRef.current = setTimeout(() => {
+                    setShowZoomHint(false);
+                }, 2500);
+            }
+        };
+
+        container.addEventListener("wheel", handleWheel, { passive: false });
+
+        return () => {
+            container.removeEventListener("wheel", handleWheel);
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, [map, setShowZoomHint]);
+
+    return null;
+};
+
+const MobileTouchHandler = () => {
+    const map = useMap();
+
+    useEffect(() => {
+        const isMobile = window.innerWidth < 768;
+        if (!isMobile) return;
+
+        const container = map.getContainer();
+
+        const handleTouchStart = (e) => {
+            if (e.touches.length === 2) {
+                // Two fingers → disable map drag so page can scroll
+                map.dragging.disable();
+            } else {
+                // One finger → map pans normally
+                map.dragging.enable();
+            }
+        };
+
+        const handleTouchEnd = () => {
+            map.dragging.enable();
+        };
+
+        container.addEventListener("touchstart", handleTouchStart, { passive: true });
+        container.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+        return () => {
+            container.removeEventListener("touchstart", handleTouchStart);
+            container.removeEventListener("touchend", handleTouchEnd);
+        };
+    }, [map]);
+
+    return null;
+};
+
 const TimeControlBar = ({
-                            startTime,
-                            endTime,
-                            currentTime,
-                            isPlaying,
-                            onTogglePlay,
-                            onSeek
-                        }) => {
+    startTime,
+    endTime,
+    currentTime,
+    isPlaying,
+    onTogglePlay,
+    onSeek,
+    setIsDragging,
+    setIsPlaying
+}) => {
+    const map = useMap();
+    const containerRef = useRef(null);
+
+    // Disable ALL Leaflet pointer interception on the slider container.
+    // L.DomEvent.disableClickPropagation only stops clicks — we must also
+    // block pointerdown/mousedown at the DOM level so Leaflet never starts a
+    // map-drag when the user presses down on the slider thumb or track.
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        L.DomEvent.disableClickPropagation(el);
+        L.DomEvent.disableScrollPropagation(el);
+        const stopAll = (e) => e.stopPropagation();
+        el.addEventListener('pointerdown', stopAll);
+        el.addEventListener('mousedown',   stopAll);
+        el.addEventListener('touchstart',  stopAll, { passive: false });
+        el.addEventListener('touchmove',   stopAll, { passive: false });
+        return () => {
+            el.removeEventListener('pointerdown', stopAll);
+            el.removeEventListener('mousedown',   stopAll);
+            el.removeEventListener('touchstart',  stopAll);
+            el.removeEventListener('touchmove',   stopAll);
+        };
+    }, []);
 
     const formatTime = (ts) => {
         if (!ts) return "--:--";
         return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    const isDraggingRef = useRef(false);
+    const [dragValue, setDragValue] = useState(null);
+    const displayTime = dragValue !== null ? dragValue : currentTime;
+
+    // Temporarily disable map dragging and pause animation while the slider is being used
+    const startDrag = (val) => {
+        isDraggingRef.current = true;
+        if (setIsDragging) setIsDragging(true);
+        if (setIsPlaying) setIsPlaying(false);
+        setDragValue(val ?? currentTime);
+        if (map) map.dragging.disable();
+    };
+
+    const commitDrag = (val) => {
+        isDraggingRef.current = false;
+        if (setIsDragging) setIsDragging(false);
+        if (setIsPlaying) setIsPlaying(true);
+        setDragValue(null);
+        if (map) map.dragging.enable();
+        onSeek(val);
+    };
+
+    const handleMouseDown = () => startDrag(currentTime);
+
+    const handleChange = (e) => {
+        const val = Number(e.target.value);
+        if (isDraggingRef.current) {
+            setDragValue(val); // visual only — no radar request
+        } else {
+            setDragValue(null);
+            onSeek(val);
+        }
+    };
+
+    const handleMouseUp = (e) => {
+        if (isDraggingRef.current) commitDrag(Number(e.target.value));
+    };
+
+    const handleTouchStart = () => startDrag(currentTime);
+
+    const handleTouchEnd = (e) => {
+        if (isDraggingRef.current) commitDrag(Number(e.target.value));
+    };
+
     return (
-        <div className="time-control-bar">
+        <div className="time-control-bar" ref={containerRef}>
             <button
                 className="play-pause-btn"
                 onClick={onTogglePlay}
@@ -80,7 +229,7 @@ const TimeControlBar = ({
             <div className="time-slider-wrapper">
                 <div className="time-labels">
                     <span>{formatTime(startTime)}</span>
-                    <span className="current-time-label">{formatTime(currentTime)}</span>
+                    <span className="current-time-label">{formatTime(displayTime)}</span>
                     <span>{formatTime(endTime)}</span>
                 </div>
                 <input
@@ -89,8 +238,12 @@ const TimeControlBar = ({
                     min={startTime}
                     max={endTime}
                     step={STEP_SIZE}
-                    value={currentTime}
-                    onChange={(e) => onSeek(Number(e.target.value))}
+                    value={displayTime}
+                    onChange={handleChange}
+                    onMouseDown={handleMouseDown}
+                    onMouseUp={handleMouseUp}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
                 />
             </div>
         </div>
@@ -110,9 +263,12 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
             errorTileUrl: '', // Optional: hides the broken image icon if a tile is missing
         }).addTo(map);
 
-        const municipalities = EL.featureLayer({
-            url: 'https://services5.arcgis.com/TQ9qkk0dURXSP7LQ/arcgis/rest/services/LIMITES_LEGALES_MUNICIPIOS/FeatureServer/0',
-            style: () => ({ color: 'black', weight: 1, fillOpacity: 0 }),
+        // Use dynamicMapLayer instead of featureLayer to avoid per-pan feature queries.
+        // featureLayer re-queries the FeatureServer on every map move/zoom.
+        const municipalities = EL.dynamicMapLayer({
+            url: 'https://services5.arcgis.com/TQ9qkk0dURXSP7LQ/arcgis/rest/services/LIMITES_LEGALES_MUNICIPIOS/MapServer',
+            opacity: 1,
+            f: 'image',
         }).addTo(map);
 
         return () => {
@@ -147,12 +303,18 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
         };
     }, [map, showForecast]);
 
+    // Debounce radar time updates: waits 500ms after last tick before sending
+    // a request to the NOAA ImageServer — prevents one request per animation frame.
     useEffect(() => {
-        if (showForecast && radarLayerRef.current && currentTime) {
-            const end = currentTime;
-            const start = end - STEP_SIZE;
-            radarLayerRef.current.setTimeRange(new Date(start), new Date(end));
-        }
+        if (!showForecast || !radarLayerRef.current || !currentTime) return;
+        const timer = setTimeout(() => {
+            if (radarLayerRef.current) {
+                const end = currentTime;
+                const start = end - STEP_SIZE;
+                radarLayerRef.current.setTimeRange(new Date(start), new Date(end));
+            }
+        }, 500);
+        return () => clearTimeout(timer);
     }, [currentTime, showForecast]);
 
 
@@ -191,6 +353,9 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
 const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast }) => {
     const [stations, setStations] = useState([]);
     const initialSyncDone = useRef(false);
+    // Keep a ref to stations so the heartbeat can read latest data
+    // without needing stations in its dependency array
+    const stationsRef = useRef([]);
 
     const fetchStations = () => {
         fetch(BASE_STATIONS_URL)
@@ -198,7 +363,10 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 if (!response.ok) throw new Error(`Error: ${response.status}`);
                 return response.json();
             })
-            .then((data) => setStations(data))
+            .then((data) => {
+                setStations(data);
+                stationsRef.current = data;
+            })
             .catch((err) => console.error("API Fetch Error:", err));
     };
 
@@ -241,10 +409,13 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
     };
 
     // --- HEARTBEAT LOGIC ---
+    // Uses stationsRef so the interval is registered only ONCE and never
+    // torn down / re-created on every stations state update.
     useEffect(() => {
-        if (stations.length === 0) return;
-
         const checkDataConsistency = async () => {
+            const currentStations = stationsRef.current;
+            if (currentStations.length === 0) return;
+
             console.log("Heartbeat: Checking data consistency...");
             try {
                 const response = await fetch(BASE_FILES_DATA_URL);
@@ -252,22 +423,18 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 
                 const filesData = await response.json();
                 const batchPayload = [];
-
                 const localUpdates = {};
 
                 filesData.forEach(fileRecord => {
-                    const station = stations.find(s => s.station_id === fileRecord.station_id);
-
+                    const station = currentStations.find(s => s.station_id === fileRecord.station_id);
                     if (station && fileRecord.data) {
                         const metrics = calculateMetricsFromRawData(fileRecord.data, station);
-
                         if (metrics) {
                             batchPayload.push({
                                 station_id: station.station_id,
                                 precipitation: metrics.calculatedPrecip,
                                 soil_saturation: metrics.calculatedSaturation
                             });
-
                             localUpdates[station.station_id] = {
                                 precipitation: metrics.calculatedPrecip,
                                 soil_saturation: metrics.calculatedSaturation
@@ -284,42 +451,81 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                     });
                     console.log(`Heartbeat: Updated ${batchPayload.length} stations.`);
 
-                    setStations(prevStations => prevStations.map(s => {
-                        if (localUpdates[s.station_id]) {
-                            return {
-                                ...s,
-                                ...localUpdates[s.station_id],
-                                last_updated: new Date().toISOString() // Update timestamp locally
-                            };
-                        }
-                        return s;
-                    }));
+                    setStations(prevStations => {
+                        const updated = prevStations.map(s => {
+                            if (localUpdates[s.station_id]) {
+                                return { ...s, ...localUpdates[s.station_id], last_updated: new Date().toISOString() };
+                            }
+                            return s;
+                        });
+                        stationsRef.current = updated;
+                        return updated;
+                    });
                 }
-
             } catch (error) {
                 console.error("Error performing batch update:", error);
             }
         };
 
-        if (!initialSyncDone.current) {
-            checkDataConsistency();
-            initialSyncDone.current = true;
-        }
+        // Delay initial sync slightly to ensure fetchStations has populated stationsRef
+        const initTimer = setTimeout(() => {
+            if (!initialSyncDone.current) {
+                checkDataConsistency();
+                initialSyncDone.current = true;
+            }
+        }, 2000);
 
-        const interval = setInterval(checkDataConsistency, 300000); // 300,000 ms = 5 mins
+        // Register interval once — never torn down by state changes
+        const interval = setInterval(checkDataConsistency, 300000); // 5 mins
 
-        return () => clearInterval(interval);
-    }, [stations]);
+        return () => {
+            clearTimeout(initTimer);
+            clearInterval(interval);
+        };
+    }, []); // Empty deps: stable interval, reads fresh data via stationsRef
 
     /** SOIL SATURATION ICON **/
-    const createSaturationIcon = (saturation) => {
+    const createSaturationIcon = (saturation, lastUpdated) => {
+        const { isOffline, isStale, diffHours } = getStationStatus(lastUpdated);
+
+        // OFF STATE
+        if (isOffline) {
+            return L.divIcon({
+                html: `
+                    <div class="saturation-marker offline"
+                        title="No data for ${Math.floor(diffHours)}+ hours">
+                        OFF
+                    </div>
+                `,
+                className: "",
+                iconSize: [55, 30],
+                iconAnchor: [27, 15],
+            });
+        }
+
         let className = "saturation-marker";
         if (saturation >= 90) className += " high";
         else if (saturation >= 80) className += " medium";
         else className += " low";
+
         const rounded = Math.round(saturation);
+
         return L.divIcon({
-            html: `<div class="${className}">${rounded}%</div>`,
+            html: `
+                <div class="${className}"
+                    title="Last updated ${Math.floor(diffHours)} hour(s) ago">
+                    ${rounded}%
+                    ${isStale ? `
+                        <span class="stale-clock">
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                                <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/>
+                                <line x1="12" y1="12" x2="12" y2="6" stroke="white" stroke-width="2"/>
+                                <line x1="12" y1="12" x2="16" y2="12" stroke="white" stroke-width="2"/>
+                            </svg>
+                        </span>
+                    ` : ""}
+                </div>
+            `,
             className: "",
             iconSize: [55, 30],
             iconAnchor: [27, 15],
@@ -418,6 +624,9 @@ const createLandslideIcon = () => {
 const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
     const [allLandslides, setAllLandslides] = useState([]);
     const customIcon = createLandslideIcon();
+    // Stable ref so the fetch effect runs exactly once regardless of parent re-renders
+    const setAvailableYearsRef = useRef(setAvailableYears);
+    useEffect(() => { setAvailableYearsRef.current = setAvailableYears; }, [setAvailableYears]);
 
     useEffect(() => {
         fetch(BASE_LANDSLIDES_URL)
@@ -439,12 +648,12 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
                     .filter(year => !isNaN(year) && year !== null)
                     .sort((a, b) => b - a);
 
-                setAvailableYears(uniqueYears);
+                setAvailableYearsRef.current(uniqueYears);
             })
             .catch((err) => {
                 console.error("API Fetch Error:", err);
             });
-    }, [setAvailableYears]);
+    }, []); // Run once on mount — setAvailableYears is accessed via ref
 
     const filteredLandslides = allLandslides.filter(landslide => {
         if (selectedYear === 'all') {
@@ -467,17 +676,46 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
     );
 }
 
+const getStationStatus = (lastUpdated) => {
+    if (!lastUpdated) {
+        return {
+            isOffline: true,
+            isStale: false,
+            diffHours: null
+        };
+    }
+
+    const last = new Date(lastUpdated);
+    const now = new Date();
+    const diffHours = (now - last) / (1000 * 60 * 60);
+
+    return {
+        isOffline: diffHours >= 12,
+        isStale: diffHours >= 6 && diffHours < 12,
+        diffHours
+    };
+};
+
 const SoilSaturationLegend = () => (
-    <div className="legend-container legend-bottom-right">
+    <div className="legend-container legend-soil-saturation">
         <div className="legend-title">Soil Saturation</div>
-        <div className="legend-item"><span className="legend-color-box" style={{background:"#e0c853"}}></span><p>0–80%</p></div>
-        <div className="legend-item"><span className="legend-color-box" style={{background:"#63b3ff"}}></span><p>80–90%</p></div>
-        <div className="legend-item"><span className="legend-color-box" style={{background:"#001f57"}}></span><p>90–100%</p></div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#e0c853"}}></span>
+            <p>0% - 79%</p>
+        </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#63b3ff"}}></span>
+            <p>80% – 89%</p>
+        </div>
+        <div className="legend-item">
+            <span className="legend-color-box" style={{background:"#001f57"}}></span>
+            <p>90% - 100%</p>
+        </div>
     </div>
 );
 
 const SusceptibilityLegend = () => (
-    <div className="legend-container legend-bottom-right-top">
+    <div className="legend-container legend-landslide-susceptibility">
         <div className="legend-title">Landslide Susceptibility</div>
         <div className="legend-item">
             <span className="legend-color-box" style={{background:"#C0C0C0"}}></span>
@@ -502,25 +740,45 @@ const SusceptibilityLegend = () => (
     </div>
 );
 
-const PrecipLegend = () => (
-    <div className="legend-container legend-top-left legend-scrollable" >
-        <div className="legend-title">Precipitation (inches)</div>
-        {[
-            ["#9FEAFF", "0.01 - 0.05"], ["#7FD6FF", "0.05 - 0.10"], ["#5FC2FF", "0.10 - 0.15"], ["#0099FF", "0.15 - 0.20"],
-            ["#00CC00", "0.20 - 0.40"], ["#00B200", "0.40 - 0.60"], ["#009900", "0.60 - 0.80"], ["#007F00", "0.80 - 1.00"],
-            ["#FFFF66", "1.00 - 1.25"], ["#FFD24D", "1.25 - 1.50"], ["#FFB733", "1.50 - 1.75"], ["#FF9900", "1.75 - 2.00"],
-            ["#FF6600", "2.00 - 2.50"], ["#FF3300", "2.50 - 3.00"], ["#CC0000", "3.00 - 3.50"], ["#FF3399", "3.50 - 4.00"],
-            ["#FF00FF", "4.00 - 4.50"], ["#CC00CC", "4.50 - 5.00"], ["#990099", "5.00 - 5.50"], ["#660066", "5.50 - 6.00"],
-            ["#330033", "6.00 - 6.50"], ["#3333FF", "6.50 - 7.00"], ["#0000CC", "7.00 - 8.00"], ["#000066", "Above 8.00"],
-        ].map(([color, label]) => (
-            <div className="legend-item" key={label}>
-                <span className="legend-color-box" style={{background: color}}></span>
-                <p>{label}</p>
-            </div>
-        ))}
-    </div>
-);
+const PrecipLegend = () => {
+    const ref = useRef(null);
 
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+
+        const stopProp = (e) => e.stopPropagation();
+
+        el.addEventListener("touchstart", stopProp, { passive: false });
+        el.addEventListener("touchmove", stopProp, { passive: false });
+        el.addEventListener("wheel", stopProp, { passive: false });
+
+        return () => {
+            el.removeEventListener("touchstart", stopProp);
+            el.removeEventListener("touchmove", stopProp);
+            el.removeEventListener("wheel", stopProp);
+        };
+    }, []);
+
+    return (
+        <div ref={ref} className="legend-container legend-precipitation legend-scrollable">
+            <div className="legend-title">Precipitation (inches)</div>
+            {[
+                ["#9FEAFF", "0.01 - 0.05"], ["#7FD6FF", "0.05 - 0.10"], ["#5FC2FF", "0.10 - 0.15"], ["#0099FF", "0.15 - 0.20"],
+                ["#00CC00", "0.20 - 0.40"], ["#00B200", "0.40 - 0.60"], ["#009900", "0.60 - 0.80"], ["#007F00", "0.80 - 1.00"],
+                ["#FFFF66", "1.00 - 1.25"], ["#FFD24D", "1.25 - 1.50"], ["#FFB733", "1.50 - 1.75"], ["#FF9900", "1.75 - 2.00"],
+                ["#FF6600", "2.00 - 2.50"], ["#FF3300", "2.50 - 3.00"], ["#CC0000", "3.00 - 3.50"], ["#FF3399", "3.50 - 4.00"],
+                ["#FF00FF", "4.00 - 4.50"], ["#CC00CC", "4.50 - 5.00"], ["#990099", "5.00 - 5.50"], ["#660066", "5.50 - 6.00"],
+                ["#330033", "6.00 - 6.50"], ["#3333FF", "6.50 - 7.00"], ["#0000CC", "7.00 - 8.00"], ["#000066", "Above 8.00"],
+            ].map(([color, label]) => (
+                <div className="legend-item" key={label}>
+                    <span className="legend-color-box" style={{background: color}}></span>
+                    <p>{label}</p>
+                </div>
+            ))}
+        </div>
+    );
+};
 
 export default function InteractiveMap() {
     const center = [18.220833, -66.420149];
@@ -571,6 +829,8 @@ export default function InteractiveMap() {
     const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
     const [showPrecipLegend, setShowPrecipLegend] = useState(false);
 
+    const [showZoomHint, setShowZoomHint] = useState(false);
+    const hasShownZoomHint = useRef(false);
 
     // --- RADAR / TIME LOGIC ---
     const [showForecast, setShowForecast] = useState(true);
@@ -643,26 +903,27 @@ export default function InteractiveMap() {
 
     const [radarTimeRange] = useState({ start: roundedStart, end: roundedEnd });
     const [currentTime, setCurrentTime] = useState(roundedStart);
-    const [isPlaying, setIsPlaying] = useState(true);
+  
+    const [isPlaying, setIsPlaying] = useState(false); // Start paused — user initiates playback
+    const [isDragging, setIsDragging] = useState(false);
 
     useEffect(() => {
         let interval;
-        const step = typeof STEP_SIZE !== 'undefined' ? STEP_SIZE : 300000; // 5 mins
-        const speed = typeof FRAME_SPEED !== 'undefined' ? FRAME_SPEED : 1000; // 1 sec
 
-        if (showForecast && isPlaying) {
+        if (showForecast && isPlaying && !isDragging) {
             interval = setInterval(() => {
-                setCurrentTime(prevTime => {
-                    const nextTime = prevTime + step;
-                    if (nextTime > radarTimeRange.end) {
-                        return radarTimeRange.start;
-                    }
-                    return nextTime;
-                });
-            }, speed);
+            setCurrentTime(prevTime => {
+                const nextTime = prevTime + STEP_SIZE;
+                if (nextTime > radarTimeRange.end) {
+                return radarTimeRange.start;
+                }
+                return nextTime;
+            });
+            }, FRAME_SPEED);
         }
+
         return () => clearInterval(interval);
-    }, [isPlaying, showForecast, radarTimeRange]);
+    }, [isPlaying, showForecast, radarTimeRange, isDragging]);
 
     const handleSeek = (time) => {
         const step = typeof STEP_SIZE !== 'undefined' ? STEP_SIZE : 300000;
@@ -680,8 +941,8 @@ export default function InteractiveMap() {
         setShowStations(newValue);
 
         if (newValue) {
-            // Stations turned ON → Landslides OFF
-            setSelectedYear(null);
+            // Stations turned ON → clear any selected year
+            setSelectedYear("");
 
             // Default station display
             setShowSaturation(true);
@@ -691,33 +952,24 @@ export default function InteractiveMap() {
             setShowSaturationLegend(true);
             setShowPrecipLegend(false);
             setShowSusceptibilityLegend(false);
-
-            // Disable other overlays
-            setShowPrecip(false);
-            setShowSusceptibility(false);
         }
     };
-
 
     const togglePrecip = () => setShowPrecip(v => !v);
     const toggleSusceptibility = () => setShowSusceptibility(v => !v);
 
-    // Mutually Exclusive Toggles for Station Data
+    // Mutually Exclusive Toggles for Station Data (radio behavior)
     const toggleSaturation = () => {
-        if (showSaturation) {
-            setShowSaturation(false);
-        } else {
-            setShowSaturation(true);
-            setShowPrecip12hr(false);
-        }
+        setSelectedYear("");
+        setShowStations(true);
+        setShowSaturation(true);
+        setShowPrecip12hr(false);
     };
     const togglePrecip12hr = () => {
-        if (showPrecip12hr) {
-            setShowPrecip12hr(false);
-        } else {
-            setShowPrecip12hr(true);
-            setShowSaturation(false);
-        }
+        setSelectedYear("");
+        setShowStations(true);
+        setShowPrecip12hr(true);
+        setShowSaturation(false);
     };
 
     const toggleSaturationLegend = () => setShowSaturationLegend(v => !v);
@@ -725,36 +977,25 @@ export default function InteractiveMap() {
     const togglePrecipLegend = () => setShowPrecipLegend(v => !v);
     const toggleForecast = () => setShowForecast(v => !v);
 
-   const handleYearChange = (year) => {
+    const handleYearChange = (year) => {
         setSelectedYear(year);
 
         if (year) {
-            // Disable station layers
             setShowStations(false);
             setShowSaturation(false);
             setShowPrecip12hr(false);
-
-            // Disable station legends
             setShowSaturationLegend(false);
             setShowPrecipLegend(false);
-
-            // Disable overlays irrelevant to Landslide mode
-            setShowPrecip(false);
-            setShowSusceptibility(false);
-            setShowSusceptibilityLegend(false);
-
         } else {
-            // Return to default station mode
             setShowStations(true);
             setShowSaturation(true);
-            setShowPrecip12hr(true);
+            setShowPrecip12hr(false);
 
             setShowSaturationLegend(true);
             setShowSusceptibilityLegend(false);
             setShowPrecipLegend(false);
         }
     };
-
 
     const resetLayers = () => {
         setShowStations(false);
@@ -764,19 +1005,18 @@ export default function InteractiveMap() {
         setShowSaturation(false);
         setShowPrecip12hr(false);
 
-        // Reset legends
         setShowSaturationLegend(false);
         setShowSusceptibilityLegend(false);
         setShowPrecipLegend(false);
     };
 
     const resetToDefault = () => {
+        setShowStations(true);
         setShowSaturation(true);
-        setShowStations(true); 
+        setShowPrecip12hr(false);
         setShowPrecip(false);
         setShowSusceptibility(false);
-        setShowForecast(true);
-        setShowPrecip12hr(true);
+        setShowForecast(false);
 
         setShowSaturationLegend(true);
         setShowSusceptibilityLegend(false);
@@ -805,10 +1045,10 @@ export default function InteractiveMap() {
             <MapContainer
                 id="map"
                 center={center}
-                zoom={isMobile ? 9 : 10}
+                zoom={isMobile ? 8 : 10}
                 minZoom={7}
                 maxZoom={18}
-                scrollWheelZoom={false}
+                scrollWheelZoom={true}
                 zoomControl={false}
                 style={{ height: '100vh', width: '100%' }}
             >
@@ -818,6 +1058,15 @@ export default function InteractiveMap() {
                     url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                     attribution="Tiles © Esri"
                 />
+
+               {showZoomHint && (
+                <div className="zoom-hint">
+                    Press Ctrl + scroll to zoom
+                </div>
+                )} 
+
+                <CtrlZoomHandler setShowZoomHint={setShowZoomHint} hasShownZoomHint={hasShownZoomHint} />
+                <MobileTouchHandler />
 
                 <MapMenu
                     showStations={showStations} onToggleStations={toggleStations}
@@ -845,7 +1094,7 @@ export default function InteractiveMap() {
                     currentTime={currentTime}
                 />
 
-                <ZoomControl position="topright" />
+                {!isMobile && <ZoomControl position="topright" />}
 
                 {showStations && (
                     <PopulateStations
@@ -868,6 +1117,8 @@ export default function InteractiveMap() {
                         isPlaying={isPlaying}
                         onTogglePlay={() => setIsPlaying(p => !p)}
                         onSeek={handleSeek}
+                        setIsDragging={setIsDragging}
+                        setIsPlaying={setIsPlaying}
                     />
                 )}
 

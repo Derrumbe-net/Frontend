@@ -8,7 +8,10 @@ import {
     FaClipboardList,
     FaBroadcastTower,
     FaUsers,
-    FaSignOutAlt
+    FaSignOutAlt,
+    FaIdCard,
+    FaHandshake,
+    FaEnvelope,
 } from "react-icons/fa";
 
 import "../styles/CMSSidebar.css";
@@ -18,12 +21,10 @@ export default function Sidebar() {
     const [currentUserEmail, setCurrentUserEmail] = useState("");
     const SUPER_ADMIN_EMAIL = "slidespr@gmail.com";
 
-    // Check user email on mount
     useEffect(() => {
         const token = localStorage.getItem("cmsAdmin");
         if (token) {
             try {
-                // Simple JWT decode to get email
                 const payload = JSON.parse(atob(token.split('.')[1]));
                 setCurrentUserEmail(payload.email);
             } catch (e) {
@@ -39,66 +40,55 @@ export default function Sidebar() {
 
     return (
         <aside className="cms-sidebar">
-            {/* ===== Header with Logo ===== */}
             <div className="cms-sidebar__header">
-                <img
-                    src={logo}
-                    alt="PRLHMO Logo"
-                    className="cms-sidebar__logo"
-                />
-                <h3 className="cms-sidebar__title">
-                    PRLHMO CMS
-                </h3>
+                <img src={logo} alt="PRLHMO Logo" className="cms-sidebar__logo" />
+                <h3 className="cms-sidebar__title">PRLHMO CMS</h3>
             </div>
 
             <nav className="cms-sidebar__nav">
 
-                <NavLink
-                    to="/cms"
-                    end
-                    className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}
-                >
+                <NavLink to="/cms" end className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}>
                     <span className="cms-link-icon"><FaThLarge /></span>
                     <span>Dashboard</span>
                 </NavLink>
 
-                <NavLink
-                    to="/cms/proyectos"
-                    className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}
-                >
+                <NavLink to="/cms/proyectos" className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}>
                     <span className="cms-link-icon"><FaProjectDiagram /></span>
                     <span>Proyectos</span>
                 </NavLink>
 
-                <NavLink
-                    to="/cms/publicaciones"
-                    className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}
-                >
+                <NavLink to="/cms/publicaciones" className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}>
                     <span className="cms-link-icon"><FaNewspaper /></span>
                     <span>Publicaciones</span>
                 </NavLink>
 
-                <NavLink
-                    to="/cms/reportes"
-                    className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}
-                >
+                <NavLink to="/cms/reportes" className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}>
                     <span className="cms-link-icon"><FaClipboardList /></span>
                     <span>Reportes</span>
                 </NavLink>
 
-                <NavLink
-                    to="/cms/estaciones"
-                    className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}
-                >
+                <NavLink to="/cms/estaciones" className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}>
                     <span className="cms-link-icon"><FaBroadcastTower /></span>
                     <span>Estaciones</span>
                 </NavLink>
 
+                <NavLink to="/cms/equipo" className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}>
+                    <span className="cms-link-icon"><FaIdCard /></span>
+                    <span>Equipo</span>
+                </NavLink>
+
+                <NavLink to="/cms/financiamiento" className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}>
+                    <span className="cms-link-icon"><FaHandshake /></span>
+                    <span>Financiamiento</span>
+                </NavLink>
+
+                <NavLink to="/cms/contacto" className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}>
+                    <span className="cms-link-icon"><FaEnvelope /></span>
+                    <span>Contacto</span>
+                </NavLink>
+
                 {currentUserEmail === SUPER_ADMIN_EMAIL && (
-                    <NavLink
-                        to="/cms/usuarios"
-                        className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}
-                    >
+                    <NavLink to="/cms/usuarios" className={({ isActive }) => `cms-link ${isActive ? "cms-link--active" : ""}`}>
                         <span className="cms-link-icon"><FaUsers /></span>
                         <span>Usuarios</span>
                     </NavLink>

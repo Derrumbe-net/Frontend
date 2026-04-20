@@ -15,10 +15,8 @@
   color: #fff;
   padding: 10px 18px;
   border-radius: 6px;
-  z-index: 999 !important;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  z-index: 998;
+  pointer-events: none;
   text-transform: uppercase;
   font-family: 'Inter', sans-serif;
   font-weight: 700;
@@ -70,6 +68,38 @@
   background-color: rgb(0, 28, 104, 0.9);
 }
 
+/* OFFLINE STYLE */
+.saturation-marker.offline {
+    background-color: #6c757d !important;
+    color: white;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Clock container */
+.stale-clock {
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    background: rgba(0,0,0,0.6);
+    border-radius: 50%;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    animation: pulseClock 2s infinite ease-in-out;
+}
+
+/* Subtle pulse animation */
+@keyframes pulseClock {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 .precip-marker {
   display: flex;
   justify-content: center;
@@ -91,53 +121,42 @@
   position: absolute;
   bottom: 60px;
   right: 30px;
-  z-index: 1000;
-
+  z-index: 999;
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(4px);
-
-  padding: 15px 18px;
-  border-radius: 10px;
-
+  padding: 8px 10px;
+  border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
-
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   color: white;
-  min-width: 190px;
-  max-width: 220px;
+  min-width: 130px;
+  max-width: 180px;
 }
 
 /* Title */
 .legend-title {
-  font-size: 1rem;
+  font-size: 0.8rem;              /* 👈 smaller */
   font-weight: 700;
-  margin-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
-  padding-bottom: 6px;
+  margin-bottom: 6px;             /* 👈 was 12px */
+  padding-bottom: 3px;
 }
 
-/* Each row */
 .legend-item {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
 }
 
-.legend-item:last-child {
-  margin-bottom: 0;
-}
-
-/* Label text */
 .legend-item p {
-  padding-left: 10px;
-  font-weight: 600;
-  margin: 0;
+  padding-left: 5px;   /* 👈 tighter horizontal spacing */
+  font-weight: 500;
+  font-size: 0.65rem;  /* 👈 slightly smaller text */
+  line-height: 0;    /* 👈 reduces vertical height */
 }
 
 /* Color squares */
 .legend-color-box {
-  width: 20px;
-  height: 20px;
+  width: 12px;
+  height: 12px;
   border: 1px solid rgba(255,255,255,0.4);
   border-radius: 4px;
   flex-shrink: 0;
@@ -146,8 +165,10 @@
 /* For long precipitation legend */
 .legend-scrollable {
   max-height: 260px;
-  overflow-y: auto;
   padding-right: 5px;
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  max-height: 250px;
 }
 
 /* Scrollbar styling */
@@ -167,30 +188,28 @@
 
 /* --- Positioning --- */
 
-/* 1) Soil Saturation - bottom right */
-.legend-bottom-right {
+.legend-soil-saturation {
   position: absolute;
   bottom: 60px;
   right: 30px;
+  width: 150px;
 }
 
-/* 2) Susceptibility - stacked ABOVE soil saturation */
-.legend-bottom-right-top {
+.legend-landslide-susceptibility {
   position: absolute;
-  bottom: 220px; /* Adjust stack height */
+  bottom: 170px; /* Adjust stack height */
   right: 30px;
+  width: 150px;
 }
 
-/* 3) Precipitation - below MapMenu icons, left side */
-.legend-top-left {
+.legend-precipitation {
   position: absolute;
-  top: 120px;       /* right below the map menu buttons */
-  left: 30px;
-  max-height: 50vh;
+  top: 162px;       /* right below the map menu buttons */
+  right: 30px;
+  max-height: 25vh;
   overflow-y: auto;
+  width: 155px;
 }
-
-
 
 /* --- Disclaimer --- */
 .disclaimer-overlay {
@@ -265,7 +284,7 @@
 }
 
 .landslide-logo {
-  width: 100px;
+  width: 80px;
   height: auto;
   display: block;
 }
@@ -385,112 +404,130 @@
     transform: scale(1.2);
 }
 
-@media (max-width: 600px) {
-
-    .time-control-bar {
-        bottom: 55px;       /* Move it slightly lower */
-        padding: 8px 12px;  /* Reduce padding */
-        gap: 10px;          /* Smaller spacing */
-        width: 94%;         /* Slightly narrower */
-        max-width: 380px;   /* Shrink max size */
-        border-radius: 5px; 
-    }
-
-    .play-pause-btn {
-        width: 28px;
-        height: 28px;
-        font-size: 12px;
-        border-width: 1.5px;
-    }
-
-    .time-labels {
-        font-size: 10px;     /* Smaller text */
-        margin-bottom: 4px;
-    }
-
-    .current-time-label {
-        font-size: 12px;     /* Adjust highlight size */
-    }
-
-    .time-slider-input {
-        height: 3px;         /* Slim slider */
-    }
-
-    .time-slider-input::-webkit-slider-thumb {
-        width: 12px;
-        height: 12px;
-        border-width: 1.5px;
-    }
+.zoom-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  
+  pointer-events: none;
+  z-index: 1000;
 }
 
-
-/* MOBILE — shrink legends */
 @media (max-width: 768px) {
-  /* shrink every legend */
-  .legend-container,
-  .legend-top-left,
-  .legend-bottom-right,
-  .legend-bottom-right-top {
-    transform: scale(0.6); /* Slightly increased from 0.5 for readability */
-    transform-origin: center;
+
+  /* ---------- MAP MENU + LABEL ---------- */
+  .map-label {
+    top: 55px;
+    font-size: 0.5rem;
+    padding: 6px 10px;
   }
 
-  /* reduce spacing so they don’t collide */
-  .legend-bottom-right {
-    bottom: 20px !important;
-    right: -20px !important;
+  /* ---------- TIME CONTROL BAR ---------- */
+  .time-control-bar {
+    width: 85%;              /* slightly smaller */
+    max-width: 300px;        /* tighter container */
+    bottom: 30px;            /* moved UP a bit */
+    padding: 4px 8px;        /* thinner */
+    gap: 6px;
+    border-radius: 5px;
   }
 
-  .legend-bottom-right-top {
-    bottom: 90px !important;
-    right: -20px !important;
+  /* Play button smaller */
+  .play-pause-btn {
+    width: 15px;
+    height: 15px;
+    font-size: 9px;
+    border-width: 1px;
   }
 
-  .legend-top-left {
-    top: 100px !important;
-    left: -20px !important;
-    max-height: 45vh !important;
+  /* Labels smaller + tighter */
+  .time-labels {
+    font-size: 7px;
+    margin-bottom: 2px;
   }
 
-  /* Smaller text */
+  .current-time-label {
+    font-size: 8px;
+  }
+
+  /* Slider thinner */
+  .time-slider-input {
+    height: 2px;
+    touch-action: none;
+  }
+
+  /* Slider thumb smaller */
+  .time-slider-input::-webkit-slider-thumb {
+    width: 9px;
+    height: 9px;
+    border-width: 1px;
+  }
+
+  /* ---------- LEGENDS (MOBILE FIX) ---------- */
+  .legend-container {
+    transform: scale(0.65); /* 👈 shrink EVERYTHING */
+  }
+
   .legend-title {
-    font-size: 0.8rem !important;
+    font-size: 0.6rem; 
   }
 
-  .legend-item p {
-    font-size: 0.7rem !important;
+  /* Stack them vertically on the right */
+  .legend-landslide-susceptibility,
+  .legend-soil-saturation {
+    right: 15px !important;
+    width: 130px;
+    transform-origin: bottom right;
+  } 
+
+  /* Top legend */
+  .legend-landslide-susceptibility {
+    bottom: 140px !important; /* 👈 sits above */
   }
 
-  .legend-color-box {
-    width: 12px;
-    height: 12px;
+  /* Bottom legend */
+  .legend-soil-saturation {
+    bottom: 70px !important;
   }
 
+  /* Precipitation legend (left side → make smaller + move up) */
+  .legend-precipitation {
+    top: 250px !important;
+    left: 15px !important;
+    width: 130px;
+    max-height: 41.8vh !important;
+    transform-origin: bottom left;
+  }
+
+  /* ---------- LOGO ---------- */
   .logo-container {
-    bottom: 25px; /* a bit higher on mobile */
+    bottom: 5px;
     left: 5px;
   }
 
   .landslide-logo {
-    transform: scale(0.6);
+    transform: scale(0.3);
     transform-origin: bottom left;
   }
 
+  /* ---------- ZOOM ---------- */
   .leaflet-control-zoom {
     transform: scale(0.8);
     transform-origin: top right;
   }
 
-
-  .time-control-bar {
-      width: 95%;
-      bottom: 150px; /* Moved up to clear the bottom legends/logos */
-      padding: 8px 12px;
-  }
-  
+  /* ---------- TIME DISPLAY ---------- */
   .time-display {
-      bottom: 150px;
-      left: 10px;
-      font-size: 1rem;
+    bottom: 150px;
+    left: 10px;
+    font-size: 1rem;
   }
 }

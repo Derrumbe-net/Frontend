@@ -1,0 +1,231 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
+.cms-officeinfo-wrapper {
+  padding: 32px;
+  max-width: 900px; /* narrower than most pages — it's a single-record form */
+  margin: 0 auto;
+  font-family: "Inter", sans-serif;
+  color: #13241e;
+}
+
+.cms-officeinfo-loading {
+  text-align: center;
+  padding: 48px;
+  color: #6fa174;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+/* ── Header ── */
+.cms-officeinfo-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.cms-accent-line {
+  display: block;
+  width: 50px;
+  height: 4px;
+  background: #6fa174;
+  border-radius: 2px;
+  margin-bottom: 12px;
+}
+
+.cms-page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #13241e;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.cms-page-subtitle {
+  margin-top: 12px;
+  font-size: 1rem;
+  color: #465a52;
+  line-height: 1.5;
+  max-width: 560px;
+}
+
+.cms-officeinfo-preview-badge {
+  background: #f0fdf4;
+  color: #6fa174;
+  padding: 8px 16px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+/* ── Card ── */
+.cms-card {
+  background: #fff;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Form grid ── */
+.cms-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.cms-form-section-title {
+  grid-column: 1 / -1;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #6fa174;
+  margin-top: 16px;
+  border-bottom: 1px solid #edf2f7;
+  padding-bottom: 8px;
+}
+
+.cms-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cms-form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #13241e;
+}
+
+.span-2 {
+  grid-column: span 2;
+}
+
+.cms-input,
+.cms-textarea {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e0;
+  background: #fff;
+  font-family: "Inter", sans-serif;
+  font-size: 0.95rem;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cms-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.cms-input:focus,
+.cms-textarea:focus {
+  outline: none;
+  border-color: #6fa174;
+  box-shadow: 0 0 0 3px rgba(111, 161, 116, 0.2);
+}
+
+.cms-input-hint {
+  font-size: 0.75rem;
+  color: #718096;
+  margin-top: 2px;
+}
+
+/* ── Live preview panel ── */
+.cms-officeinfo-preview {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px 24px;
+  font-size: 0.95rem;
+  color: #13241e;
+  line-height: 1.6;
+}
+
+.cms-officeinfo-preview h3 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0 0 4px 0;
+}
+
+.cms-officeinfo-preview hr {
+  border: none;
+  border-top: 1px solid #000;
+  margin-bottom: 14px;
+}
+
+.cms-officeinfo-preview p {
+  margin: 0 0 12px 0;
+}
+
+.cms-link {
+  color: #6fa174;
+  text-decoration: none;
+  font-weight: 600;
+  word-break: break-all;
+}
+.cms-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Actions ── */
+.cms-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #edf2f7;
+}
+
+.cms-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: #6fa174;
+  color: #fff;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cms-btn:hover:not(:disabled) {
+  background: #315f1b;
+  transform: translateY(-1px);
+}
+.cms-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.required-asterisk {
+  color: #e53e3e;
+  margin-left: 3px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .span-2 {
+    grid-column: 1 / -1;
+  }
+  .cms-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .cms-officeinfo-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
