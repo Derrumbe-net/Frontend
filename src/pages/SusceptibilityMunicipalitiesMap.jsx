@@ -71,7 +71,7 @@ function MunicipalityModal({ municipality, onClose }) {
     const name = municipality.name;
     
     const imagePreview = municipalityPng[name];
-    const pdfFile = municipalityPdf[name];
+    const pdfFile = municipalityPdf[name]; 
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -88,30 +88,23 @@ function MunicipalityModal({ municipality, onClose }) {
 
                 <div className="modal-buttons">
                     {pdfFile ? (
-                        <a
-                            href={pdfFile}
-                            download={`${name}_UPRM_SLIDES.pdf`}
-                            className="modal-button"
-                        >
-                            Descargar PDF
-                        </a>
+                        <>
+                            <a
+                                href={pdfFile}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="modal-button"
+                            >
+                                Abrir / Descargar PDF
+                            </a>
+                        </>
                     ) : (
                         <span className="error-text">PDF no disponible</span>
-                    )}
-
-                    {pdfFile && (
-                        <a
-                            href={pdfFile}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="modal-button secondary"
-                        >
-                            Ver PDF en pantalla completa
-                        </a>
                     )}
                 </div>
             </div>
         </div>
     );
 }
+
 export default SusceptibilityMunicipalitiesMap;

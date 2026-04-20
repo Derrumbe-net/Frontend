@@ -28,14 +28,4 @@ package-lock.json
 composer.lock
 composer.phar
 
-deploy.sh
-.env
-
-.venv/
-node_modules/
-dist/
-build/
-__pycache__/
-*.log
-
-View/src/assets/map_pdfs/
+coverage/
