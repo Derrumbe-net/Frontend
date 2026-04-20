@@ -1,7 +1,7 @@
 import 'leaflet/dist/leaflet.css';
 import '../styles/InteractiveMap.css';
 import { useEffect, useState, useRef } from "react";
-import { MapContainer, TileLayer, ZoomControl, useMap, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, ZoomControl, useMap, Marker, ImageOverlay } from 'react-leaflet';
 import * as EL from 'esri-leaflet';
 import LandslideLogo from '../assets/PRLHMO_LOGO.svg';
 import StationPopup from '../components/StationPopup';
@@ -28,11 +28,8 @@ const BASE_LANDSLIDES_URL = `${BASE_DOMAIN}/landslides`;
 
 const BASE_BATCH_UPDATE_URL = `${BASE_DOMAIN}/stations/batch-update`;
 
-
 // --- CONSTANTS FOR RADAR ---
-const STEP_SIZE = 5 * 60 * 1000; // 5 minutes
 const FRAME_SPEED = 1500; // 1.5 seconds per frame
-const HISTORY_DURATION = 60 * 60 * 1000 * 1; // 1 hour history
 
 const Disclaimer = ({ onAgree }) => {
     return (
@@ -133,9 +130,8 @@ const MobileTouchHandler = () => {
 };
 
 const TimeControlBar = ({
-    startTime,
-    endTime,
-    currentTime,
+    frames,
+    currentIndex,
     isPlaying,
     onTogglePlay,
     onSeek,
@@ -145,10 +141,6 @@ const TimeControlBar = ({
     const map = useMap();
     const containerRef = useRef(null);
 
-    // Disable ALL Leaflet pointer interception on the slider container.
-    // L.DomEvent.disableClickPropagation only stops clicks — we must also
-    // block pointerdown/mousedown at the DOM level so Leaflet never starts a
-    // map-drag when the user presses down on the slider thumb or track.
     useEffect(() => {
         const el = containerRef.current;
         if (!el) return;
@@ -167,21 +159,21 @@ const TimeControlBar = ({
         };
     }, []);
 
-    const formatTime = (ts) => {
-        if (!ts) return "--:--";
-        return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formatTime = (idx) => {
+        if (!frames || frames.length === 0 || !frames[idx]) return "--:--";
+        return new Date(frames[idx].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
     const isDraggingRef = useRef(false);
     const [dragValue, setDragValue] = useState(null);
-    const displayTime = dragValue !== null ? dragValue : currentTime;
+    const displayIndex = dragValue !== null ? dragValue : currentIndex;
+    const maxIndex = frames && frames.length > 0 ? frames.length - 1 : 0;
 
-    // Temporarily disable map dragging and pause animation while the slider is being used
     const startDrag = (val) => {
         isDraggingRef.current = true;
         if (setIsDragging) setIsDragging(true);
         if (setIsPlaying) setIsPlaying(false);
-        setDragValue(val ?? currentTime);
+        setDragValue(val ?? currentIndex);
         if (map) map.dragging.disable();
     };
 
@@ -194,12 +186,12 @@ const TimeControlBar = ({
         onSeek(val);
     };
 
-    const handleMouseDown = () => startDrag(currentTime);
+    const handleMouseDown = () => startDrag(currentIndex);
 
     const handleChange = (e) => {
         const val = Number(e.target.value);
         if (isDraggingRef.current) {
-            setDragValue(val); // visual only — no radar request
+            setDragValue(val);
         } else {
             setDragValue(null);
             onSeek(val);
@@ -210,11 +202,13 @@ const TimeControlBar = ({
         if (isDraggingRef.current) commitDrag(Number(e.target.value));
     };
 
-    const handleTouchStart = () => startDrag(currentTime);
+    const handleTouchStart = () => startDrag(currentIndex);
 
     const handleTouchEnd = (e) => {
         if (isDraggingRef.current) commitDrag(Number(e.target.value));
     };
+
+    if (!frames || frames.length === 0) return null;
 
     return (
         <div className="time-control-bar" ref={containerRef}>
@@ -228,17 +222,17 @@ const TimeControlBar = ({
 
             <div className="time-slider-wrapper">
                 <div className="time-labels">
-                    <span>{formatTime(startTime)}</span>
-                    <span className="current-time-label">{formatTime(displayTime)}</span>
-                    <span>{formatTime(endTime)}</span>
+                    <span>{formatTime(0)}</span>
+                    <span className="current-time-label">{formatTime(displayIndex)}</span>
+                    <span>{formatTime(maxIndex)}</span>
                 </div>
                 <input
                     type="range"
                     className="time-slider-input"
-                    min={startTime}
-                    max={endTime}
-                    step={STEP_SIZE}
-                    value={displayTime}
+                    min={0}
+                    max={maxIndex}
+                    step={1}
+                    value={displayIndex}
                     onChange={handleChange}
                     onMouseDown={handleMouseDown}
                     onMouseUp={handleMouseUp}
@@ -250,21 +244,18 @@ const TimeControlBar = ({
     );
 };
 
-const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTime}) => {
+const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
     const map = useMap();
-    const radarLayerRef = useRef(null);
 
     useEffect(() => {
         const hillshade = EL.tiledMapLayer({
             url: 'https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Hillshade_Puerto_Rico/MapServer',
             opacity: 0.5,
             minZoom: 7,  // Prevents requesting tiles when zoomed too far out
-            maxZoom: 16, // Prevents requesting tiles when zoomed too far in (Adjust if layer supports deeper zoom)
-            errorTileUrl: '', // Optional: hides the broken image icon if a tile is missing
+            maxZoom: 16, // Prevents requesting tiles when zoomed too far in
+            errorTileUrl: '', 
         }).addTo(map);
 
-        // Use dynamicMapLayer instead of featureLayer to avoid per-pan feature queries.
-        // featureLayer re-queries the FeatureServer on every map move/zoom.
         const municipalities = EL.dynamicMapLayer({
             url: 'https://services5.arcgis.com/TQ9qkk0dURXSP7LQ/arcgis/rest/services/LIMITES_LEGALES_MUNICIPIOS/MapServer',
             opacity: 1,
@@ -277,54 +268,12 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
         };
     }, [map]);
 
-    // Forecast Layer Creation
-    useEffect(() => {
-        if (showForecast) {
-            const radarUrl = 'https://mapservices.weather.noaa.gov/eventdriven/rest/services/radar/radar_base_reflectivity_time/ImageServer';
-
-            radarLayerRef.current = EL.imageMapLayer({
-                url: radarUrl,
-                opacity: 0.7,
-                useCors: false
-            }).addTo(map);
-
-        } else {
-            if (radarLayerRef.current) {
-                map.removeLayer(radarLayerRef.current);
-                radarLayerRef.current = null;
-            }
-        }
-
-        return () => {
-            if (radarLayerRef.current) {
-                map.removeLayer(radarLayerRef.current);
-                radarLayerRef.current = null;
-            }
-        };
-    }, [map, showForecast]);
-
-    // Debounce radar time updates: waits 500ms after last tick before sending
-    // a request to the NOAA ImageServer — prevents one request per animation frame.
-    useEffect(() => {
-        if (!showForecast || !radarLayerRef.current || !currentTime) return;
-        const timer = setTimeout(() => {
-            if (radarLayerRef.current) {
-                const end = currentTime;
-                const start = end - STEP_SIZE;
-                radarLayerRef.current.setTimeRange(new Date(start), new Date(end));
-            }
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [currentTime, showForecast]);
-
-
     useEffect(() => {
         let precipLayer;
         if (showPrecip) {
             precipLayer = EL.imageMapLayer({
                 url: 'https://mapservices.weather.noaa.gov/raster/rest/services/obs/mrms_qpe/ImageServer',
                 opacity: 0.5,
-                // renderingRule: { rasterFunction: 'rft_12hr' },
             }).addTo(map);
         }
         return () => {
@@ -353,8 +302,6 @@ const EsriOverlays = ({ showPrecip, showSusceptibility, showForecast, currentTim
 const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast }) => {
     const [stations, setStations] = useState([]);
     const initialSyncDone = useRef(false);
-    // Keep a ref to stations so the heartbeat can read latest data
-    // without needing stations in its dependency array
     const stationsRef = useRef([]);
 
     const fetchStations = () => {
@@ -409,8 +356,6 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
     };
 
     // --- HEARTBEAT LOGIC ---
-    // Uses stationsRef so the interval is registered only ONCE and never
-    // torn down / re-created on every stations state update.
     useEffect(() => {
         const checkDataConsistency = async () => {
             const currentStations = stationsRef.current;
@@ -467,7 +412,6 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
             }
         };
 
-        // Delay initial sync slightly to ensure fetchStations has populated stationsRef
         const initTimer = setTimeout(() => {
             if (!initialSyncDone.current) {
                 checkDataConsistency();
@@ -475,20 +419,18 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
             }
         }, 2000);
 
-        // Register interval once — never torn down by state changes
-        const interval = setInterval(checkDataConsistency, 300000); // 5 mins
+        const interval = setInterval(checkDataConsistency, 300000);
 
         return () => {
             clearTimeout(initTimer);
             clearInterval(interval);
         };
-    }, []); // Empty deps: stable interval, reads fresh data via stationsRef
+    }, []);
 
     /** SOIL SATURATION ICON **/
     const createSaturationIcon = (saturation, lastUpdated) => {
         const { isOffline, isStale, diffHours } = getStationStatus(lastUpdated);
 
-        // OFF STATE
         if (isOffline) {
             return L.divIcon({
                 html: `
@@ -558,7 +500,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         if (p >= 0.10) return "#5FC2FF";
         if (p >= 0.05) return "#7FD6FF";
         if (p >= 0.01) return "#9FEAFF";
-        return "#DADADA"; // default/no data
+        return "#DADADA"; 
     };
 
     /** PRECIPITATION ICON **/
@@ -579,7 +521,6 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 if (station.is_available !== 1) return null;
                 let icon = null;
 
-                // Ensure strict types or non-null checks
                 if (showLandslideForecast && station.landslide_forecast != null) {
                     icon = createForecastIcon(station.landslide_forecast);
                 }
@@ -590,7 +531,6 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                     icon = createPrecipIcon(station.precipitation);
                 }
                 else {
-                    // Fallback Priorities (default view)
                     if (station.soil_saturation != null) {
                         icon = createSaturationIcon(station.soil_saturation);
                     }
@@ -615,17 +555,17 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 const createLandslideIcon = () => {
     return L.icon({
         iconUrl: GreenPinIcon,
-        iconSize: [30, 40],        // Adjust size as needed
-        iconAnchor: [15, 30],      // Bottom center of the icon
-        popupAnchor: [0, -10]      // Popup appears above the pin
+        iconSize: [30, 40],        
+        iconAnchor: [15, 30],      
+        popupAnchor: [0, -10]      
     });
 };
 
 const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
     const [allLandslides, setAllLandslides] = useState([]);
     const customIcon = createLandslideIcon();
-    // Stable ref so the fetch effect runs exactly once regardless of parent re-renders
     const setAvailableYearsRef = useRef(setAvailableYears);
+    
     useEffect(() => { setAvailableYearsRef.current = setAvailableYears; }, [setAvailableYears]);
 
     useEffect(() => {
@@ -653,7 +593,7 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
             .catch((err) => {
                 console.error("API Fetch Error:", err);
             });
-    }, []); // Run once on mount — setAvailableYears is accessed via ref
+    }, []);
 
     const filteredLandslides = allLandslides.filter(landslide => {
         if (selectedYear === 'all') {
@@ -783,38 +723,6 @@ const PrecipLegend = () => {
 export default function InteractiveMap() {
     const center = [18.220833, -66.420149];
 
-    // --- COOKIE / STATE INITIALIZATION LOGIC ---
-    // const COOKIE_NAME = 'landslide_map_filters';
-
-    // Helper: Safely retrieve and parse the cookie
-    // const getSavedSettings = () => {
-    //     try {
-    //         const saved = Cookies.get(COOKIE_NAME);
-    //         return saved ? JSON.parse(saved) : {};
-    //     } catch (e) {
-    //         console.warn("Failed to parse map settings cookie", e);
-    //         return {};
-    //     }
-    // };
-
-    // const savedSettings = getSavedSettings();
-
-    // UI State: Initialize with cookie value if it exists, otherwise default
-    // const [showStations, setShowStations] = useState(savedSettings.showStations ?? true);
-    // const [selectedYear, setSelectedYear] = useState(savedSettings.selectedYear ?? "");
-    // const [availableYears, setAvailableYears] = useState([]); // Derived from API, not saved
-    // const [showPrecip, setShowPrecip] = useState(savedSettings.showPrecip ?? false);
-    // const [showSusceptibility, setShowSusceptibility] = useState(savedSettings.showSusceptibility ?? false);
-
-    // Toggle State for Station Visualization Layers
-    // const [showSaturation, setShowSaturation] = useState(savedSettings.showSaturation ?? false);
-    // const [showPrecip12hr, setShowPrecip12hr] = useState(savedSettings.showPrecip12hr ?? false);
-
-    // Legend State
-    // const [showSaturationLegend, setShowSaturationLegend] = useState(savedSettings.showSaturationLegend ?? false);
-    // const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(savedSettings.showSusceptibilityLegend ?? false);
-    // const [showPrecipLegend, setShowPrecipLegend] = useState(savedSettings.showPrecipLegend ?? false);
-
     const [showStations, setShowStations] = useState(true);
     const [selectedYear, setSelectedYear] = useState("");
     const [availableYears, setAvailableYears] = useState([]);
@@ -834,12 +742,15 @@ export default function InteractiveMap() {
 
     // --- RADAR / TIME LOGIC ---
     const [showForecast, setShowForecast] = useState(true);
-    // Disclaimer State
+    const [radarFrames, setRadarFrames] = useState([]);
+    const [currentFrameIdx, setCurrentFrameIdx] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+
     const [showDisclaimer, setShowDisclaimer] = useState(
         localStorage.getItem('disclaimerAccepted') !== 'true'
     );
 
-    // Load cookie AFTER first render to avoid breaking initial logic
     useEffect(() => {
         try {
             const saved = Cookies.get(COOKIE_NAME);
@@ -847,7 +758,6 @@ export default function InteractiveMap() {
 
             const settings = JSON.parse(saved);
 
-            // Apply only the settings that make sense
             if (typeof settings.showStations === 'boolean') setShowStations(settings.showStations);
             if (typeof settings.selectedYear === 'string') setSelectedYear(settings.selectedYear);
 
@@ -866,8 +776,6 @@ export default function InteractiveMap() {
         }
     }, []);
 
-    
-    // --- EFFECT: PERSIST SETTINGS TO COOKIE ---
     useEffect(() => {
         const settingsToSave = {
             showStations,
@@ -880,8 +788,6 @@ export default function InteractiveMap() {
             showSusceptibilityLegend,
             showPrecipLegend,
         };
-
-        // Save cookie with 30-day expiration
         Cookies.set(COOKIE_NAME, JSON.stringify(settingsToSave), { expires: 30 });
     }, [
         showStations,
@@ -895,41 +801,35 @@ export default function InteractiveMap() {
         showPrecipLegend
     ]);
 
-    // --- RADAR TIME VARIABLES ---
-    const now = new Date();
-    const coeff = 1000 * 60 * 5;
-    const roundedEnd = new Date(Math.floor(now.getTime() / coeff) * coeff).getTime();
-    const roundedStart = roundedEnd - (typeof HISTORY_DURATION !== 'undefined' ? HISTORY_DURATION : 7200000);
+    // Fetch Custom Radar Frames from VPS
+    useEffect(() => {
+        if (!showForecast) return;
+        
+        fetch(`${BASE_DOMAIN}/radar/frames`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.length > 0) {
+                    setRadarFrames(data);
+                    setCurrentFrameIdx(data.length - 1); // Start at the most recent frame
+                }
+            })
+            .catch(err => console.error("Error fetching radar frames:", err));
+    }, [showForecast]);
 
-    const [radarTimeRange] = useState({ start: roundedStart, end: roundedEnd });
-    const [currentTime, setCurrentTime] = useState(roundedStart);
-  
-    const [isPlaying, setIsPlaying] = useState(false); // Start paused — user initiates playback
-    const [isDragging, setIsDragging] = useState(false);
-
+    // Animation Loop
     useEffect(() => {
         let interval;
-
-        if (showForecast && isPlaying && !isDragging) {
+        if (showForecast && isPlaying && !isDragging && radarFrames.length > 0) {
             interval = setInterval(() => {
-            setCurrentTime(prevTime => {
-                const nextTime = prevTime + STEP_SIZE;
-                if (nextTime > radarTimeRange.end) {
-                return radarTimeRange.start;
-                }
-                return nextTime;
-            });
+                setCurrentFrameIdx(prev => {
+                    const nextIdx = prev + 1;
+                    return nextIdx >= radarFrames.length ? 0 : nextIdx;
+                });
             }, FRAME_SPEED);
         }
-
         return () => clearInterval(interval);
-    }, [isPlaying, showForecast, radarTimeRange, isDragging]);
+    }, [isPlaying, showForecast, isDragging, radarFrames]);
 
-    const handleSeek = (time) => {
-        const step = typeof STEP_SIZE !== 'undefined' ? STEP_SIZE : 300000;
-        const snapped = Math.round((time - radarTimeRange.start) / step) * step + radarTimeRange.start;
-        setCurrentTime(snapped);
-    };
 
     const handleAgree = () => {
         localStorage.setItem('disclaimerAccepted', 'true');
@@ -941,14 +841,10 @@ export default function InteractiveMap() {
         setShowStations(newValue);
 
         if (newValue) {
-            // Stations turned ON → clear any selected year
             setSelectedYear("");
-
-            // Default station display
             setShowSaturation(true);
             setShowPrecip12hr(false);
 
-            // Legends
             setShowSaturationLegend(true);
             setShowPrecipLegend(false);
             setShowSusceptibilityLegend(false);
@@ -958,13 +854,13 @@ export default function InteractiveMap() {
     const togglePrecip = () => setShowPrecip(v => !v);
     const toggleSusceptibility = () => setShowSusceptibility(v => !v);
 
-    // Mutually Exclusive Toggles for Station Data (radio behavior)
     const toggleSaturation = () => {
         setSelectedYear("");
         setShowStations(true);
         setShowSaturation(true);
         setShowPrecip12hr(false);
     };
+    
     const togglePrecip12hr = () => {
         setSelectedYear("");
         setShowStations(true);
@@ -1023,7 +919,6 @@ export default function InteractiveMap() {
         setShowPrecipLegend(false);
     };
 
-    // --- MOBILE & LABEL LOGIC (From 'demo2' branch) ---
     const isMobile = window.innerWidth < 768;
 
     let mapLabelText = "";
@@ -1035,7 +930,7 @@ export default function InteractiveMap() {
     } else if (showPrecip12hr) {
         mapLabelText = "PAST 12 HOUR PRECIPITATION (INCHES)";
     } else {
-        mapLabelText = "SOIL SATURATION PERCENTAGE"; // fallback if needed
+        mapLabelText = "SOIL SATURATION PERCENTAGE"; 
     }
 
     return (
@@ -1090,8 +985,6 @@ export default function InteractiveMap() {
                 <EsriOverlays
                     showPrecip={showPrecip}
                     showSusceptibility={showSusceptibility}
-                    showForecast={showForecast}
-                    currentTime={currentTime}
                 />
 
                 {!isMobile && <ZoomControl position="topright" />}
@@ -1109,14 +1002,22 @@ export default function InteractiveMap() {
                 {showSusceptibilityLegend && <SusceptibilityLegend />}
                 {showPrecipLegend && <PrecipLegend />}
 
-                {showForecast && (
+                {/* Path B: Custom Cached Image Overlay */}
+                {showForecast && radarFrames.length > 0 && radarFrames[currentFrameIdx] && (
+                    <ImageOverlay 
+                        url={`${BASE_DOMAIN}${radarFrames[currentFrameIdx].url}`} 
+                        bounds={[[17.5, -68.0], [19.0, -65.0]]} 
+                        opacity={0.6} 
+                    />
+                )}
+
+                {showForecast && radarFrames.length > 0 && (
                     <TimeControlBar
-                        startTime={radarTimeRange.start}
-                        endTime={radarTimeRange.end} 
-                        currentTime={currentTime}
+                        frames={radarFrames}
+                        currentIndex={currentFrameIdx}
                         isPlaying={isPlaying}
                         onTogglePlay={() => setIsPlaying(p => !p)}
-                        onSeek={handleSeek}
+                        onSeek={(idx) => setCurrentFrameIdx(idx)}
                         setIsDragging={setIsDragging}
                         setIsPlaying={setIsPlaying}
                     />
