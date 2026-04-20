@@ -1,12 +1,12 @@
 /* ===== MAIN SECTION ===== */
 
 .about {
-  background-color: #DFE8DA;
+  background-color: #dfe8da;
   padding: 3rem 2rem;
   width: 100%;
   position: relative;
   overflow: hidden;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 .about__content {
@@ -67,12 +67,11 @@
   text-align: justify;
 }
 
-
 /* ===== DIRECTORY SECTION ===== */
 
 .directory__title {
-  background-color: #3B7D23;
-  color: #DFE8DA;
+  background-color: #3b7d23;
+  color: #dfe8da;
   padding: 1rem;
   font-size: 2.5rem;
   font-weight: bold;
@@ -152,7 +151,7 @@
 }
 
 .directory__linkedin-box {
-  background-color: #3B7D23;
+  background-color: #3b7d23;
   width: 60px;
   height: 60px;
   margin-top: -18%;
@@ -173,12 +172,10 @@
   justify-content: center;
   flex-wrap: wrap;
   text-align: left;
-  gap: 10rem;       
+  gap: 10rem;
   max-width: 1200px;
   margin: 0 auto;
-
 }
-
 
 .directory__group h3 {
   font-size: 2.2rem;
@@ -213,7 +210,6 @@
    MOBILE — ABOUT US PAGE
 ============================================ */
 @media (max-width: 768px) {
-
   /* ========== MAIN ABOUT SECTION ========== */
   .about {
     padding: 2rem 1rem !important;
@@ -231,7 +227,6 @@
     margin-left: 0 !important;
     max-width: 100% !important;
     padding-left: 0.5rem !important;
-
   }
 
   .about__image {
@@ -263,7 +258,7 @@
   }
 
   /* ========== DIRECTORY SECTION ========== */
-  
+
   .directory__title {
     font-size: 1.7rem !important;
     padding: 1rem 0.5rem !important;
@@ -338,5 +333,202 @@
     font-size: 1rem !important;
     text-align: left !important;
     margin-bottom: 0.5rem !important;
+  }
+}
+
+/* Smaller, tighter grid for grad / undergrad cards */
+.directory__profiles--students {
+  gap: 3rem;
+  margin-top: 3rem;
+  margin-bottom: 3rem;
+}
+
+/* Student cards are narrower than faculty cards */
+.directory__profiles--students .directory__card {
+  width: 180px;
+}
+
+/* Student cards: image fills the card top with a fixed square crop */
+.directory__profiles--students .directory__card img.profile {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+/* Student name slightly smaller */
+.directory__profiles--students .directory__person-info strong {
+  font-size: 16px;
+}
+
+/* Hide the green LinkedIn box for students (no contact info shown) */
+.directory__profiles--students .directory__linkedin-box {
+  background-color: transparent;
+  width: 0;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* ── Responsive: student cards stack more tightly on mobile ── */
+@media (max-width: 768px) {
+  .directory__profiles--students {
+    gap: 1.5rem !important;
+  }
+
+  .directory__profiles--students .directory__card {
+    width: 45% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .directory__profiles--students .directory__card {
+    width: 70% !important;
+  }
+}
+/* ===================================================
+   ADDITIONS — student profile card grid + funding section
+   Append these rules to the existing About_module.css
+=================================================== */
+
+/* Smaller, tighter grid for grad / undergrad cards */
+.directory__profiles--students {
+  gap: 3rem;
+  margin-top: 3rem;
+  margin-bottom: 3rem;
+}
+
+/* Student cards are narrower than faculty cards */
+.directory__profiles--students .directory__card {
+  width: 180px;
+}
+
+/* Student cards: image fills the card top with a fixed square crop */
+.directory__profiles--students .directory__card img.profile {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+/* Student name slightly smaller */
+.directory__profiles--students .directory__person-info strong {
+  font-size: 16px;
+}
+
+/* Hide the green LinkedIn box for students (no contact info shown) */
+.directory__profiles--students .directory__linkedin-box {
+  background-color: transparent;
+  width: 0;
+  height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* ── Funding Sources Section ── */
+
+.funding__section {
+  margin-top: 4rem;
+}
+
+/* Reuse the green banner but allow overriding margin */
+.funding__banner {
+  margin-top: 0;
+}
+
+.funding__grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2.5rem;
+  padding: 3rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.funding__link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.funding__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  padding: 1.5rem 1.25rem;
+  width: 180px;
+  min-height: 140px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  gap: 0.75rem;
+}
+
+.funding__card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.funding__logo {
+  max-width: 140px;
+  max-height: 80px;
+  object-fit: contain;
+}
+
+.funding__label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #465a52;
+  text-align: center;
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Shown when no logo image has been uploaded */
+.funding__name-fallback {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #3b7d23;
+  text-align: center;
+  word-break: break-word;
+}
+
+/* ── Responsive: student cards + funding on mobile ── */
+@media (max-width: 768px) {
+  .directory__profiles--students {
+    gap: 1.5rem !important;
+  }
+
+  .directory__profiles--students .directory__card {
+    width: 45% !important;
+  }
+
+  .funding__grid {
+    gap: 1.5rem;
+    padding: 2rem 1rem;
+  }
+
+  .funding__card {
+    width: 140px;
+    min-height: 110px;
+    padding: 1rem;
+  }
+
+  .funding__logo {
+    max-width: 110px;
+    max-height: 60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .directory__profiles--students .directory__card {
+    width: 70% !important;
+  }
+
+  .funding__card {
+    width: 130px;
   }
 }
