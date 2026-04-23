@@ -105,10 +105,8 @@ const MobileTouchHandler = () => {
 
         const handleTouchStart = (e) => {
             if (e.touches.length === 2) {
-                // Two fingers → disable map drag so page can scroll
                 map.dragging.disable();
             } else {
-                // One finger → map pans normally
                 map.dragging.enable();
             }
         };
@@ -251,8 +249,8 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
         const hillshade = EL.tiledMapLayer({
             url: 'https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Hillshade_Puerto_Rico/MapServer',
             opacity: 0.5,
-            minZoom: 7,  // Prevents requesting tiles when zoomed too far out
-            maxZoom: 16, // Prevents requesting tiles when zoomed too far in
+            minZoom: 7,
+            maxZoom: 16,
             errorTileUrl: '', 
         }).addTo(map);
 
@@ -299,7 +297,8 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
     return null;
 };
 
-const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast }) => {
+// Added onDataUpdate prop to lift state
+const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast, onDataUpdate }) => {
     const [stations, setStations] = useState([]);
     const initialSyncDone = useRef(false);
     const stationsRef = useRef([]);
@@ -313,6 +312,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
             .then((data) => {
                 setStations(data);
                 stationsRef.current = data;
+                if (onDataUpdate) onDataUpdate(data);
             })
             .catch((err) => console.error("API Fetch Error:", err));
     };
@@ -355,13 +355,11 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         };
     };
 
-    // --- HEARTBEAT LOGIC ---
     useEffect(() => {
         const checkDataConsistency = async () => {
             const currentStations = stationsRef.current;
             if (currentStations.length === 0) return;
 
-            console.log("Heartbeat: Checking data consistency...");
             try {
                 const response = await fetch(BASE_FILES_DATA_URL);
                 if (!response.ok) return;
@@ -394,7 +392,6 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ stations: batchPayload })
                     });
-                    console.log(`Heartbeat: Updated ${batchPayload.length} stations.`);
 
                     setStations(prevStations => {
                         const updated = prevStations.map(s => {
@@ -404,6 +401,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                             return s;
                         });
                         stationsRef.current = updated;
+                        if (onDataUpdate) onDataUpdate(updated);
                         return updated;
                     });
                 }
@@ -427,7 +425,6 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         };
     }, []);
 
-    /** SOIL SATURATION ICON **/
     const createSaturationIcon = (saturation, lastUpdated) => {
         const { isOffline, isStale, diffHours } = getStationStatus(lastUpdated);
 
@@ -474,7 +471,6 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         });
     };
 
-    /** PRECIP COLOR SCALE (MRMS QPE) **/
     const getPrecipColor = (p) => {
         if (p > 8.0) return "#000066";
         if (p >= 7.0) return "#0000CC";
@@ -503,7 +499,6 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         return "#DADADA"; 
     };
 
-    /** PRECIPITATION ICON **/
     const createPrecipIcon = (precip) => {
         const color = getPrecipColor(precip);
         const rounded = Number(precip).toFixed(2);
@@ -561,7 +556,8 @@ const createLandslideIcon = () => {
     });
 };
 
-const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
+// Added onDataUpdate prop
+const PopulateLandslides = ({ selectedYear, setAvailableYears, onDataUpdate }) => {
     const [allLandslides, setAllLandslides] = useState([]);
     const customIcon = createLandslideIcon();
     const setAvailableYearsRef = useRef(setAvailableYears);
@@ -578,6 +574,7 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
             })
             .then((data) => {
                 setAllLandslides(data);
+                if (onDataUpdate) onDataUpdate(data);
 
                 const years = data.map(ls => {
                     if (!ls.landslide_date) return null;
@@ -740,6 +737,10 @@ export default function InteractiveMap() {
     const [showZoomHint, setShowZoomHint] = useState(false);
     const hasShownZoomHint = useRef(false);
 
+    // --- Data States for KML Export ---
+    const [stationsData, setStationsData] = useState([]);
+    const [landslidesData, setLandslidesData] = useState([]);
+
     // --- RADAR / TIME LOGIC ---
     const [showForecast, setShowForecast] = useState(true);
     const [radarFrames, setRadarFrames] = useState([]);
@@ -801,7 +802,6 @@ export default function InteractiveMap() {
         showPrecipLegend
     ]);
 
-    // Fetch Custom Radar Frames from VPS
     useEffect(() => {
         if (!showForecast) return;
         
@@ -810,13 +810,12 @@ export default function InteractiveMap() {
             .then(data => {
                 if (data && data.length > 0) {
                     setRadarFrames(data);
-                    setCurrentFrameIdx(data.length - 1); // Start at the most recent frame
+                    setCurrentFrameIdx(data.length - 1); 
                 }
             })
             .catch(err => console.error("Error fetching radar frames:", err));
     }, [showForecast]);
 
-    // Animation Loop
     useEffect(() => {
         let interval;
         if (showForecast && isPlaying && !isDragging && radarFrames.length > 0) {
@@ -919,6 +918,71 @@ export default function InteractiveMap() {
         setShowPrecipLegend(false);
     };
 
+    // --- KML GENERATOR FUNCTION ---
+    const handleExportKML = (e) => {
+        e.stopPropagation(); // Prevents map clicks if placed directly over the map
+
+        let kmlString = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+        kmlString += `<kml xmlns="http://www.opengis.net/kml/2.2">\n`;
+        kmlString += `  <Document>\n`;
+        kmlString += `    <name>Derrumbe_Data</name>\n`;
+
+        // 1. Export Stations (Only if stations layer is visible)
+        if (showStations) {
+            stationsData.forEach(station => {
+                if (station.is_available !== 1) return;
+                const name = station.name || `Station ${station.station_id}`;
+                const sat = station.soil_saturation != null ? Math.round(station.soil_saturation) + '%' : 'N/A';
+                const precip = station.precipitation != null ? Number(station.precipitation).toFixed(2) + ' in' : 'N/A';
+                
+                kmlString += `    <Placemark>\n`;
+                kmlString += `      <name>${name}</name>\n`;
+                kmlString += `      <description><![CDATA[\n`;
+                kmlString += `        <b>Soil Saturation:</b> ${sat}<br>\n`;
+                kmlString += `        <b>12hr Precip:</b> ${precip}\n`;
+                kmlString += `      ]]></description>\n`;
+                kmlString += `      <Point>\n`;
+                kmlString += `        <coordinates>${station.longitude},${station.latitude},0</coordinates>\n`;
+                kmlString += `      </Point>\n`;
+                kmlString += `    </Placemark>\n`;
+            });
+        }
+
+        // 2. Export Landslides (Respecting active year filters)
+        const exportLandslides = (selectedYear && selectedYear !== 'all')
+            ? landslidesData.filter(ls => ls.landslide_date && new Date(ls.landslide_date).getFullYear() === parseInt(selectedYear))
+            : landslidesData;
+
+        exportLandslides.forEach(ls => {
+            const name = `Landslide Event ${ls.landslide_id || ''}`.trim();
+            const date = ls.landslide_date ? new Date(ls.landslide_date).toLocaleDateString() : 'Unknown Date';
+            
+            kmlString += `    <Placemark>\n`;
+            kmlString += `      <name>${name}</name>\n`;
+            kmlString += `      <description><![CDATA[\n`;
+            kmlString += `        <b>Date:</b> ${date}<br>\n`;
+            kmlString += `      ]]></description>\n`;
+            kmlString += `      <Point>\n`;
+            kmlString += `        <coordinates>${ls.longitude},${ls.latitude},0</coordinates>\n`;
+            kmlString += `      </Point>\n`;
+            kmlString += `    </Placemark>\n`;
+        });
+
+        kmlString += `  </Document>\n`;
+        kmlString += `</kml>`;
+
+        // Trigger Download
+        const blob = new Blob([kmlString], { type: "application/vnd.google-earth.kml+xml" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Derrumbe_Data_${new Date().toISOString().slice(0,10)}.kml`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     const isMobile = window.innerWidth < 768;
 
     let mapLabelText = "";
@@ -945,8 +1009,37 @@ export default function InteractiveMap() {
                 maxZoom={18}
                 scrollWheelZoom={true}
                 zoomControl={false}
-                style={{ height: '100vh', width: '100%' }}
+                style={{ height: '100vh', width: '100%', position: 'relative' }}
             >
+            {/* --- FLOATING EXPORT BUTTON --- */}
+            <div 
+                style={{ 
+                    position: 'absolute', 
+                    top: '120px', /* Increased from 80px to push it down further from the +/- */
+                    right: '15px', 
+                    zIndex: 1000 
+                }}
+            >
+                <button 
+                    onClick={handleExportKML}
+                    style={{
+                        padding: '10px 14px',
+                        cursor: 'pointer',
+                        backgroundColor: '#ffffff',
+                        color: '#333',
+                        border: '2px solid rgba(0,0,0,0.2)',
+                        borderRadius: '4px',
+                        fontWeight: 'bold',
+                        boxShadow: '0 1px 5px rgba(0,0,0,0.4)',
+                        transition: 'background-color 0.2s'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = '#f4f4f4'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = '#ffffff'}
+                >
+                    📥 Exportar KML
+                </button>
+            </div>
+
                 {mapLabelText && <div className="map-label">{mapLabelText}</div>}
 
                 <TileLayer
@@ -993,10 +1086,15 @@ export default function InteractiveMap() {
                     <PopulateStations
                         showSaturation={showSaturation}
                         showPrecip12hr={showPrecip12hr}
+                        onDataUpdate={setStationsData}
                     />
                 )}
 
-                <PopulateLandslides selectedYear={selectedYear} setAvailableYears={setAvailableYears} />
+                <PopulateLandslides 
+                    selectedYear={selectedYear} 
+                    setAvailableYears={setAvailableYears} 
+                    onDataUpdate={setLandslidesData}
+                />
 
                 {showSaturationLegend && <SoilSaturationLegend />}
                 {showSusceptibilityLegend && <SusceptibilityLegend />}
