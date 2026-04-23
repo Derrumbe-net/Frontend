@@ -82,7 +82,7 @@ export default function CMSStations() {
                             {paginatedStations.map((s) => (
                                 <tr key={s.station_id}>
                                     <td>
-                                        {s.sensor_image_url ? (
+                                        {s.image_url ? (
                                             <a
                                                 href={`${API_URL}/stations/${s.station_id}/image/sensor`}
                                                 target="_blank"
@@ -91,7 +91,7 @@ export default function CMSStations() {
                                             >
                                                 <img
                                                     src={`${API_URL}/stations/${s.station_id}/image/sensor`}
-                                                    alt={`Estación ${s.city}`}
+                                                    alt={`Estación ${s.name}`}
                                                     className="cms-thumb"
                                                 />
                                             </a>
@@ -99,7 +99,7 @@ export default function CMSStations() {
                                             <span className="no-img">Sin Imagen</span>
                                         )}
                                     </td>
-                                    <td style={{ fontWeight: "600" }}>{s.city}</td>
+                                    <td style={{ fontWeight: "600" }}>{s.name}</td>
                                     <td>
                                       <span className={`status-pill ${s.is_available ? 'status-active' : 'status-inactive'}`}>
                                         {s.is_available ? "Activa" : "Oculta"}
@@ -108,10 +108,10 @@ export default function CMSStations() {
                                     <td>{s.soil_saturation}%</td>
                                     <td>{s.precipitation}</td>
 
-                                    <td>{s.wc1}</td>
-                                    <td>{s.wc2}</td>
-                                    <td>{s.wc3}</td>
-                                    <td>{s.wc4}</td>
+                                    <td>{s.wc1_max}</td>
+                                    <td>{s.wc2_max}</td>
+                                    <td>{s.wc3_max}</td>
+                                    <td>{s.wc4_max}</td>
 
                                     <td>
                                         <button className="cms-icon-btn" onClick={() => handleOpenForm(s)} title="Editar">
@@ -170,10 +170,10 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
     });
 
     const [formData, setFormData] = useState({
-        city: "",
+        name: "",
         soil_saturation: "",
         precipitation: "",
-        wc1: "", wc2: "", wc3: "", wc4: "",
+        wc1_max: "", wc2_max: "", wc3_max: "", wc4_max: "",
         susceptibility: "", elevation: "", latitude: "", longitude: "",
         land_unit: "", geological_unit: "", slope: "",
         collaborator: "", ftp_file_path: "", is_available: 1,
@@ -195,13 +195,13 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
             });
 
             setFormData({
-                city: station.city || "",
+                name: station.name || "",
                 soil_saturation: station.soil_saturation || "",
                 precipitation: station.precipitation || "",
-                wc1: station.wc1 || "",
-                wc2: station.wc2 || "",
-                wc3: station.wc3 || "",
-                wc4: station.wc4 || "",
+                wc1_max: station.wc1_max || "",
+                wc2_max: station.wc2_max || "",
+                wc3_max: station.wc3_max || "",
+                wc4_max: station.wc4_max || "",
                 susceptibility: station.susceptibility || "",
                 elevation: station.elevation || "",
                 latitude: station.latitude || "",
@@ -216,7 +216,7 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
                 station_installation_date: station.station_installation_date?.slice(0, 10) || "",
             });
 
-            if (station.sensor_image_url) {
+            if (station.image_url) {
                 setPreviewUrl(`${apiUrl}/stations/${station.station_id}/image/sensor`);
             } else {
                 setPreviewUrl(null);
@@ -236,14 +236,14 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
     };
 
     const validate = () => {
-        if (!formData.city.trim()) { Swal.fire("Error", "El nombre de la ciudad es obligatorio.", "warning"); return false; }
+        if (!formData.name.trim()) { Swal.fire("Error", "El nombre de la ciudad es obligatorio.", "warning"); return false; }
         if (!formData.latitude || !formData.longitude) { Swal.fire("Error", "Latitud y Longitud son obligatorias.", "warning"); return false; }
         if (!formData.elevation) { Swal.fire("Error", "La elevación es obligatoria.", "warning"); return false; }
         if (!formData.susceptibility) { Swal.fire("Error", "La susceptibilidad es obligatoria.", "warning"); return false; }
         if (!formData.station_installation_date) { Swal.fire("Error", "La fecha de instalación es obligatoria.", "warning"); return false; }
         if (!formData.ftp_file_path) { Swal.fire("Error", "La ruta del archivo (.dat) es obligatoria.", "warning"); return false; }
 
-        if (formData.wc1 === "" || formData.wc2 === "" || formData.wc3 === "" || formData.wc4 === "") {
+        if (formData.wc1_max === "" || formData.wc2_max === "" || formData.wc3_max === "" || formData.wc4_max === "") {
             Swal.fire("Error", "Todos los campos de WC Max son obligatorios.", "warning");
             return false;
         }
@@ -335,7 +335,7 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
     return (
         <form onSubmit={handleSubmit}>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '8px', color: '#13241e' }}>
-                {isEdit ? `Editar: ${station.city}` : "Nueva Estación"}
+                {isEdit ? `Editar: ${station.name}` : "Nueva Estación"}
             </h2>
             <p style={{ color: '#666', marginBottom: '24px' }}>
                 Complete la información técnica y geográfica.
@@ -347,7 +347,7 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
 
                 <div className="cms-form-group span-2">
                     <label>Nombre de la Ciudad <span className="required-asterisk">*</span></label>
-                    <input className="cms-input" name="city" value={formData.city} onChange={handleChange} placeholder="Ej. Utuado" />
+                    <input className="cms-input" name="name" value={formData.name} onChange={handleChange} placeholder="Ej. Utuado" />
                 </div>
 
                 <div className="cms-form-group">
@@ -410,22 +410,22 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
 
                 <div className="cms-form-group">
                     <label>WC1 Max <span className="required-asterisk">*</span></label>
-                    <input className="cms-input" type="number" name="wc1" value={formData.wc1} onChange={handleChange} />
+                    <input className="cms-input" type="number" name="wc1_max" value={formData.wc1_max} onChange={handleChange} />
                 </div>
 
                 <div className="cms-form-group">
                     <label>WC2 Max <span className="required-asterisk">*</span></label>
-                    <input className="cms-input" type="number" name="wc2" value={formData.wc2} onChange={handleChange} />
+                    <input className="cms-input" type="number" name="wc2_max" value={formData.wc2_max} onChange={handleChange} />
                 </div>
 
                 <div className="cms-form-group">
                     <label>WC3 Max <span className="required-asterisk">*</span></label>
-                    <input className="cms-input" type="number" name="wc3" value={formData.wc3} onChange={handleChange} />
+                    <input className="cms-input" type="number" name="wc3_max" value={formData.wc3_max} onChange={handleChange} />
                 </div>
 
                 <div className="cms-form-group">
                     <label>WC4 Max <span className="required-asterisk">*</span></label>
-                    <input className="cms-input" type="number" name="wc4" value={formData.wc4} onChange={handleChange} />
+                    <input className="cms-input" type="number" name="wc4_max" value={formData.wc4_max} onChange={handleChange} />
                 </div>
 
                 <div className="cms-form-section-title">Profundidad de Sensores (Incluir unidades)</div>
