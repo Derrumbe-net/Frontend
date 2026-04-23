@@ -359,8 +359,8 @@ function ReportForm({ report, onClose, refreshReports }) {
                 const landslidePayload = {
                     admin_id: adminId, // Uses the decoded ID
                     landslide_date: formData.reported_at,
-                    latitude: formData.latitude,
-                    longitude: formData.longitude,
+                    latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+                    longitude: formData.longitude ? parseFloat(formData.longitude) : null,
                     image_url: sharedFolder // Explicitly send folder name
                 };
 
@@ -385,6 +385,8 @@ function ReportForm({ report, onClose, refreshReports }) {
             // 4. Update Report with new Data AND Link the Landslide ID
             const reportPayload = {
                 ...formData,
+                latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+                longitude: formData.longitude ? parseFloat(formData.longitude) : null,
                 landslide_id: finalLandslideId,
                 image_url: sharedFolder // Ensure report gets the folder name too
             };
