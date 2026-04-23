@@ -15,18 +15,14 @@ const COOKIE_NAME = 'landslide_map_filters';
 
 const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 
-// $app->get('/stations', ...)
+// Matches GET /stations
 const BASE_STATIONS_URL = `${BASE_DOMAIN}/stations`;
 
-// $app->get('/stations/files/data', ...)
+// Matches GET /stations/files/data
 const BASE_FILES_DATA_URL = `${BASE_DOMAIN}/stations/files/data`;
 
-// $app->put('/stations/files/data/{id}/update', ...)
-const BASE_UPDATE_PREFIX = `${BASE_DOMAIN}/stations/files/data`;
-
+// Matches GET /landslides
 const BASE_LANDSLIDES_URL = `${BASE_DOMAIN}/landslides`;
-
-const BASE_BATCH_UPDATE_URL = `${BASE_DOMAIN}/stations/batch-update`;
 
 // --- CONSTANTS FOR RADAR ---
 const FRAME_SPEED = 1500; // 1.5 seconds per frame
@@ -105,10 +101,8 @@ const MobileTouchHandler = () => {
 
         const handleTouchStart = (e) => {
             if (e.touches.length === 2) {
-                // Two fingers → disable map drag so page can scroll
                 map.dragging.disable();
             } else {
-                // One finger → map pans normally
                 map.dragging.enable();
             }
         };
@@ -251,8 +245,8 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
         const hillshade = EL.tiledMapLayer({
             url: 'https://tiles.arcgis.com/tiles/TQ9qkk0dURXSP7LQ/arcgis/rest/services/Hillshade_Puerto_Rico/MapServer',
             opacity: 0.5,
-            minZoom: 7,  // Prevents requesting tiles when zoomed too far out
-            maxZoom: 16, // Prevents requesting tiles when zoomed too far in
+            minZoom: 7,
+            maxZoom: 16,
             errorTileUrl: '', 
         }).addTo(map);
 
@@ -301,44 +295,36 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
 
 const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast }) => {
     const [stations, setStations] = useState([]);
-    const initialSyncDone = useRef(false);
     const stationsRef = useRef([]);
-
-    const fetchStations = () => {
-        fetch(BASE_STATIONS_URL)
-            .then((response) => {
-                if (!response.ok) throw new Error(`Error: ${response.status}`);
-                return response.json();
-            })
-            .then((data) => {
-                setStations(data);
-                stationsRef.current = data;
-            })
-            .catch((err) => console.error("API Fetch Error:", err));
-    };
-
-    useEffect(() => {
-        fetchStations();
-    }, []);
 
     const calculateMetricsFromRawData = (rows, stationInfo) => {
         if (!rows || rows.length === 0) return null;
 
-        const last12 = rows.slice(-12);
-        const totalRain = last12.reduce((acc, row) => {
-            const val = parseFloat(row['Rain_mm_Tot']);
+        // 1. Sum precipitation across the provided rows (Received in mm)
+        const totalRainMm = rows.reduce((acc, row) => {
+            const val = parseFloat(row.precipitation);
             return acc + (isNaN(val) ? 0 : val);
         }, 0);
 
+        // 2. Convert mm to inches (1 inch = 25.4 mm)
+        const totalRainInches = totalRainMm / 25.4;
+
+        // Get limits and the latest row for soil saturation
         const lastRow = rows[rows.length - 1];
         const wcRatios = [];
-        const limits = [stationInfo.wc1, stationInfo.wc2, stationInfo.wc3, stationInfo.wc4];
+        
+        // Limits from the /stations API metadata
+        const limits = [stationInfo.wc1_max, stationInfo.wc2_max, stationInfo.wc3_max, stationInfo.wc4_max];
+        
+        // Values from the /stations/files/data raw readings array
+        const keys = ['wc1', 'wc2', 'wc3', 'wc4'];
 
         limits.forEach((limit, index) => {
-            const key = Object.keys(lastRow).find(k => k.toLowerCase().startsWith(`wc${index + 1}`));
-            const val = key ? parseFloat(lastRow[key]) : null;
+            const val = parseFloat(lastRow[keys[index]]);
             const max = parseFloat(limit);
-            if (!isNaN(val) && !isNaN(max) && max !== 0) {
+            
+            // Ensure both parsed successfully and max is greater than 0
+            if (!isNaN(val) && !isNaN(max) && max > 0) {
                 wcRatios.push(val / max);
             }
         });
@@ -347,130 +333,107 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         if (wcRatios.length > 0) {
             const sumRatio = wcRatios.reduce((a, b) => a + b, 0);
             avgSaturation = (sumRatio / wcRatios.length) * 100;
+            
+            // Cap saturation at 100% in case sensor readings temporarily exceed the calibrated max
+            if (avgSaturation > 100) avgSaturation = 100;
         }
 
         return {
-            calculatedPrecip: totalRain,
-            calculatedSaturation: avgSaturation
+            calculatedPrecip: totalRainInches, // Converted to inches
+            calculatedSaturation: avgSaturation,
+            lastUpdated: lastRow.recorded_at
         };
     };
 
-    // --- HEARTBEAT LOGIC ---
+    // Load data ONCE upon mount
     useEffect(() => {
-        const checkDataConsistency = async () => {
-            const currentStations = stationsRef.current;
-            if (currentStations.length === 0) return;
-
-            console.log("Heartbeat: Checking data consistency...");
+        const loadInitialData = async () => {
             try {
-                const response = await fetch(BASE_FILES_DATA_URL);
-                if (!response.ok) return;
+                // 1. Fetch base stations
+                const stationRes = await fetch(BASE_STATIONS_URL);
+                if (!stationRes.ok) return;
+                const baseStations = await stationRes.json();
+                
+                const dataArray = Array.isArray(baseStations) ? baseStations : [];
+                stationsRef.current = dataArray;
 
-                const filesData = await response.json();
-                const batchPayload = [];
+                if (dataArray.length === 0) return;
+
+                // 2. Fetch the latest readings immediately after
+                const dataRes = await fetch(BASE_FILES_DATA_URL);
+                if (!dataRes.ok) return;
+                const filesData = await dataRes.json();
+
                 const localUpdates = {};
 
-                filesData.forEach(fileRecord => {
-                    const station = currentStations.find(s => s.station_id === fileRecord.station_id);
-                    if (station && fileRecord.data) {
-                        const metrics = calculateMetricsFromRawData(fileRecord.data, station);
-                        if (metrics) {
-                            batchPayload.push({
-                                station_id: station.station_id,
-                                precipitation: metrics.calculatedPrecip,
-                                soil_saturation: metrics.calculatedSaturation
-                            });
-                            localUpdates[station.station_id] = {
-                                precipitation: metrics.calculatedPrecip,
-                                soil_saturation: metrics.calculatedSaturation
-                            };
-                        }
-                    }
-                });
-
-                if (batchPayload.length > 0) {
-                    await fetch(BASE_BATCH_UPDATE_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ stations: batchPayload })
-                    });
-                    console.log(`Heartbeat: Updated ${batchPayload.length} stations.`);
-
-                    setStations(prevStations => {
-                        const updated = prevStations.map(s => {
-                            if (localUpdates[s.station_id]) {
-                                return { ...s, ...localUpdates[s.station_id], last_updated: new Date().toISOString() };
+                if (Array.isArray(filesData)) {
+                    filesData.forEach(fileRecord => {
+                        const fileRecordId = fileRecord.id || fileRecord.station_id;
+                        const station = dataArray.find(s => (s.id || s.station_id) === fileRecordId);
+                        
+                        if (station && fileRecord.data && Array.isArray(fileRecord.data) && fileRecord.data.length > 0) {
+                            const metrics = calculateMetricsFromRawData(fileRecord.data, station);
+                            if (metrics) {
+                                localUpdates[fileRecordId] = {
+                                    precipitation: metrics.calculatedPrecip,
+                                    soil_saturation: metrics.calculatedSaturation,
+                                    last_updated: metrics.lastUpdated
+                                };
                             }
-                            return s;
-                        });
-                        stationsRef.current = updated;
-                        return updated;
+                        }
                     });
                 }
-            } catch (error) {
-                console.error("Error performing batch update:", error);
+
+                // Merge and set state
+                const updatedStations = dataArray.map(s => {
+                    const stId = s.id || s.station_id;
+                    if (localUpdates[stId]) {
+                        return { ...s, ...localUpdates[stId] };
+                    }
+                    return s;
+                });
+                
+                setStations(updatedStations);
+
+            } catch (err) {
+                console.error("Error loading station data:", err);
             }
         };
 
-        const initTimer = setTimeout(() => {
-            if (!initialSyncDone.current) {
-                checkDataConsistency();
-                initialSyncDone.current = true;
-            }
-        }, 2000);
-
-        const interval = setInterval(checkDataConsistency, 300000);
-
-        return () => {
-            clearTimeout(initTimer);
-            clearInterval(interval);
-        };
+        loadInitialData();
     }, []);
 
     /** SOIL SATURATION ICON **/
     const createSaturationIcon = (saturation, lastUpdated) => {
-        const { isOffline, isStale, diffHours } = getStationStatus(lastUpdated);
-
-        if (isOffline) {
-            return L.divIcon({
-                html: `
-                    <div class="saturation-marker offline"
-                        title="No data for ${Math.floor(diffHours)}+ hours">
-                        OFF
-                    </div>
-                `,
-                className: "",
-                iconSize: [55, 30],
-                iconAnchor: [27, 15],
-            });
-        }
+        const { isOutdated, timeString } = getStationStatus(lastUpdated);
 
         let className = "saturation-marker";
         if (saturation >= 90) className += " high";
         else if (saturation >= 80) className += " medium";
         else className += " low";
 
-        const rounded = Math.round(saturation);
+        const rounded = saturation != null ? Math.round(saturation) : "--";
+
+        const clockHtml = isOutdated ? `
+            <span class="stale-clock" title="${timeString}" style="margin-left: 5px; display: flex; align-items: center; justify-content: center; cursor: help; opacity: 0.9;">
+                <svg viewBox="0 0 24 24" width="13" height="13">
+                    <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/>
+                    <line x1="12" y1="12" x2="12" y2="6" stroke="white" stroke-width="2"/>
+                    <line x1="12" y1="12" x2="16" y2="12" stroke="white" stroke-width="2"/>
+                </svg>
+            </span>
+        ` : "";
 
         return L.divIcon({
             html: `
-                <div class="${className}"
-                    title="Last updated ${Math.floor(diffHours)} hour(s) ago">
-                    ${rounded}%
-                    ${isStale ? `
-                        <span class="stale-clock">
-                            <svg viewBox="0 0 24 24" width="14" height="14">
-                                <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/>
-                                <line x1="12" y1="12" x2="12" y2="6" stroke="white" stroke-width="2"/>
-                                <line x1="12" y1="12" x2="16" y2="12" stroke="white" stroke-width="2"/>
-                            </svg>
-                        </span>
-                    ` : ""}
+                <div class="${className}" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box; color: white;">
+                    <span>${rounded}%</span>
+                    ${clockHtml}
                 </div>
             `,
             className: "",
-            iconSize: [55, 30],
-            iconAnchor: [27, 15],
+            iconSize: [65, 30], 
+            iconAnchor: [32, 15],
         });
     };
 
@@ -504,46 +467,65 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
     };
 
     /** PRECIPITATION ICON **/
-    const createPrecipIcon = (precip) => {
+    const createPrecipIcon = (precip, lastUpdated) => {
         const color = getPrecipColor(precip);
         const rounded = Number(precip).toFixed(2);
+        const { isOutdated, timeString } = getStationStatus(lastUpdated);
+
+        const clockHtml = isOutdated ? `
+            <span class="stale-clock" title="${timeString}" style="margin-left: 5px; display: flex; align-items: center; justify-content: center; cursor: help; opacity: 0.9;">
+                <svg viewBox="0 0 24 24" width="13" height="13">
+                    <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/>
+                    <line x1="12" y1="12" x2="12" y2="6" stroke="white" stroke-width="2"/>
+                    <line x1="12" y1="12" x2="16" y2="12" stroke="white" stroke-width="2"/>
+                </svg>
+            </span>
+        ` : "";
+
         return L.divIcon({
-            html: `<div class="precip-marker" style="background-color:${color}">${rounded}"</div>`,
+            html: `
+                <div class="precip-marker" style="background-color:${color}; color: white; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box;">
+                    <span>${rounded}"</span>
+                    ${clockHtml}
+                </div>
+            `,
             className: "",
-            iconSize: [55, 30],
-            iconAnchor: [27, 15],
+            iconSize: [65, 30], 
+            iconAnchor: [32, 15], 
         });
     };
 
     return (
         <>
             {stations.map(station => {
-                if (station.is_available !== 1) return null;
+                if ((station.is_available !== 1 && station.is_available !== true) || !station.latitude) return null;
                 let icon = null;
 
-                if (showLandslideForecast && station.landslide_forecast != null) {
+                if (showLandslideForecast && station.landslide_forecast != null && typeof createForecastIcon === 'function') {
                     icon = createForecastIcon(station.landslide_forecast);
                 }
                 else if (showSaturation && station.soil_saturation != null) {
-                    icon = createSaturationIcon(station.soil_saturation);
+                    icon = createSaturationIcon(station.soil_saturation, station.last_updated);
                 }
                 else if (showPrecip12hr && station.precipitation != null) {
-                    icon = createPrecipIcon(station.precipitation);
+                    icon = createPrecipIcon(station.precipitation, station.last_updated);
                 }
                 else {
                     if (station.soil_saturation != null) {
-                        icon = createSaturationIcon(station.soil_saturation);
+                        icon = createSaturationIcon(station.soil_saturation, station.last_updated);
                     }
                     else if (station.precipitation != null) {
-                        icon = createPrecipIcon(station.precipitation);
+                        icon = createPrecipIcon(station.precipitation, station.last_updated);
                     }
                     else {
                         return null;
                     }
                 }
 
+                const stId = station.id || station.station_id;
+
                 return (
-                    <Marker key={station.id} position={[station.latitude, station.longitude]} icon={icon}>
+                    <Marker key={stId} position={[station.latitude, station.longitude]} icon={icon}>
                         <StationPopup station={station} />
                     </Marker>
                 );
@@ -607,32 +589,44 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
 
     return (
         <>
-            {filteredLandslides.map(landslide => (
-                <Marker key={landslide.landslide_id} position={[landslide.latitude, landslide.longitude]} icon={customIcon}>
-                    <LandslidePopup landslide={landslide} />
-                </Marker>
-            ))}
+            {filteredLandslides.map(landslide => {
+                const lsId = landslide.id || landslide.landslide_id;
+                return (
+                    <Marker key={lsId} position={[landslide.latitude, landslide.longitude]} icon={customIcon}>
+                        <LandslidePopup landslide={landslide} />
+                    </Marker>
+                );
+            })}
         </>
     );
 }
 
 const getStationStatus = (lastUpdated) => {
     if (!lastUpdated) {
-        return {
-            isOffline: true,
-            isStale: false,
-            diffHours: null
-        };
+        return { isOutdated: true, timeString: "Desconocido" };
     }
 
     const last = new Date(lastUpdated);
     const now = new Date();
-    const diffHours = (now - last) / (1000 * 60 * 60);
+    
+    // Calculate time differences
+    const diffMs = now - last;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    let timeString = "";
+    if (diffDays > 0) {
+        timeString = `Hace ${diffDays} día(s)`;
+    } else if (diffHours > 0) {
+        timeString = `Hace ${diffHours} hora(s)`;
+    } else {
+        timeString = `Hace ${diffMins} minuto(s)`;
+    }
 
     return {
-        isOffline: diffHours >= 12,
-        isStale: diffHours >= 6 && diffHours < 12,
-        diffHours
+        isOutdated: diffMins > 5,
+        timeString
     };
 };
 
@@ -810,7 +804,7 @@ export default function InteractiveMap() {
             .then(data => {
                 if (data && data.length > 0) {
                     setRadarFrames(data);
-                    setCurrentFrameIdx(data.length - 1); // Start at the most recent frame
+                    setCurrentFrameIdx(data.length - 1); 
                 }
             })
             .catch(err => console.error("Error fetching radar frames:", err));

@@ -1,5 +1,15 @@
 import { useState, useEffect } from "react";
-import { FaEdit, FaPlus, FaTrash, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { 
+    FaEdit, 
+    FaPlus, 
+    FaTrash, 
+    FaChevronLeft, 
+    FaChevronRight,
+    FaDownload,
+    FaSort,
+    FaSortUp,
+    FaSortDown
+} from "react-icons/fa";
 import "../../cms/styles/CMSProjects.css";
 import Swal from "sweetalert2";
 
@@ -8,12 +18,11 @@ export default function CMSProjects() {
     const [showForm, setShowForm] = useState(false);
     const [editProject, setEditProject] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
+    
+    // Estado para la configuración de ordenamiento (por defecto ordenamos por año de inicio descendente)
+    const [sortConfig, setSortConfig] = useState({ key: "start_year", direction: "desc" });
+
     const itemsPerPage = 5;
-
-    const totalPages = Math.ceil(projects.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedProjects = projects.slice(startIndex, startIndex + itemsPerPage);
-
     const API_URL = `${import.meta.env.VITE_API_URL}`;
 
     useEffect(() => {
@@ -24,7 +33,7 @@ export default function CMSProjects() {
         try {
             const response = await fetch(`${API_URL}/projects`);
             const data = await response.json();
-            setProjects(data);
+            setProjects(data || []);
         } catch (error) {
             console.error("Error fetching projects:", error);
         }
@@ -57,7 +66,7 @@ export default function CMSProjects() {
         try {
             const token = localStorage.getItem("cmsAdmin");
 
-            const response = await fetch(`${API_URL}/projects/${id}`, {
+            const response = await fetch(`${API_URL}/projects/item/${id}`, {
                 method: "DELETE",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -70,12 +79,81 @@ export default function CMSProjects() {
             }
 
             Swal.fire("Eliminado", "El proyecto fue eliminado correctamente.", "success");
-
-            fetchProjects(); // Refresh list
+            fetchProjects();
         } catch (error) {
             console.error(error);
             Swal.fire("Error", "No se pudo conectar al servidor.", "error");
         }
+    };
+
+    // 1. Lógica de ordenamiento
+    const handleSort = (key) => {
+        let direction = "asc";
+        if (sortConfig.key === key && sortConfig.direction === "asc") {
+            direction = "desc";
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortIcon = (key) => {
+        if (sortConfig.key !== key) return <FaSort style={{ opacity: 0.3 }} />;
+        return sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />;
+    };
+
+    const sortedProjects = [...projects].sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+        if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+        
+        if (aValue === undefined || aValue === null) aValue = "";
+        if (bValue === undefined || bValue === null) bValue = "";
+
+        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+    });
+
+    // 2. Paginación basada en los datos ordenados
+    const totalPages = Math.ceil(sortedProjects.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedProjects = sortedProjects.slice(startIndex, startIndex + itemsPerPage);
+
+    // 3. Exportación a CSV
+    const exportToCSV = () => {
+        const headers = ["ID", "Título", "Año de Inicio", "Año de Fin", "Estado", "Descripción"];
+        
+        const rows = sortedProjects.map(p => {
+            const id = p.id || p.project_id || "";
+            // Reemplazamos comillas dobles por dobles comillas dobles (formato CSV) para evitar que se rompa el archivo
+            const title = p.title ? p.title.replace(/"/g, '""') : "";
+            const desc = p.description ? p.description.replace(/"/g, '""') : "";
+            const status = p.project_status === 'active' ? 'Actual' : 'Completado';
+
+            return [
+                id,
+                `"${title}"`,
+                p.start_year || "",
+                p.end_year || "",
+                status,
+                `"${desc}"`
+            ];
+        });
+
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(r => r.join(","))
+        ].join("\n");
+
+        const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "proyectos.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return (
@@ -92,9 +170,14 @@ export default function CMSProjects() {
                 </div>
 
                 {!showForm && (
-                    <button className="cms-btn" onClick={() => handleOpenForm()}>
-                        <FaPlus /> Añadir Proyecto
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button className="cms-btn cms-btn-secondary" onClick={exportToCSV} title="Exportar vista actual">
+                            <FaDownload /> Exportar CSV
+                        </button>
+                        <button className="cms-btn" onClick={() => handleOpenForm()}>
+                            <FaPlus /> Añadir Proyecto
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -107,66 +190,97 @@ export default function CMSProjects() {
                             <thead>
                             <tr>
                                 <th>Imagen</th>
-                                <th>Título</th>
-                                <th>Periodo</th>
-                                <th>Estado</th>
-                                <th>Descripción</th>
+                                <th 
+                                    style={{ cursor: "pointer", userSelect: "none" }} 
+                                    onClick={() => handleSort("title")}
+                                >
+                                    Título {getSortIcon("title")}
+                                </th>
+                                <th 
+                                    style={{ cursor: "pointer", userSelect: "none" }} 
+                                    onClick={() => handleSort("start_year")}
+                                >
+                                    Periodo {getSortIcon("start_year")}
+                                </th>
+                                <th 
+                                    style={{ cursor: "pointer", userSelect: "none" }} 
+                                    onClick={() => handleSort("project_status")}
+                                >
+                                    Estado {getSortIcon("project_status")}
+                                </th>
+                                <th 
+                                    style={{ cursor: "pointer", userSelect: "none" }} 
+                                    onClick={() => handleSort("description")}
+                                >
+                                    Descripción {getSortIcon("description")}
+                                </th>
                                 <th>Acciones</th>
                             </tr>
                             </thead>
                             <tbody>
-                            {paginatedProjects.map((p) => (
-                                <tr key={p.project_id}>
-                                    <td>
-                                        {p.image_url ? (
-                                            <a
-                                                href={`${API_URL}/projects/${p.project_id}/image`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                title="Ver imagen completa"
-                                            >
-                                                <img
-                                                    src={`${API_URL}/projects/${p.project_id}/image`}
-                                                    alt="Project"
-                                                    className="cms-thumb"
-                                                />
-                                            </a>
-                                        ) : (
-                                            <span className="no-img">N/A</span>
-                                        )}
-                                    </td>
-
-                                    <td style={{ fontWeight: "600" }}>{p.title}</td>
-
-                                    <td>{p.start_year} - {p.end_year}</td>
-
-                                    <td>
-                      <span className={`status-pill ${p.project_status === 'active' ? 'status-active' : 'status-completed'}`}>
-                        {p.project_status === 'active' ? 'Actual' : 'Completado'}
-                      </span>
-                                    </td>
-
-                                    <td style={{ maxWidth: '300px', fontSize: '0.85rem' }}>
-                                        {p.description?.length > 50
-                                            ? p.description.slice(0, 50) + "..."
-                                            : p.description}
-                                    </td>
-
-                                    <td>
-                                        <button className="cms-icon-btn" onClick={() => handleOpenForm(p)} title="Editar">
-                                            <FaEdit />
-                                        </button>
-                                        <button
-                                            className="cms-icon-btn cms-delete-btn"
-                                            onClick={() => handleDelete(p.project_id)}
-                                            title="Eliminar"
-                                        >
-                                            <FaTrash />
-                                        </button>
-
+                            {paginatedProjects.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} style={{ textAlign: "center", color: "#a0aec0", padding: "32px" }}>
+                                        No hay proyectos disponibles.
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                paginatedProjects.map((p) => {
+                                    const id = p.id || p.project_id;
+                                    
+                                    return (
+                                        <tr key={id}>
+                                            <td>
+                                                {p.image_url || p.image_path ? (
+                                                    <a
+                                                        href={`${API_URL}/projects/item/${id}/image`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        title="Ver imagen completa"
+                                                    >
+                                                        <img
+                                                            src={`${API_URL}/projects/item/${id}/image`}
+                                                            alt="Project"
+                                                            className="cms-thumb"
+                                                        />
+                                                    </a>
+                                                ) : (
+                                                    <span className="no-img">N/A</span>
+                                                )}
+                                            </td>
+
+                                            <td style={{ fontWeight: "600" }}>{p.title}</td>
+
+                                            <td>{p.start_year} - {p.end_year}</td>
+
+                                            <td>
+                                              <span className={`status-pill ${p.project_status === 'active' ? 'status-active' : 'status-completed'}`}>
+                                                {p.project_status === 'active' ? 'Actual' : 'Completado'}
+                                              </span>
+                                            </td>
+
+                                            <td style={{ maxWidth: '300px', fontSize: '0.85rem' }}>
+                                                {p.description?.length > 50
+                                                    ? p.description.slice(0, 50) + "..."
+                                                    : p.description}
+                                            </td>
+
+                                            <td>
+                                                <button className="cms-icon-btn" onClick={() => handleOpenForm(p)} title="Editar">
+                                                    <FaEdit />
+                                                </button>
+                                                <button
+                                                    className="cms-icon-btn cms-delete-btn"
+                                                    onClick={() => handleDelete(id)}
+                                                    title="Eliminar"
+                                                >
+                                                    <FaTrash />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
                             </tbody>
                         </table>
                     </div>
@@ -214,6 +328,7 @@ export default function CMSProjects() {
 
 function ProjectForm({ project, onClose, refreshProjects, apiUrl }) {
     const isEdit = !!project;
+    const projectId = project?.id || project?.project_id;
 
     const [formData, setFormData] = useState({
         title: "",
@@ -237,15 +352,15 @@ function ProjectForm({ project, onClose, refreshProjects, apiUrl }) {
                 imageFile: null,
             });
 
-            if (project.image_url) {
-                setPreviewUrl(`${apiUrl}/projects/${project.project_id}/image`);
+            if (project.image_url || project.image_path) {
+                setPreviewUrl(`${apiUrl}/projects/item/${projectId}/image`);
             } else {
                 setPreviewUrl(null);
             }
         } else {
             setPreviewUrl(null);
         }
-    }, [project, apiUrl]);
+    }, [project, apiUrl, projectId]);
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -286,8 +401,9 @@ function ProjectForm({ project, onClose, refreshProjects, apiUrl }) {
         if (!confirm.isConfirmed) return;
 
         const method = isEdit ? "PUT" : "POST";
+        
         const url = isEdit
-            ? `${apiUrl}/projects/${project.project_id}`
+            ? `${apiUrl}/projects/item/${projectId}`
             : `${apiUrl}/projects`;
 
         try {
@@ -312,13 +428,13 @@ function ProjectForm({ project, onClose, refreshProjects, apiUrl }) {
             }
 
             const result = await response.json();
-            const projId = isEdit ? project.project_id : result.project_id;
+            const finalProjId = isEdit ? projectId : (result.id || result.project_id);
 
-            if (formData.imageFile) {
+            if (formData.imageFile && finalProjId) {
                 const imageForm = new FormData();
                 imageForm.append("image", formData.imageFile);
 
-                await fetch(`${apiUrl}/projects/${projId}/image`, {
+                await fetch(`${apiUrl}/projects/item/${finalProjId}/image`, {
                     method: "POST",
                     headers: { "Authorization": `Bearer ${token}` },
                     body: imageForm,

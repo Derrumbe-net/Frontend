@@ -9,6 +9,10 @@ export default function CMSLogin() {
   const navigate = useNavigate();
 
   const API_URL = `${import.meta.env.VITE_API_URL}`;
+  
+  // These routes match your Go router exactly:
+  // POST /admins/login
+  // GET /admins/{id}
   const login_route = `${API_URL}/admins/login`;
   const admins_base_route = `${API_URL}/admins`;
 
@@ -45,7 +49,8 @@ export default function CMSLogin() {
         const token = data.token;
 
         const payload = getPayloadFromToken(token);
-        const adminId = payload?.sub;
+        // Ensure this matches the claim your Go JWT middleware generates (e.g., 'sub', 'user_id', 'id')
+        const adminId = payload?.sub || payload?.id;
 
         if (!adminId) {
           alert("Error: Token inválido recibido.");
@@ -64,7 +69,8 @@ export default function CMSLogin() {
         console.log("User Data from Server:", userData);
 
         if (userResponse.ok) {
-          const isAuthorized = userData.isAuthorized === 1 || userData.isAuthorized === true;
+          // Go serializes booleans cleanly to true/false in JSON
+          const isAuthorized = userData.isAuthorized === true;
 
           if (isAuthorized) {
             localStorage.setItem('cmsAdmin', token);

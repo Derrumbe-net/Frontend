@@ -14,6 +14,8 @@ const ChevronRight = () => (
     </svg>
 );
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const StationPopup = ({ station }) => {
     const [currentImgIndex, setCurrentImgIndex] = useState(0);
 
@@ -26,17 +28,22 @@ const StationPopup = ({ station }) => {
     const city = station.city;
     const precip = station.precipitation;
 
+    // Normalize ID just in case your Go API returns 'id' instead of 'station_id'
+    const id = station.id || station.station_id;
+
     // Construct image list
     const images = [];
     if (station.sensor_image_url) {
         images.push({
-            src: `/api/stations/${station.station_id}/image/sensor`,
+            // Updated to match the new route: /stations/item/{id}/image/{type}
+            src: `${API_URL}/stations/item/${id}/image/sensor`,
             label: 'Sensor View' // Added label for clarity
         });
     }
     if (station.data_image_url) {
         images.push({
-            src: `/api/stations/${station.station_id}/image/data`,
+            // Updated to match the new route: /stations/item/{id}/image/{type}
+            src: `${API_URL}/stations/item/${id}/image/data`,
             label: 'Data View' // Added label for clarity
         });
     }

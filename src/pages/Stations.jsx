@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Tooltip, ZoomControl } from "react-leaflet";
 import L from "leaflet";
 import Highcharts from "highcharts";
@@ -10,10 +10,14 @@ import stationSchematic from "../assets/station_schematic.png";
 import Cookies from 'js-cookie'; 
 const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 const BASE_STATIONS_URL = BASE_DOMAIN + "/stations";
-const getHistoryUrl = (stationId) => `${BASE_STATIONS_URL}/history/${stationId}/wc`;
-const getSensorImageUrl = (stationId) => `${BASE_STATIONS_URL}/${stationId}/image/sensor`;
+const BASE_FILES_DATA_URL = BASE_DOMAIN + "/stations/files/data";
 
-const getDataImageUrl = (stationId) => `${BASE_STATIONS_URL}/${stationId}/image/data`;
+// Matches GET /stations/history/{id}/wc
+const getHistoryUrl = (stationId) => `${BASE_STATIONS_URL}/history/${stationId}/wc`;
+
+// Matches GET /stations/item/{id}/image/{type}
+const getSensorImageUrl = (stationId) => `${BASE_STATIONS_URL}/item/${stationId}/image/sensor`;
+const getDataImageUrl = (stationId) => `${BASE_STATIONS_URL}/item/${stationId}/image/data`;
 
 const isMobile = window.innerWidth < 768;
 
@@ -68,14 +72,18 @@ const StationsMap = ({ stations, selectedMetric, onStationSelect, selectedStatio
         return "#6c757d";
     };
 
+    // Failsafe: Ensure stations is an array before attempting to map
+    const validStations = Array.isArray(stations) ? stations : [];
+
     return (
         <>
             <TileLayer
                 url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 attribution="Tiles © Esri"
             />
-            {stations.map((station) => {
-                if (station.is_available !== 1 || !station.latitude) return null;
+            {validStations.map((station) => {
+                // Handle Go's boolean values or standard ints
+                if ((station.is_available !== 1 && station.is_available !== true) || !station.latitude) return null;
 
                 let icon;
                 if (selectedMetric === 'saturation' && station.soil_saturation != null) {
@@ -86,11 +94,13 @@ const StationsMap = ({ stations, selectedMetric, onStationSelect, selectedStatio
                     icon = createStatusIcon(getStatusColor(station));
                 }
 
-                const isSelected = selectedStationId === station.station_id;
+                // Fallback ID check
+                const stId = station.id || station.station_id;
+                const isSelected = selectedStationId === stId;
 
                 return (
                     <Marker
-                        key={station.station_id}
+                        key={stId}
                         position={[station.latitude, station.longitude]}
                         icon={icon}
                         zIndexOffset={isSelected ? 1000 : 0}
@@ -99,7 +109,7 @@ const StationsMap = ({ stations, selectedMetric, onStationSelect, selectedStatio
                         }}
                     >
                         <Tooltip direction="top" offset={[0, -20]} opacity={1}>
-                            <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{station.city}</span>
+                            <span style={{ fontWeight: 'bold', fontSize: '13px' }}>{station.name}</span>
                         </Tooltip>
                     </Marker>
                 );
@@ -116,8 +126,10 @@ const StationChart = ({ station, sensorIndex }) => {
     useEffect(() => {
         if (!station) return;
         setLoading(true);
+        
+        const stId = station.id || station.station_id;
 
-        fetch(getHistoryUrl(station.station_id))
+        fetch(getHistoryUrl(stId))
             .then(res => res.json())
             .then(data => {
                 const wcKey = `wc${sensorIndex}`;
@@ -191,6 +203,7 @@ function Stations() {
     // --- STATE MANAGEMENT ---
     const [stations, setStations] = useState([]);
     const [activeTab, setActiveTab] = useState("data");
+    const stationsRef = useRef([]);
 
     // Load these from cookie or use default
     const [mapMetric, setMapMetric] = useState(savedSettings.mapMetric ?? "status");
@@ -208,11 +221,115 @@ function Stations() {
         Cookies.set(COOKIE_NAME, JSON.stringify(settingsToSave), { expires: 30 });
     }, [mapMetric, selectedStation, selectedSensor]);
 
+
+    // --- DATA CALCULATION LOGIC ---
+    const calculateMetricsFromRawData = (rows, stationInfo) => {
+        if (!rows || rows.length === 0) return null;
+
+        // Sum precipitation across the provided rows (Received in mm)
+        const totalRainMm = rows.reduce((acc, row) => {
+            const val = parseFloat(row.precipitation);
+            return acc + (isNaN(val) ? 0 : val);
+        }, 0);
+
+        // Convert mm to inches (1 inch = 25.4 mm)
+        const totalRainInches = totalRainMm / 25.4;
+
+        // Get limits and the latest row
+        const lastRow = rows[rows.length - 1];
+        const wcRatios = [];
+        const limits = [stationInfo.wc1, stationInfo.wc2, stationInfo.wc3, stationInfo.wc4];
+        const keys = ['wc1', 'wc2', 'wc3', 'wc4'];
+
+        limits.forEach((limit, index) => {
+            const val = parseFloat(lastRow[keys[index]]);
+            const max = parseFloat(limit);
+            if (!isNaN(val) && !isNaN(max) && max !== 0) {
+                wcRatios.push(val / max);
+            }
+        });
+
+        let avgSaturation = 0;
+        if (wcRatios.length > 0) {
+            const sumRatio = wcRatios.reduce((a, b) => a + b, 0);
+            avgSaturation = (sumRatio / wcRatios.length) * 100;
+        }
+
+        return {
+            precipitation: totalRainInches,
+            soil_saturation: avgSaturation,
+            last_updated: lastRow.recorded_at
+        };
+    };
+
+    const fetchLatestReadings = async (baseStations) => {
+        const currentStations = baseStations || stationsRef.current;
+        if (!currentStations || !Array.isArray(currentStations) || currentStations.length === 0) return;
+
+        try {
+            const response = await fetch(BASE_FILES_DATA_URL);
+            if (!response.ok) return;
+
+            const filesData = await response.json();
+            
+            // Failsafe: Ensure filesData is an array
+            if (!Array.isArray(filesData)) return;
+
+            const localUpdates = {};
+
+            filesData.forEach(fileRecord => {
+                const fileRecordId = fileRecord.id || fileRecord.station_id;
+                const station = currentStations.find(s => (s.id || s.station_id) === fileRecordId);
+                
+                if (station && fileRecord.data && Array.isArray(fileRecord.data) && fileRecord.data.length > 0) {
+                    const metrics = calculateMetricsFromRawData(fileRecord.data, station);
+                    if (metrics) {
+                        localUpdates[fileRecordId] = metrics;
+                    }
+                }
+            });
+
+            // Always set state if we have valid base stations, even if localUpdates is empty
+            const mergedStations = currentStations.map(s => {
+                const stId = s.id || s.station_id;
+                if (localUpdates[stId]) {
+                    return { ...s, ...localUpdates[stId] };
+                }
+                return s;
+            });
+
+            setStations(mergedStations);
+            stationsRef.current = mergedStations;
+            
+        } catch (error) {
+            console.error("Error fetching latest readings:", error);
+            // Fallback: If dynamic fetch fails, ensure map still renders base data
+            setStations(currentStations);
+        }
+    };
+
     useEffect(() => {
+        // Fetch static metadata first, then append dynamic metrics
         fetch(BASE_STATIONS_URL)
             .then((res) => res.json())
-            .then((data) => setStations(data))
-            .catch((err) => console.error(err));
+            .then((data) => {
+                // Ensure data is actually an array before processing
+                const dataArray = Array.isArray(data) ? data : [];
+                stationsRef.current = dataArray;
+                
+                if (dataArray.length > 0) {
+                    fetchLatestReadings(dataArray);
+                } else {
+                    setStations([]);
+                }
+            })
+            .catch((err) => {
+                console.error(err);
+                setStations([]);
+            });
+
+        const interval = setInterval(() => fetchLatestReadings(), 300000); // Poll every 5 minutes
+        return () => clearInterval(interval);
     }, []);
 
     const handleStationSelect = (station) => {
@@ -259,7 +376,7 @@ function Stations() {
                                 stations={stations}
                                 selectedMetric={mapMetric}
                                 onStationSelect={handleStationSelect}
-                                selectedStationId={selectedStation?.station_id}
+                                selectedStationId={selectedStation?.id || selectedStation?.station_id}
                             />
                         </MapContainer>
                     </div>
@@ -275,7 +392,7 @@ function Stations() {
                     ) : (
                         <>
                             <div className="details-header">
-                                <h2>{selectedStation.city}</h2>
+                                <h2>{selectedStation.name}</h2>
                             </div>
 
                             <div className="details-tabs">
@@ -322,8 +439,8 @@ function Stations() {
                                         <div className="station-img-container">
                                             {selectedStation.sensor_image_url ? (
                                                 <img
-                                                    src={getSensorImageUrl(selectedStation.station_id)}
-                                                    alt={selectedStation.city}
+                                                    src={getSensorImageUrl(selectedStation.id || selectedStation.station_id)}
+                                                    alt={selectedStation.name}
                                                     onError={(e) => e.target.style.display = 'none'}
                                                 />
                                             ) : (
@@ -344,8 +461,8 @@ function Stations() {
                                         <div className="station-grafico-img-container">
                                             {selectedStation.data_image_url ? (
                                                 <img
-                                                    src={getDataImageUrl(selectedStation.station_id)}
-                                                    alt={`Gráfico de datos de ${selectedStation.city}`}
+                                                    src={getDataImageUrl(selectedStation.id || selectedStation.station_id)}
+                                                    alt={`Gráfico de datos de ${selectedStation.name}`}
                                                     onError={(e) => e.target.style.display = 'none'}
                                                 />
                                             ) : (
