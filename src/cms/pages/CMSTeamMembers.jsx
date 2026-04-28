@@ -1,5 +1,15 @@
 import { useState, useEffect } from "react";
-import { FaEdit, FaPlus, FaTrash, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { 
+  FaEdit, 
+  FaPlus, 
+  FaTrash, 
+  FaChevronLeft, 
+  FaChevronRight, 
+  FaDownload, 
+  FaSort, 
+  FaSortUp, 
+  FaSortDown 
+} from "react-icons/fa";
 import "../../cms/styles/CMSTeamMembers.css";
 import Swal from "sweetalert2";
 
@@ -17,21 +27,47 @@ export default function CMSTeamMembers() {
   const [editMember, setEditMember] = useState(null);
   const [filterType, setFilterType] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Estados para la función de ordenar
+  const [sortConfig, setSortConfig] = useState({ key: "display_order", direction: "asc" });
+  
   const itemsPerPage = 8;
 
   useEffect(() => { fetchMembers(); }, []);
 
   const fetchMembers = async () => {
     try {
-      const res  = await fetch(`${API_URL}/team-members`);
-      const data = await res.json();
-      setMembers(data);
+      const [facRes, stuRes] = await Promise.all([
+        fetch(`${API_URL}/faculty-members`),
+        fetch(`${API_URL}/student-members`)
+      ]);
+      
+      const facData = await facRes.json();
+      const stuData = await stuRes.json();
+
+      // Normalizamos algunos campos temporalmente por si el backend no los envía unificados
+      const normalizedFac = (facData || []).map(f => ({
+        ...f,
+        member_type: 'faculty',
+        role: f.faculty_role || f.role,
+        id: f.faculty_member_id || f.id
+      }));
+
+      const normalizedStu = (stuData || []).map(s => ({
+        ...s,
+        member_type: s.student_type,
+        id: s.student_member_id || s.id
+      }));
+
+      const combined = [...normalizedFac, ...normalizedStu];
+
+      setMembers(combined);
     } catch (err) {
       console.error("Error fetching team members:", err);
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (member) => {
     const confirm = await Swal.fire({
       title: "¿Eliminar miembro?",
       text: "Esta acción no se puede deshacer.",
@@ -45,11 +81,15 @@ export default function CMSTeamMembers() {
 
     try {
       const token = localStorage.getItem("cmsAdmin");
-      const res = await fetch(`${API_URL}/team-members/${id}`, {
+      const id = member.id || member.member_id;
+      const endpoint = member.member_type === "faculty" ? "faculty-members" : "student-members";
+
+      const res = await fetch(`${API_URL}/${endpoint}/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) { Swal.fire("Error", "No se pudo eliminar.", "error"); return; }
+      
       Swal.fire("Eliminado", "El miembro fue eliminado.", "success");
       fetchMembers();
     } catch (err) {
@@ -69,18 +109,84 @@ export default function CMSTeamMembers() {
     setEditMember(null);
   };
 
+  // 1. Filtrar
   const filtered = filterType === "all"
     ? members
     : members.filter((m) => m.member_type === filterType);
 
-  const totalPages  = Math.ceil(filtered.length / itemsPerPage);
-  const startIndex  = (currentPage - 1) * itemsPerPage;
-  const paginated   = filtered.slice(startIndex, startIndex + itemsPerPage);
+  // 2. Ordenar
+  const sorted = [...filtered].sort((a, b) => {
+    let aValue = a[sortConfig.key];
+    let bValue = b[sortConfig.key];
 
-  // Reset page when filter changes
+    // Manejo de strings nulos/undefined
+    if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+    if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+    
+    if (aValue === undefined || aValue === null) aValue = "";
+    if (bValue === undefined || bValue === null) bValue = "";
+
+    if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+    if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // 3. Paginar sobre los datos ordenados
+  const totalPages  = Math.ceil(sorted.length / itemsPerPage);
+  const startIndex  = (currentPage - 1) * itemsPerPage;
+  const paginated   = sorted.slice(startIndex, startIndex + itemsPerPage);
+
   const handleFilterChange = (type) => {
     setFilterType(type);
     setCurrentPage(1);
+  };
+
+  const handleSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return <FaSort style={{ opacity: 0.3 }} />;
+    return sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />;
+  };
+
+  // Función para exportar a CSV
+  const exportToCSV = () => {
+    const headers = ["ID", "Nombre", "Tipo", "Rol", "Email", "Teléfono", "Extensión", "LinkedIn", "Orden"];
+    
+    const rows = sorted.map(m => {
+      // Envolvemos en comillas dobles para evitar problemas con comas en los textos
+      return [
+        m.id || m.faculty_member_id || m.student_member_id || "",
+        `"${m.name || ""}"`,
+        TYPE_LABELS[m.member_type] || m.member_type || "",
+        `"${m.role || ""}"`,
+        `"${m.email || ""}"`,
+        `"${m.phone || ""}"`,
+        `"${m.extension || m.phone_ext || ""}"`,
+        `"${m.linkedin_url || ""}"`,
+        m.display_order || 0
+      ];
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(r => r.join(","))
+    ].join("\n");
+
+    // Crear y descargar el blob
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" }); // \uFEFF añade BOM para caracteres especiales en Excel
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `equipo_${filterType}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -94,15 +200,19 @@ export default function CMSTeamMembers() {
           </p>
         </div>
         {!showForm && (
-          <button className="cms-btn" onClick={() => handleOpenForm()}>
-            <FaPlus /> Añadir Miembro
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button className="cms-btn cms-btn-secondary" onClick={exportToCSV} title="Exportar vista actual">
+              <FaDownload /> Exportar CSV
+            </button>
+            <button className="cms-btn" onClick={() => handleOpenForm()}>
+              <FaPlus /> Añadir Miembro
+            </button>
+          </div>
         )}
       </div>
 
       {!showForm ? (
         <div className="cms-card">
-          {/* Filter tabs */}
           <div className="cms-filter-tabs">
             {["all", "faculty", "graduate", "undergraduate"].map((type) => (
               <button
@@ -120,10 +230,25 @@ export default function CMSTeamMembers() {
               <thead>
                 <tr>
                   <th>Foto</th>
-                  <th>Nombre</th>
-                  <th>Rol / Tipo</th>
+                  <th 
+                    style={{ cursor: "pointer", userSelect: "none" }} 
+                    onClick={() => handleSort("name")}
+                  >
+                    Nombre {getSortIcon("name")}
+                  </th>
+                  <th 
+                    style={{ cursor: "pointer", userSelect: "none" }} 
+                    onClick={() => handleSort("member_type")}
+                  >
+                    Rol / Tipo {getSortIcon("member_type")}
+                  </th>
                   <th>Contacto</th>
-                  <th>Orden</th>
+                  <th 
+                    style={{ cursor: "pointer", userSelect: "none", textAlign: "center" }} 
+                    onClick={() => handleSort("display_order")}
+                  >
+                    Orden {getSortIcon("display_order")}
+                  </th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -135,51 +260,56 @@ export default function CMSTeamMembers() {
                     </td>
                   </tr>
                 ) : (
-                  paginated.map((m) => (
-                    <tr key={m.member_id}>
-                      <td>
-                        {m.image_url ? (
-                          <img
-                            src={`${API_URL}/team-members/${m.member_id}/image`}
-                            alt={m.name}
-                            className="cms-thumb cms-thumb--circle"
-                          />
-                        ) : (
-                          <span className="no-img">Sin foto</span>
-                        )}
-                      </td>
-                      <td style={{ fontWeight: "600" }}>{m.name}</td>
-                      <td>
-                        <span className={`cms-badge cms-badge--${m.member_type}`}>
-                          {TYPE_LABELS[m.member_type]}
-                        </span>
-                        <br />
-                        <span style={{ fontSize: "0.8rem", color: "#718096" }}>{m.role}</span>
-                      </td>
-                      <td style={{ fontSize: "0.82rem", color: "#4b4b4b" }}>
-                        {m.email   && <div>{m.email}</div>}
-                        {m.phone   && <div>{m.phone} {m.phone_ext}</div>}
-                        {m.linkedin_url && (
-                          <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="cms-link">
-                            LinkedIn ↗
-                          </a>
-                        )}
-                      </td>
-                      <td style={{ textAlign: "center" }}>{m.display_order}</td>
-                      <td>
-                        <button className="cms-icon-btn" onClick={() => handleOpenForm(m)} title="Editar">
-                          <FaEdit />
-                        </button>
-                        <button
-                          className="cms-icon-btn cms-delete-btn"
-                          onClick={() => handleDelete(m.member_id)}
-                          title="Eliminar"
-                        >
-                          <FaTrash />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  paginated.map((m) => {
+                    const id = m.id;
+                    const endpoint = m.member_type === "faculty" ? "faculty-members" : "student-members";
+
+                    return (
+                      <tr key={`${m.member_type}-${id}`}>
+                        <td>
+                          {m.image_url || m.image_path ? (
+                            <img
+                              src={`${API_URL}/${endpoint}/${id}/image`}
+                              alt={m.name}
+                              className="cms-thumb cms-thumb--circle"
+                            />
+                          ) : (
+                            <span className="no-img">Sin foto</span>
+                          )}
+                        </td>
+                        <td style={{ fontWeight: "600" }}>{m.name}</td>
+                        <td>
+                          <span className={`cms-badge cms-badge--${m.member_type}`}>
+                            {TYPE_LABELS[m.member_type] || m.member_type}
+                          </span>
+                          <br />
+                          <span style={{ fontSize: "0.8rem", color: "#718096" }}>{m.role}</span>
+                        </td>
+                        <td style={{ fontSize: "0.82rem", color: "#4b4b4b" }}>
+                          {m.email   && <div>{m.email}</div>}
+                          {m.phone   && <div>{m.phone} {m.extension || m.phone_ext}</div>}
+                          {m.linkedin_url && (
+                            <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="cms-link">
+                              LinkedIn ↗
+                            </a>
+                          )}
+                        </td>
+                        <td style={{ textAlign: "center" }}>{m.display_order || 0}</td>
+                        <td>
+                          <button className="cms-icon-btn" onClick={() => handleOpenForm(m)} title="Editar">
+                            <FaEdit />
+                          </button>
+                          <button
+                            className="cms-icon-btn cms-delete-btn"
+                            onClick={() => handleDelete(m)}
+                            title="Eliminar"
+                          >
+                            <FaTrash />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -221,21 +351,24 @@ export default function CMSTeamMembers() {
 // ─────────────────────────────────────────────
 function MemberForm({ member, onClose, refreshMembers }) {
   const isEdit = !!member;
+  const memberId = member?.id || member?.member_id;
 
   const [formData, setFormData] = useState({
     name:          member?.name          ?? "",
     role:          member?.role          ?? "",
     email:         member?.email         ?? "",
     phone:         member?.phone         ?? "",
-    phone_ext:     member?.phone_ext     ?? "",
+    phone_ext:     member?.phone_ext     ?? member?.extension ?? "",
     linkedin_url:  member?.linkedin_url  ?? "",
     member_type:   member?.member_type   ?? "faculty",
     display_order: member?.display_order ?? 0,
     imageFile:     null,
   });
 
+  const endpointForPreview = member?.member_type === "faculty" ? "faculty-members" : "student-members";
+
   const [previewUrl, setPreviewUrl] = useState(
-    member?.image_url ? `${API_URL}/team-members/${member.member_id}/image` : null
+    (member?.image_url || member?.image_path) ? `${API_URL}/${endpointForPreview}/${memberId}/image` : null
   );
 
   const handleChange = (e) => {
@@ -254,8 +387,8 @@ function MemberForm({ member, onClose, refreshMembers }) {
     if (!formData.name.trim()) {
       Swal.fire("Error", "El nombre es obligatorio.", "warning"); return false;
     }
-    if (!formData.role.trim()) {
-      Swal.fire("Error", "El rol es obligatorio.", "warning"); return false;
+    if (formData.member_type === 'faculty' && !formData.role.trim()) {
+      Swal.fire("Error", "El rol es obligatorio para la facultad.", "warning"); return false;
     }
     return true;
   };
@@ -275,12 +408,15 @@ function MemberForm({ member, onClose, refreshMembers }) {
     });
     if (!confirmed.isConfirmed) return;
 
+    const endpoint = formData.member_type === "faculty" ? "faculty-members" : "student-members";
     const method = isEdit ? "PUT" : "POST";
-    const url    = isEdit
-      ? `${API_URL}/team-members/${member.member_id}`
-      : `${API_URL}/team-members`;
+    
+    const url = isEdit
+      ? `${API_URL}/${endpoint}/${memberId}`
+      : `${API_URL}/${endpoint}`;
 
     const { imageFile, ...bodyData } = formData;
+    bodyData.display_order = parseInt(bodyData.display_order, 10) || 0;
 
     try {
       const token = localStorage.getItem("cmsAdmin");
@@ -298,12 +434,13 @@ function MemberForm({ member, onClose, refreshMembers }) {
       if (!res.ok) { Swal.fire("Error", "No se pudo guardar el miembro.", "error"); return; }
 
       const result  = await res.json();
-      const memberId = isEdit ? member.member_id : result.member_id;
+      const finalMemberId = isEdit ? memberId : (result.id || result.member_id || result.faculty_member_id || result.student_member_id);
 
-      if (imageFile) {
+      if (imageFile && finalMemberId) {
         const imgForm = new FormData();
         imgForm.append("image", imageFile);
-        await fetch(`${API_URL}/team-members/${memberId}/image`, {
+        
+        await fetch(`${API_URL}/${endpoint}/${finalMemberId}/image`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: imgForm,
@@ -331,7 +468,6 @@ function MemberForm({ member, onClose, refreshMembers }) {
       <div className="cms-form-grid">
         <div className="cms-form-section-title">Información Personal</div>
 
-        {/* Name */}
         <div className="cms-form-group span-2">
           <label>Nombre completo <span className="required-asterisk">*</span></label>
           <input
@@ -343,9 +479,24 @@ function MemberForm({ member, onClose, refreshMembers }) {
           />
         </div>
 
-        {/* Role */}
         <div className="cms-form-group span-2">
-          <label>Rol / Posición <span className="required-asterisk">*</span></label>
+          <label>Tipo de Miembro <span className="required-asterisk">*</span></label>
+          <select
+            className="cms-input"
+            name="member_type"
+            value={formData.member_type}
+            onChange={handleChange}
+            disabled={isEdit}
+          >
+            <option value="faculty">Facultad</option>
+            <option value="graduate">Estudiante Graduado/a</option>
+            <option value="undergraduate">Estudiante Subgraduado/a</option>
+          </select>
+          {isEdit && <span className="cms-input-hint">El tipo de miembro no puede ser cambiado una vez creado.</span>}
+        </div>
+
+        <div className="cms-form-group span-2">
+          <label>Rol / Posición {formData.member_type === 'faculty' && <span className="required-asterisk">*</span>}</label>
           <input
             className="cms-input"
             name="role"
@@ -355,22 +506,6 @@ function MemberForm({ member, onClose, refreshMembers }) {
           />
         </div>
 
-        {/* Type */}
-        <div className="cms-form-group span-2">
-          <label>Tipo de Miembro <span className="required-asterisk">*</span></label>
-          <select
-            className="cms-input"
-            name="member_type"
-            value={formData.member_type}
-            onChange={handleChange}
-          >
-            <option value="faculty">Facultad</option>
-            <option value="graduate">Estudiante Graduado/a</option>
-            <option value="undergraduate">Estudiante Subgraduado/a</option>
-          </select>
-        </div>
-
-        {/* Display order */}
         <div className="cms-form-group">
           <label>Orden de aparición</label>
           <input
@@ -385,7 +520,6 @@ function MemberForm({ member, onClose, refreshMembers }) {
 
         <div className="cms-form-section-title">Contacto (opcional para no-Facultad)</div>
 
-        {/* Email */}
         <div className="cms-form-group span-2">
           <label>Correo electrónico</label>
           <input
@@ -397,7 +531,6 @@ function MemberForm({ member, onClose, refreshMembers }) {
           />
         </div>
 
-        {/* Phone */}
         <div className="cms-form-group">
           <label>Teléfono</label>
           <input
@@ -409,7 +542,6 @@ function MemberForm({ member, onClose, refreshMembers }) {
           />
         </div>
 
-        {/* Extension */}
         <div className="cms-form-group">
           <label>Extensión</label>
           <input
@@ -421,7 +553,6 @@ function MemberForm({ member, onClose, refreshMembers }) {
           />
         </div>
 
-        {/* LinkedIn */}
         <div className="cms-form-group span-2">
           <label>Perfil de LinkedIn</label>
           <input

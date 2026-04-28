@@ -17,6 +17,7 @@ export default function CMSOfficeInfo() {
   const [saving,  setSaving]    = useState(false);
 
   useEffect(() => {
+    // Matches: GET /office-info
     fetch(`${API_URL}/office-info`)
       .then((r) => r.json())
       .then((data) => {
@@ -60,6 +61,7 @@ export default function CMSOfficeInfo() {
       const token = localStorage.getItem("cmsAdmin");
       if (!token) { Swal.fire("Error", "Sesión expirada.", "error"); return; }
 
+      // Matches: PUT /office-info
       const res = await fetch(`${API_URL}/office-info`, {
         method: "PUT",
         headers: {

@@ -291,8 +291,8 @@ function Report() {
 
     const dbPayload = {
       city: form.pueblo,
-      latitude: String(coords.lat),
-      longitude: String(coords.lng),
+      latitude: coords.lat,
+      longitude: coords.lng,
       reported_at: form.date,
       physical_address: form.carretera || "",
       reporter_name: form.name || "Anonymous",

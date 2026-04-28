@@ -5,29 +5,6 @@ import searchIcon from "../assets/search-icon-png-9.png";
 
 // Local images
 import placeholder from "../assets/placeholder.png";
-// import actualproject1 from "../assets/projects/proyecto actual 1.webp";
-// import actualproject2 from "../assets/projects/proyecto actual 2.webp";
-// import actualproject3 from "../assets/projects/proyecto actual 3.webp";
-// import actualproject4 from "../assets/projects/proyecto actual 4.webp";
-// import actualproject5 from "../assets/projects/proyecto actual 5.webp";
-
-// import pastproject1 from "../assets/projects/proyecto pasado 1.webp";
-// import pastproject2 from "../assets/projects/proyecto pasado 2.webp";
-// import pastproject3 from "../assets/projects/proyecto pasado 3.webp";
-// import pastproject4 from "../assets/projects/proyecto pasado 4.webp";
-
-// // Map backend project_id to local images
-// const imageMap = {
-//   1: pastproject1, 
-//   2: pastproject2,
-//   3: pastproject3,
-//   4: pastproject4,
-//   5: actualproject1,
-//   6: actualproject2,
-//   7: actualproject3,
-//   8: actualproject4,
-//   9: actualproject5,
-// };
 
 function Projects() {
   const [projects, setProjects] = useState([]);
@@ -38,8 +15,8 @@ function Projects() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-
         const API_URL = `${import.meta.env.VITE_API_URL}`;
+        // This matches your Go router: mux.HandleFunc("GET /projects", ...)
         const response = await fetch(`${API_URL}/projects`);
 
         if (!response.ok) throw new Error(`Error: ${response.status} ${response.statusText}`);
@@ -47,20 +24,26 @@ function Projects() {
         const data = await response.json();
 
         // Backend data + local images
-        const formattedData = data.map((item) => ({
-          id: item.project_id,
-          title: item.title,
-          start_year: item.start_year,
-          end_year: item.end_year,
-          status:
-            item.project_status === "active"
-              ? "present"
-              : "past",
-          description: item.description,
-          image: item.image_url
-                      ? `${API_URL}/projects/${item.project_id}/image`
-                      : placeholder,
-        }));
+        const formattedData = data.map((item) => {
+          // Normalize ID just in case your Go API returns 'id' instead of 'project_id'
+          const id = item.id || item.project_id; 
+
+          return {
+            id: id,
+            title: item.title,
+            start_year: item.start_year,
+            end_year: item.end_year,
+            status:
+              item.project_status === "active"
+                ? "present"
+                : "past",
+            description: item.description,
+            // Updated to match the new route: /projects/item/{id}/image
+            image: item.image_url
+                        ? `${API_URL}/projects/item/${id}/image`
+                        : placeholder,
+          };
+        });
 
         setProjects(formattedData);
       } catch (err) {

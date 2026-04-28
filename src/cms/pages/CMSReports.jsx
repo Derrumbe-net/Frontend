@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { FaEdit, FaChevronLeft, FaChevronRight, FaTrash } from "react-icons/fa";
+import { 
+    FaEdit, 
+    FaChevronLeft, 
+    FaChevronRight, 
+    FaTrash,
+    FaDownload,
+    FaSort,
+    FaSortUp,
+    FaSortDown
+} from "react-icons/fa";
 import Swal from "sweetalert2";
 import "../../cms/styles/CMSReports.css";
 
@@ -9,12 +18,11 @@ export default function CMSReports() {
     const [editReport, setEditReport] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
 
+    // Estado para la configuración de ordenamiento (por defecto, los más recientes primero)
+    const [sortConfig, setSortConfig] = useState({ key: "reported_at", direction: "desc" });
+
     const API_URL = `${import.meta.env.VITE_API_URL}`;
     const itemsPerPage = 6;
-
-    const totalPages = Math.ceil(reports.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedReports = reports.slice(startIndex, startIndex + itemsPerPage);
 
     useEffect(() => {
         fetchReports();
@@ -24,7 +32,7 @@ export default function CMSReports() {
         try {
             const res = await fetch(`${API_URL}/reports`);
             const data = await res.json();
-            setReports(data);
+            setReports(data || []);
         } catch (err) {
             console.error("Error loading reports:", err);
         }
@@ -41,15 +49,107 @@ export default function CMSReports() {
         setEditReport(null);
     };
 
+    // 1. Lógica de ordenamiento
+    const handleSort = (key) => {
+        let direction = "asc";
+        if (sortConfig.key === key && sortConfig.direction === "asc") {
+            direction = "desc";
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortIcon = (key) => {
+        if (sortConfig.key !== key) return <FaSort style={{ opacity: 0.3 }} />;
+        return sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />;
+    };
+
+    const sortedReports = [...reports].sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+        if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+        if (aValue === undefined || aValue === null) aValue = "";
+        if (bValue === undefined || bValue === null) bValue = "";
+
+        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+    });
+
+    // 2. Paginación basada en los datos ordenados
+    const totalPages = Math.ceil(sortedReports.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedReports = sortedReports.slice(startIndex, startIndex + itemsPerPage);
+
+    // 3. Exportación a CSV
+    const exportToCSV = () => {
+        // Incluimos campos extra que están en el form para hacer el reporte más útil
+        const headers = [
+            "ID", "Fecha del Evento", "Pueblo", "Dirección Física", 
+            "Latitud", "Longitud", "Estado", "Reportado Por", 
+            "Teléfono", "Email", "Descripción"
+        ];
+        
+        const rows = sortedReports.map(r => {
+            const id = r.id || r.report_id || "";
+            const date = r.reported_at ? r.reported_at.slice(0, 10) : "";
+            // Escapar comillas dobles
+            const city = r.city ? r.city.replace(/"/g, '""') : "";
+            const address = r.physical_address ? r.physical_address.replace(/"/g, '""') : "";
+            const status = r.is_validated ? "Validado" : "Pendiente";
+            const name = r.reporter_name ? r.reporter_name.replace(/"/g, '""') : "";
+            const phone = r.reporter_phone ? r.reporter_phone.replace(/"/g, '""') : "";
+            const email = r.reporter_email ? r.reporter_email.replace(/"/g, '""') : "";
+            const desc = r.description ? r.description.replace(/"/g, '""') : "";
+
+            return [
+                id,
+                `"${date}"`,
+                `"${city}"`,
+                `"${address}"`,
+                r.latitude || "",
+                r.longitude || "",
+                status,
+                `"${name}"`,
+                `"${phone}"`,
+                `"${email}"`,
+                `"${desc}"`
+            ];
+        });
+
+        const csvContent = [
+            headers.join(","),
+            ...rows.map(r => r.join(","))
+        ].join("\n");
+
+        const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+        const urlObj = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = urlObj;
+        link.setAttribute("download", "reportes_ciudadanos.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="cms-reports-wrapper">
 
-            <div className="cms-page-reports-header">
-                <span className="cms-accent-line"></span>
-                <h1 className="cms-page-title">Reportes Ciudadanos</h1>
-                <p className="cms-page-subtitle">
-                    Revise, ubique geográficamente y valide los reportes de deslizamientos enviados por la ciudadanía.
-                </p>
+            <div className="cms-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
+                <div className="cms-header-content">
+                    <span className="cms-accent-line"></span>
+                    <h1 className="cms-page-title">Reportes Ciudadanos</h1>
+                    <p className="cms-page-subtitle">
+                        Revise, ubique geográficamente y valide los reportes de deslizamientos enviados por la ciudadanía.
+                    </p>
+                </div>
+                {!showForm && (
+                    <button className="cms-btn cms-btn-secondary" onClick={exportToCSV} title="Exportar vista actual">
+                        <FaDownload /> Exportar CSV
+                    </button>
+                )}
             </div>
 
             {!showForm ? (
@@ -59,42 +159,79 @@ export default function CMSReports() {
                             <thead>
                             <tr>
                                 <th>Evidencia</th>
-                                <th>Fecha</th>
-                                <th>Pueblo</th>
-                                <th>Latitud</th>
-                                <th>Longitud</th>
-                                <th>Estado</th>
+                                <th 
+                                    style={{ cursor: "pointer", userSelect: "none" }} 
+                                    onClick={() => handleSort("reported_at")}
+                                >
+                                    Fecha {getSortIcon("reported_at")}
+                                </th>
+                                <th 
+                                    style={{ cursor: "pointer", userSelect: "none" }} 
+                                    onClick={() => handleSort("city")}
+                                >
+                                    Pueblo {getSortIcon("city")}
+                                </th>
+                                <th 
+                                    style={{ cursor: "pointer", userSelect: "none" }} 
+                                    onClick={() => handleSort("latitude")}
+                                >
+                                    Latitud {getSortIcon("latitude")}
+                                </th>
+                                <th 
+                                    style={{ cursor: "pointer", userSelect: "none" }} 
+                                    onClick={() => handleSort("longitude")}
+                                >
+                                    Longitud {getSortIcon("longitude")}
+                                </th>
+                                <th 
+                                    style={{ cursor: "pointer", userSelect: "none" }} 
+                                    onClick={() => handleSort("is_validated")}
+                                >
+                                    Estado {getSortIcon("is_validated")}
+                                </th>
                                 <th>Acciones</th>
                             </tr>
                             </thead>
                             <tbody>
-                            {paginatedReports.map((r) => (
-                                <tr key={r.report_id}>
-                                    <td>
-                                        <ReportThumbnail reportId={r.report_id} hasFolder={!!r.image_url} />
-                                    </td>
-                                    <td>{r.reported_at?.slice(0, 10)}</td>
-                                    <td style={{ fontWeight: '600' }}>{r.city}</td>
-
-                                    <td>{r.latitude}</td>
-                                    <td>{r.longitude}</td>
-
-                                    <td>
-                                      <span className={`status-pill ${r.is_validated ? "status-valid" : "status-pending"}`}>
-                                        {r.is_validated ? "Validado" : "Pendiente"}
-                                      </span>
-                                    </td>
-                                    <td>
-                                        <button
-                                            className="cms-icon-btn"
-                                            onClick={() => handleOpenForm(r)}
-                                            title="Validar / Editar"
-                                        >
-                                            <FaEdit />
-                                        </button>
+                            {paginatedReports.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} style={{ textAlign: "center", color: "#a0aec0", padding: "32px" }}>
+                                        No hay reportes disponibles.
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                paginatedReports.map((r) => {
+                                    const id = r.id || r.report_id;
+                                    
+                                    return (
+                                        <tr key={id}>
+                                            <td>
+                                                <ReportThumbnail reportId={id} hasFolder={!!r.image_url} />
+                                            </td>
+                                            <td>{r.reported_at?.slice(0, 10)}</td>
+                                            <td style={{ fontWeight: '600' }}>{r.city}</td>
+
+                                            <td>{r.latitude}</td>
+                                            <td>{r.longitude}</td>
+
+                                            <td>
+                                              <span className={`status-pill ${r.is_validated ? "status-valid" : "status-pending"}`}>
+                                                {r.is_validated ? "Validado" : "Pendiente"}
+                                              </span>
+                                            </td>
+                                            <td>
+                                                <button
+                                                    className="cms-icon-btn"
+                                                    onClick={() => handleOpenForm(r)}
+                                                    title="Validar / Editar"
+                                                >
+                                                    <FaEdit />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
                             </tbody>
                         </table>
                     </div>
@@ -104,6 +241,7 @@ export default function CMSReports() {
                             className="cms-icon-btn"
                             disabled={currentPage === 1}
                             onClick={() => setCurrentPage((p) => p - 1)}
+                            title="Página anterior"
                         >
                             <FaChevronLeft />
                         </button>
@@ -114,6 +252,7 @@ export default function CMSReports() {
                             className="cms-icon-btn"
                             disabled={currentPage === totalPages || totalPages === 0}
                             onClick={() => setCurrentPage((p) => p + 1)}
+                            title="Siguiente página"
                         >
                             <FaChevronRight />
                         </button>
@@ -141,7 +280,7 @@ function ReportThumbnail({ reportId, hasFolder }) {
     useEffect(() => {
         if (!hasFolder) return;
 
-        fetch(`${API_URL}/reports/${reportId}/images`)
+        fetch(`${API_URL}/reports/item/${reportId}/images`)
             .then(res => res.json())
             .then(data => {
                 if (data.images && data.images.length > 0) {
@@ -155,7 +294,7 @@ function ReportThumbnail({ reportId, hasFolder }) {
         return <span className="no-img" style={{fontSize:'0.8rem', color:'#999'}}>Sin imagen</span>;
     }
 
-    const imageUrl = `${API_URL}/reports/${reportId}/images/${firstImage}`;
+    const imageUrl = `${API_URL}/reports/item/${reportId}/images/${firstImage}`;
 
     return (
         <a href={imageUrl} target="_blank" rel="noopener noreferrer" title="Ver imagen completa">
@@ -179,6 +318,7 @@ function ReportThumbnail({ reportId, hasFolder }) {
 // --- FORM COMPONENT ---
 function ReportForm({ report, onClose, refreshReports }) {
     const API_URL = `${import.meta.env.VITE_API_URL}`;
+    const reportId = report?.id || report?.report_id;
 
     const [formData, setFormData] = useState({
         reporter_name: "", reporter_phone: "", reporter_email: "",
@@ -202,7 +342,8 @@ function ReportForm({ report, onClose, refreshReports }) {
                 physical_address: report.physical_address || "",
                 latitude: report.latitude || "",
                 longitude: report.longitude || "",
-                is_validated: report.is_validated || 0
+                is_validated: report.is_validated || 0,
+                landslide_id: report.landslide_id || report.id || null
             });
             fetchServerImages();
         }
@@ -215,7 +356,7 @@ function ReportForm({ report, onClose, refreshReports }) {
 
     const fetchServerImages = async () => {
         try {
-            const res = await fetch(`${API_URL}/reports/${report.report_id}/images`);
+            const res = await fetch(`${API_URL}/reports/item/${reportId}/images`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.images && Array.isArray(data.images)) {
@@ -259,7 +400,7 @@ function ReportForm({ report, onClose, refreshReports }) {
 
         try {
             const token = localStorage.getItem("cmsAdmin");
-            const res = await fetch(`${API_URL}/reports/${report.report_id}/images/${filename}`, {
+            const res = await fetch(`${API_URL}/reports/item/${reportId}/images/${filename}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -281,7 +422,6 @@ function ReportForm({ report, onClose, refreshReports }) {
         if (!formData.reported_at) missing.push("Fecha");
         if (!formData.city) missing.push("Pueblo");
 
-        // Safety check for validation
         if (formData.is_validated === 1) {
             if (!formData.latitude) missing.push("Latitud");
             if (!formData.longitude) missing.push("Longitud");
@@ -293,26 +433,6 @@ function ReportForm({ report, onClose, refreshReports }) {
         }
         return true;
     };
-
-    useEffect(() => {
-        if (report) {
-            setFormData({
-                reporter_name: report.reporter_name || "",
-                reporter_phone: report.reporter_phone || "",
-                reporter_email: report.reporter_email || "",
-                reported_at: report.reported_at?.slice(0, 10) || "",
-                description: report.description || "",
-                city: report.city || "",
-                physical_address: report.physical_address || "",
-                latitude: report.latitude || "",
-                longitude: report.longitude || "",
-                is_validated: report.is_validated || 0,
-                // ADD THIS LINE:
-                landslide_id: report.landslide_id || null
-            });
-            fetchServerImages();
-        }
-    }, [report]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -333,34 +453,29 @@ function ReportForm({ report, onClose, refreshReports }) {
             const token = localStorage.getItem("cmsAdmin");
             if (!token) { Swal.fire("Error", "Sesión expirada", "error"); return; }
 
-            let adminId = 1; // Default
+            let adminId = 1; 
             try {
-                // Decode the payload part of the JWT 
                 const payload = JSON.parse(atob(token.split('.')[1]));
-                // Checks for 'data.id' (based on your PHP middleware) or standard 'sub'/'id'
                 adminId = payload.data?.id || payload.id || payload.sub || 1;
             } catch (err) {
                 console.warn("Could not parse Admin ID from token, defaulting to 1");
             }
 
-            // Determine Folder Name (Existing or Generated)
             let sharedFolder = report.image_url;
             if (!sharedFolder && formData.reported_at) {
                 const datePart = formData.reported_at.slice(0, 10);
-                sharedFolder = `${datePart}_${report.report_id}`;
+                sharedFolder = `${datePart}_${reportId}`;
             }
 
-            // Determine if we are promoting to Validated
-            let finalLandslideId = report.landslide_id; 
+            let finalLandslideId = report.landslide_id || report.id; 
             const isValidating = report.is_validated === 0 && formData.is_validated === 1;
 
             if (isValidating) {
-                // Create Landslide Record First
                 const landslidePayload = {
-                    admin_id: adminId, // Uses the decoded ID
+                    admin_id: adminId,
                     landslide_date: formData.reported_at,
-                    latitude: formData.latitude,
-                    longitude: formData.longitude,
+                    latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+                    longitude: formData.longitude ? parseFloat(formData.longitude) : null,
                     image_url: sharedFolder // Explicitly send folder name
                 };
 
@@ -382,14 +497,15 @@ function ReportForm({ report, onClose, refreshReports }) {
                 finalLandslideId = lsData.id || lsData.landslide_id; 
             }
 
-            // 4. Update Report with new Data AND Link the Landslide ID
             const reportPayload = {
                 ...formData,
+                latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+                longitude: formData.longitude ? parseFloat(formData.longitude) : null,
                 landslide_id: finalLandslideId,
-                image_url: sharedFolder // Ensure report gets the folder name too
+                image_url: sharedFolder 
             };
 
-            const res = await fetch(`${API_URL}/reports/${report.report_id}`, {
+            const res = await fetch(`${API_URL}/reports/item/${reportId}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -403,7 +519,6 @@ function ReportForm({ report, onClose, refreshReports }) {
                 throw new Error(errorData.error || "Error al actualizar datos del reporte");
             }
             if (newFiles.length > 0) {
-                // Show a loading alert because uploads can take time
                 Swal.fire({
                     title: 'Subiendo imágenes...',
                     text: 'Por favor espere',
@@ -415,13 +530,12 @@ function ReportForm({ report, onClose, refreshReports }) {
                     const uploadForm = new FormData();
                     uploadForm.append("image_file", file);
 
-                    const imgRes = await fetch(`${API_URL}/reports/${report.report_id}/upload`, {
+                    const imgRes = await fetch(`${API_URL}/reports/item/${reportId}/upload`, {
                         method: "POST",
                         headers: { Authorization: `Bearer ${token}` },
                         body: uploadForm
                     });
 
-                    // IF UPLOAD FAILS, THROW ERROR IMMEDIATELY
                     if (!imgRes.ok) {
                         const imgError = await imgRes.json();
                         throw new Error(`Error subiendo imagen (${file.name}): ${imgError.error || imgRes.statusText}`);
@@ -509,7 +623,7 @@ function ReportForm({ report, onClose, refreshReports }) {
                     {existingImages.length > 0 ? (
                         <div className="cms-image-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
                             {existingImages.map((filename, idx) => {
-                                const imgUrl = `${API_URL}/reports/${report.report_id}/images/${filename}`;
+                                const imgUrl = `${API_URL}/reports/item/${reportId}/images/${filename}`;
                                 return (
                                     <div key={idx} className="cms-image-card" style={{ position: 'relative', width: '150px', height: '150px', border:'1px solid #ddd', borderRadius:'8px', overflow:'hidden' }}>
                                         <a href={imgUrl} target="_blank" rel="noopener noreferrer" title="Click para ver imagen completa">

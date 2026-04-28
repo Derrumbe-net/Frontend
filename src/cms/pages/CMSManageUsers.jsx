@@ -10,6 +10,7 @@ export default function CMSManageUsers() {
     const [error, setError] = useState(null);
     const [currentUserEmail, setCurrentUserEmail] = useState("");
 
+    // Base route for admins
     const API_URL = `${import.meta.env.VITE_API_URL}/admins`;
     const SUPER_ADMIN_EMAIL = "slidespr@gmail.com";
 
@@ -29,6 +30,7 @@ export default function CMSManageUsers() {
     const fetchUsers = async () => {
         try {
             const token = localStorage.getItem("cmsAdmin");
+            // Matches: GET /admins
             const response = await fetch(API_URL, {
                 headers: {
                     "Authorization": `Bearer ${token}`,
@@ -57,7 +59,8 @@ export default function CMSManageUsers() {
             return;
         }
 
-        const currentIsAuth = targetUser.isAuthorized === 1 || targetUser.isAuthorized === true;
+        // Clean boolean check for Go API
+        const currentIsAuth = targetUser.isAuthorized === true;
         const newStatus = !currentIsAuth;
 
         // UI Feedback before Action
@@ -77,7 +80,12 @@ export default function CMSManageUsers() {
 
         try {
             const token = localStorage.getItem("cmsAdmin");
-            const response = await fetch(`${API_URL}/${targetUser.admin_id}/isAuthorized`, {
+            
+            // Normalize ID fallback for Go backend
+            const targetId = targetUser.id || targetUser.admin_id;
+
+            // Matches: PUT /admins/{id}/isAuthorized
+            const response = await fetch(`${API_URL}/${targetId}/isAuthorized`, {
                 method: "PUT",
                 headers: {
                     "Authorization": `Bearer ${token}`,
@@ -88,7 +96,10 @@ export default function CMSManageUsers() {
 
             if (response.ok) {
                 setUsers((prevUsers) =>
-                    prevUsers.map((u) => u.admin_id === targetUser.admin_id ? { ...u, isAuthorized: newStatus } : u)
+                    prevUsers.map((u) => {
+                        const currentId = u.id || u.admin_id;
+                        return currentId === targetId ? { ...u, isAuthorized: newStatus } : u;
+                    })
                 );
                 Swal.fire("Éxito", "Permisos actualizados.", "success");
             } else {
@@ -99,8 +110,6 @@ export default function CMSManageUsers() {
             Swal.fire("Error", "Error de conexión con el servidor.", "error");
         }
     };
-
-    // Removed handleDeleteUser function completely
 
     if (loading) return <div className="loading-container">Cargando usuarios...</div>;
 
@@ -136,11 +145,15 @@ export default function CMSManageUsers() {
                         </thead>
                         <tbody>
                         {users.map((user) => {
-                            const isAuth = user.isAuthorized === 1 || user.isAuthorized === true;
+                            // Normalize ID fallback
+                            const id = user.id || user.admin_id;
+                            
+                            // Clean boolean check
+                            const isAuth = user.isAuthorized === true;
                             const isSuperAdmin = user.email === SUPER_ADMIN_EMAIL;
 
                             return (
-                                <tr key={user.admin_id}>
+                                <tr key={id}>
                                     <td>
                                         <span className="email-cell">{user.email}</span>
                                         {isSuperAdmin && <span className="role-badge">Super Admin</span>}
@@ -160,8 +173,6 @@ export default function CMSManageUsers() {
                                             >
                                                 {isAuth ? <><FaBan style={{marginRight:6}}/> Revocar</> : <><FaCheck style={{marginRight:6}}/> Autorizar</>}
                                             </button>
-
-                                            {/* Removed the Delete button here */}
                                         </div>
                                     </td>
                                 </tr>

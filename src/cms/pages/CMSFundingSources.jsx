@@ -11,20 +11,26 @@ export default function CMSFundingSources() {
   const [editSource, setEditSource] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
-
-  const totalPages = Math.ceil(sources.length / itemsPerPage);
+  // Replace lines 14-16 with this:
+  const safeSources = Array.isArray(sources) ? sources : [];
+  const totalPages = Math.ceil(safeSources.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginated  = sources.slice(startIndex, startIndex + itemsPerPage);
+  const paginated  = safeSources.slice(startIndex, startIndex + itemsPerPage);
 
   useEffect(() => { fetchSources(); }, []);
 
+ // Update your fetchSources function:
   const fetchSources = async () => {
     try {
       const res  = await fetch(`${API_URL}/funding-sources`);
       const data = await res.json();
-      setSources(data);
+      
+      // Ensure we only ever set an array in state
+      setSources(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error fetching funding sources:", err);
+      // Optional: Reset to empty array on error to prevent crashes
+      setSources([]); 
     }
   };
 
@@ -42,7 +48,8 @@ export default function CMSFundingSources() {
 
     try {
       const token = localStorage.getItem("cmsAdmin");
-      const res = await fetch(`${API_URL}/funding-sources/${id}`, {
+      // Updated to match: DELETE /funding-sources/item/{id}
+      const res = await fetch(`${API_URL}/funding-sources/item/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -105,44 +112,50 @@ export default function CMSFundingSources() {
                     </td>
                   </tr>
                 ) : (
-                  paginated.map((s) => (
-                    <tr key={s.funding_id}>
-                      <td>
-                        {s.image_url ? (
-                          <img
-                            src={`${API_URL}/funding-sources/${s.funding_id}/image`}
-                            alt={s.name}
-                            className="cms-thumb cms-thumb--logo"
-                          />
-                        ) : (
-                          <span className="no-img">Sin logo</span>
-                        )}
-                      </td>
-                      <td style={{ fontWeight: "600" }}>{s.name}</td>
-                      <td>
-                        {s.website_url ? (
-                          <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="cms-link">
-                            Visitar ↗
-                          </a>
-                        ) : (
-                          <span style={{ color: "#a0aec0", fontSize: "0.82rem" }}>—</span>
-                        )}
-                      </td>
-                      <td style={{ textAlign: "center" }}>{s.display_order}</td>
-                      <td>
-                        <button className="cms-icon-btn" onClick={() => handleOpenForm(s)} title="Editar">
-                          <FaEdit />
-                        </button>
-                        <button
-                          className="cms-icon-btn cms-delete-btn"
-                          onClick={() => handleDelete(s.funding_id)}
-                          title="Eliminar"
-                        >
-                          <FaTrash />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  paginated.map((s) => {
+                    // Normalize ID just in case
+                    const id = s.id || s.funding_id;
+
+                    return (
+                      <tr key={id}>
+                        <td>
+                          {s.image_url ? (
+                            <img
+                              // Updated to match the new item pattern
+                              src={`${API_URL}/funding-sources/item/${id}/image`}
+                              alt={s.name}
+                              className="cms-thumb cms-thumb--logo"
+                            />
+                          ) : (
+                            <span className="no-img">Sin logo</span>
+                          )}
+                        </td>
+                        <td style={{ fontWeight: "600" }}>{s.name}</td>
+                        <td>
+                          {s.website_url ? (
+                            <a href={s.website_url} target="_blank" rel="noopener noreferrer" className="cms-link">
+                              Visitar ↗
+                            </a>
+                          ) : (
+                            <span style={{ color: "#a0aec0", fontSize: "0.82rem" }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: "center" }}>{s.display_order}</td>
+                        <td>
+                          <button className="cms-icon-btn" onClick={() => handleOpenForm(s)} title="Editar">
+                            <FaEdit />
+                          </button>
+                          <button
+                            className="cms-icon-btn cms-delete-btn"
+                            onClick={() => handleDelete(id)}
+                            title="Eliminar"
+                          >
+                            <FaTrash />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -184,6 +197,7 @@ export default function CMSFundingSources() {
 // ─────────────────────────────────────────────
 function FundingSourceForm({ source, onClose, refreshSources }) {
   const isEdit = !!source;
+  const sourceId = source?.id || source?.funding_id;
 
   const [formData, setFormData] = useState({
     name:          source?.name          ?? "",
@@ -193,7 +207,8 @@ function FundingSourceForm({ source, onClose, refreshSources }) {
   });
 
   const [previewUrl, setPreviewUrl] = useState(
-    source?.image_url ? `${API_URL}/funding-sources/${source.funding_id}/image` : null
+    // Updated to match the new item pattern
+    source?.image_url ? `${API_URL}/funding-sources/item/${sourceId}/image` : null
   );
 
   const handleChange = (e) => {
@@ -236,8 +251,9 @@ function FundingSourceForm({ source, onClose, refreshSources }) {
     if (!confirmed.isConfirmed) return;
 
     const method = isEdit ? "PUT" : "POST";
+    // Updated to match: PUT /funding-sources/item/{id} OR POST /funding-sources
     const url    = isEdit
-      ? `${API_URL}/funding-sources/${source.funding_id}`
+      ? `${API_URL}/funding-sources/item/${sourceId}`
       : `${API_URL}/funding-sources`;
 
     const { imageFile, ...bodyData } = formData;
@@ -252,18 +268,23 @@ function FundingSourceForm({ source, onClose, refreshSources }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(bodyData),
+        // Ensure display_order is sent as a number if your backend requires it
+        body: JSON.stringify({
+          ...bodyData,
+          display_order: parseInt(bodyData.display_order, 10) || 0
+        }),
       });
 
       if (!res.ok) { Swal.fire("Error", "No se pudo guardar.", "error"); return; }
 
-      const result   = await res.json();
-      const sourceId = isEdit ? source.funding_id : result.funding_id;
+      const result = await res.json();
+      const finalSourceId = isEdit ? sourceId : (result.id || result.funding_id);
 
       if (imageFile) {
         const imgForm = new FormData();
         imgForm.append("image", imageFile);
-        await fetch(`${API_URL}/funding-sources/${sourceId}/image`, {
+        // Updated to match: POST /funding-sources/item/{id}/image
+        await fetch(`${API_URL}/funding-sources/item/${finalSourceId}/image`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: imgForm,

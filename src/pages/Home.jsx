@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import "../styles/Home_module.css";
 import { Link } from "react-router-dom";
+import "../styles/Home_module.css";
 import heroImage from '../assets/landing_page_background.webp';
 import mapPreview from '../assets/InteractiveMapGIF.gif';
 import landslidePhoto from '../assets/landslide_landing_page.webp';
@@ -16,6 +16,7 @@ function Home() {
   const [officeInfo, setOfficeInfo] = useState(null);
 
   useEffect(() => {
+    // This perfectly matches the GET /office-info route in your Go backend
     fetch(`${API_URL}/office-info`)
       .then((r) => r.json())
       .then(setOfficeInfo)
@@ -60,7 +61,8 @@ function Home() {
             Herramienta interactiva que muestra, en tiempo real, datos de saturación del suelo,
             susceptibilidad a deslizamientos y estimaciones de precipitación en Puerto Rico.
           </p>
-          <a className="landing__map-link">¡Haz clic en el mapa!</a>
+          {/* Changed <a> to <Link> for internal React Router navigation */}
+          <Link to="/mapa-interactivo" className="landing__map-link">¡Haz clic en el mapa!</Link>
         </div>
 
         <Link to="/mapa-interactivo">
@@ -76,7 +78,7 @@ function Home() {
             Ayúdanos a mejorar el monitoreo reportando deslizamientos que observes
             en tu área. Tu apoyo puede brindar ayuda para la comunidad.
           </p>
-          <a href="/reportar" className="btn--black">¡Haz tu Reporte!</a>
+          <Link to="/reportar" className="btn--black">¡Haz tu Reporte!</Link>
         </div>
         <div className="landing__report-image-wrapper">
           <img src={landslidePhoto} alt="Ejemplo de deslizamiento" className="landing__report-image" loading="lazy" />
