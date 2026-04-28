@@ -228,9 +228,23 @@ export default function CMSStations() {
                                         return (
                                             <tr key={id}>
                                                 <td>
-                                                    {s.sensor_image_url ? (
-                                                        <img src={`${API_URL}/stations/item/${id}/image/sensor`} alt={s.name} className="cms-thumb" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
-                                                    ) : <span className="no-img" style={{ fontSize: '12px', color: '#aaa' }}>Sin img</span>}
+                                                    {s.image_url || s.sensor_image_url ? (
+                                                        <a
+                                                            href={`${API_URL}/stations/item/${id}/image/sensor`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            title="Ver imagen completa"
+                                                        >
+                                                            <img 
+                                                                src={`${API_URL}/stations/item/${id}/image/sensor?t=${new Date().getTime()}`} 
+                                                                alt={s.name} 
+                                                                className="cms-thumb" 
+                                                                style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} 
+                                                            />
+                                                        </a>
+                                                    ) : (
+                                                        <span className="no-img" style={{ fontSize: '12px', color: '#aaa' }}>Sin img</span>
+                                                    )}
                                                 </td>
                                                 <td style={{ fontWeight: "600" }}>{s.name}</td>
                                                 <td>
@@ -314,6 +328,8 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
         wc2_max: "", 
         wc3_max: "", 
         wc4_max: "",
+        soil_saturation: "",
+        precipitation: "",
         landslide_forecast: "",
         collaborator: "", 
         ftp_file_path: "", 
@@ -341,15 +357,20 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
                 wc2_max: station.wc2_max || "",
                 wc3_max: station.wc3_max || "",
                 wc4_max: station.wc4_max || "",
+                soil_saturation: station.soil_saturation || "",
+                precipitation: station.precipitation || "",
                 landslide_forecast: station.landslide_forecast || "",
                 collaborator: station.collaborator || "",
                 ftp_file_path: station.ftp_file_path || "",
                 station_installation_date: station.station_installation_date?.slice(0, 10) || "",
                 imageFile: null
             });
-            if (station.sensor_image_url) {
+
+            if (station.image_url || station.sensor_image_url) {
                 // Add timestamp to prevent caching old images
                 setPreviewUrl(`${apiUrl}/stations/item/${stationId}/image/sensor?t=${new Date().getTime()}`);
+            } else {
+                setPreviewUrl(null);
             }
         }
     }, [station, apiUrl, stationId]);
@@ -361,6 +382,21 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
 
     const handleDepthChange = (e) => setDepthFields({ ...depthFields, [e.target.name]: e.target.value });
 
+    const validate = () => {
+        if (!formData.name.trim()) { Swal.fire("Error", "El nombre de la estación es obligatorio.", "warning"); return false; }
+        if (!formData.latitude || !formData.longitude) { Swal.fire("Error", "Latitud y Longitud son obligatorias.", "warning"); return false; }
+        if (!formData.elevation) { Swal.fire("Error", "La elevación es obligatoria.", "warning"); return false; }
+        if (!formData.susceptibility) { Swal.fire("Error", "La susceptibilidad es obligatoria.", "warning"); return false; }
+        if (!formData.station_installation_date) { Swal.fire("Error", "La fecha de instalación es obligatoria.", "warning"); return false; }
+        if (!formData.ftp_file_path) { Swal.fire("Error", "La ruta del archivo (.dat) es obligatoria.", "warning"); return false; }
+
+        if (formData.wc1_max === "" || formData.wc2_max === "" || formData.wc3_max === "" || formData.wc4_max === "") {
+            Swal.fire("Error", "Todos los campos de WC Max son obligatorios.", "warning");
+            return false;
+        }
+        return true;
+    };
+
     const handleImageChange = (e) => {
         if (e.target.files && e.target.files[0]) {
             setFormData({ ...formData, imageFile: e.target.files[0] });
@@ -371,12 +407,13 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
     const clearImage = () => {
         setFormData({ ...formData, imageFile: null });
         setPreviewUrl(null);
-        // If it's an edit, we aren't deleting the image from the server yet, 
-        // just clearing the preview. An explicit delete endpoint would be better here if API supports it.
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (!validate()) return;
+        
         setIsSubmitting(true);
         const token = localStorage.getItem("cmsAdmin");
         
@@ -442,24 +479,24 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
                 {/* --- SECCIÓN: UBICACIÓN Y GEOLOGÍA --- */}
                 <div className="cms-form-section-title span-2">Ubicación y Geología</div>
                 <div className="cms-form-group">
-                    <label>Latitud</label>
-                    <input className="cms-input" type="number" step="any" name="latitude" value={formData.latitude} onChange={handleChange} disabled={isSubmitting} />
+                    <label>Latitud <span className="required-asterisk">*</span></label>
+                    <input className="cms-input" type="number" step="any" name="latitude" value={formData.latitude} onChange={handleChange} disabled={isSubmitting} required />
                 </div>
                 <div className="cms-form-group">
-                    <label>Longitud</label>
-                    <input className="cms-input" type="number" step="any" name="longitude" value={formData.longitude} onChange={handleChange} disabled={isSubmitting} />
+                    <label>Longitud <span className="required-asterisk">*</span></label>
+                    <input className="cms-input" type="number" step="any" name="longitude" value={formData.longitude} onChange={handleChange} disabled={isSubmitting} required />
                 </div>
                 <div className="cms-form-group">
-                    <label>Elevación (m)</label>
-                    <input className="cms-input" type="number" step="any" name="elevation" value={formData.elevation} onChange={handleChange} disabled={isSubmitting} />
+                    <label>Elevación (m) <span className="required-asterisk">*</span></label>
+                    <input className="cms-input" type="number" step="any" name="elevation" value={formData.elevation} onChange={handleChange} disabled={isSubmitting} required />
                 </div>
                 <div className="cms-form-group">
                     <label>Pendiente (Grados)</label>
                     <input className="cms-input" type="number" step="any" name="slope" value={formData.slope} onChange={handleChange} disabled={isSubmitting} />
                 </div>
                 <div className="cms-form-group">
-                    <label>Susceptibilidad</label>
-                    <input className="cms-input" name="susceptibility" value={formData.susceptibility} onChange={handleChange} placeholder="Ej. Muy alta" disabled={isSubmitting} />
+                    <label>Susceptibilidad <span className="required-asterisk">*</span></label>
+                    <input className="cms-input" name="susceptibility" value={formData.susceptibility} onChange={handleChange} placeholder="Ej. Muy alta" disabled={isSubmitting} required />
                 </div>
                 <div className="cms-form-group">
                     <label>Unidad de Suelo</label>
@@ -473,20 +510,20 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
                 {/* --- SECCIÓN: LÍMITES WC MAX --- */}
                 <div className="cms-form-section-title span-2">Límites Volumétricos de Agua (WC Max)</div>
                 <div className="cms-form-group">
-                    <label>WC1 Max</label>
-                    <input className="cms-input" type="number" step="any" name="wc1_max" value={formData.wc1_max} onChange={handleChange} disabled={isSubmitting} />
+                    <label>WC1 Max <span className="required-asterisk">*</span></label>
+                    <input className="cms-input" type="number" step="any" name="wc1_max" value={formData.wc1_max} onChange={handleChange} disabled={isSubmitting} required />
                 </div>
                 <div className="cms-form-group">
-                    <label>WC2 Max</label>
-                    <input className="cms-input" type="number" step="any" name="wc2_max" value={formData.wc2_max} onChange={handleChange} disabled={isSubmitting} />
+                    <label>WC2 Max <span className="required-asterisk">*</span></label>
+                    <input className="cms-input" type="number" step="any" name="wc2_max" value={formData.wc2_max} onChange={handleChange} disabled={isSubmitting} required />
                 </div>
                 <div className="cms-form-group">
-                    <label>WC3 Max</label>
-                    <input className="cms-input" type="number" step="any" name="wc3_max" value={formData.wc3_max} onChange={handleChange} disabled={isSubmitting} />
+                    <label>WC3 Max <span className="required-asterisk">*</span></label>
+                    <input className="cms-input" type="number" step="any" name="wc3_max" value={formData.wc3_max} onChange={handleChange} disabled={isSubmitting} required />
                 </div>
                 <div className="cms-form-group">
-                    <label>WC4 Max</label>
-                    <input className="cms-input" type="number" step="any" name="wc4_max" value={formData.wc4_max} onChange={handleChange} disabled={isSubmitting} />
+                    <label>WC4 Max <span className="required-asterisk">*</span></label>
+                    <input className="cms-input" type="number" step="any" name="wc4_max" value={formData.wc4_max} onChange={handleChange} disabled={isSubmitting} required />
                 </div>
 
                 {/* --- SECCIÓN: PROFUNDIDADES --- */}
@@ -519,12 +556,12 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
                     <input className="cms-input" name="collaborator" value={formData.collaborator} onChange={handleChange} placeholder="Ej. UPR Mayagüez" disabled={isSubmitting} />
                 </div>
                 <div className="cms-form-group">
-                    <label>Fecha de Instalación</label>
-                    <input className="cms-input" type="date" name="station_installation_date" value={formData.station_installation_date} onChange={handleChange} disabled={isSubmitting} />
+                    <label>Fecha de Instalación <span className="required-asterisk">*</span></label>
+                    <input className="cms-input" type="date" name="station_installation_date" value={formData.station_installation_date} onChange={handleChange} disabled={isSubmitting} required />
                 </div>
                 <div className="cms-form-group">
-                    <label>Ruta Archivo FTP</label>
-                    <input className="cms-input" name="ftp_file_path" value={formData.ftp_file_path} onChange={handleChange} placeholder="/ruta/hacia/datos" disabled={isSubmitting} />
+                    <label>Ruta Archivo FTP <span className="required-asterisk">*</span></label>
+                    <input className="cms-input" name="ftp_file_path" value={formData.ftp_file_path} onChange={handleChange} placeholder="/ruta/hacia/datos" disabled={isSubmitting} required />
                 </div>
 
                 {/* --- SECCIÓN: IMAGEN --- */}
