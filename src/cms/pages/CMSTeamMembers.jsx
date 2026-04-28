@@ -84,7 +84,7 @@ export default function CMSTeamMembers() {
       const id = member.id || member.member_id;
       const endpoint = member.member_type === "faculty" ? "faculty-members" : "student-members";
 
-      const res = await fetch(`${API_URL}/${endpoint}/item/${id}`, {
+      const res = await fetch(`${API_URL}/${endpoint}/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -269,7 +269,7 @@ export default function CMSTeamMembers() {
                         <td>
                           {m.image_url || m.image_path ? (
                             <img
-                              src={`${API_URL}/${endpoint}/item/${id}/image`}
+                              src={`${API_URL}/${endpoint}/${id}/image`}
                               alt={m.name}
                               className="cms-thumb cms-thumb--circle"
                             />
@@ -368,7 +368,7 @@ function MemberForm({ member, onClose, refreshMembers }) {
   const endpointForPreview = member?.member_type === "faculty" ? "faculty-members" : "student-members";
 
   const [previewUrl, setPreviewUrl] = useState(
-    (member?.image_url || member?.image_path) ? `${API_URL}/${endpointForPreview}/item/${memberId}/image` : null
+    (member?.image_url || member?.image_path) ? `${API_URL}/${endpointForPreview}/${memberId}/image` : null
   );
 
   const handleChange = (e) => {
@@ -412,7 +412,7 @@ function MemberForm({ member, onClose, refreshMembers }) {
     const method = isEdit ? "PUT" : "POST";
     
     const url = isEdit
-      ? `${API_URL}/${endpoint}/item/${memberId}`
+      ? `${API_URL}/${endpoint}/${memberId}`
       : `${API_URL}/${endpoint}`;
 
     const { imageFile, ...bodyData } = formData;
@@ -440,7 +440,7 @@ function MemberForm({ member, onClose, refreshMembers }) {
         const imgForm = new FormData();
         imgForm.append("image", imageFile);
         
-        await fetch(`${API_URL}/${endpoint}/item/${finalMemberId}/image`, {
+        await fetch(`${API_URL}/${endpoint}/${finalMemberId}/image`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: imgForm,

@@ -73,7 +73,7 @@ export default function CMSStations() {
         if (result.isConfirmed) {
             try {
                 const token = localStorage.getItem("cmsAdmin");
-                const response = await fetch(`${API_URL}/stations/item/${id}`, {
+                const response = await fetch(`${API_URL}/stations/${id}`, {
                     method: 'DELETE',
                     headers: { "Authorization": `Bearer ${token}` }
                 });
@@ -230,13 +230,13 @@ export default function CMSStations() {
                                                 <td>
                                                     {s.image_url || s.sensor_image_url ? (
                                                         <a
-                                                            href={`${API_URL}/stations/item/${id}/image/sensor`}
+                                                            href={`${API_URL}/stations/${id}/image/sensor`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             title="Ver imagen completa"
                                                         >
                                                             <img 
-                                                                src={`${API_URL}/stations/item/${id}/image/sensor?t=${new Date().getTime()}`} 
+                                                                src={`${API_URL}/stations/${id}/image/sensor?t=${new Date().getTime()}`} 
                                                                 alt={s.name} 
                                                                 className="cms-thumb" 
                                                                 style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} 
@@ -332,7 +332,6 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
         precipitation: "",
         landslide_forecast: "",
         collaborator: "", 
-        ftp_file_path: "", 
         station_installation_date: "", 
         imageFile: null,
     });
@@ -361,14 +360,13 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
                 precipitation: station.precipitation || "",
                 landslide_forecast: station.landslide_forecast || "",
                 collaborator: station.collaborator || "",
-                ftp_file_path: station.ftp_file_path || "",
                 station_installation_date: station.station_installation_date?.slice(0, 10) || "",
                 imageFile: null
             });
 
             if (station.image_url || station.sensor_image_url) {
                 // Add timestamp to prevent caching old images
-                setPreviewUrl(`${apiUrl}/stations/item/${stationId}/image/sensor?t=${new Date().getTime()}`);
+                setPreviewUrl(`${apiUrl}/stations/${stationId}/image/sensor?t=${new Date().getTime()}`);
             } else {
                 setPreviewUrl(null);
             }
@@ -388,7 +386,6 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
         if (!formData.elevation) { Swal.fire("Error", "La elevación es obligatoria.", "warning"); return false; }
         if (!formData.susceptibility) { Swal.fire("Error", "La susceptibilidad es obligatoria.", "warning"); return false; }
         if (!formData.station_installation_date) { Swal.fire("Error", "La fecha de instalación es obligatoria.", "warning"); return false; }
-        if (!formData.ftp_file_path) { Swal.fire("Error", "La ruta del archivo (.dat) es obligatoria.", "warning"); return false; }
 
         if (formData.wc1_max === "" || formData.wc2_max === "" || formData.wc3_max === "" || formData.wc4_max === "") {
             Swal.fire("Error", "Todos los campos de WC Max son obligatorios.", "warning");
@@ -421,7 +418,7 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
             .filter(d => d !== "")
             .join(", ");
 
-        const url = isEdit ? `${apiUrl}/stations/item/${stationId}` : `${apiUrl}/stations`;
+        const url = isEdit ? `${apiUrl}/stations/${stationId}` : `${apiUrl}/stations`;
 
         try {
             const response = await fetch(url, {
@@ -437,7 +434,7 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
             if (formData.imageFile) {
                 const imgData = new FormData();
                 imgData.append("image", formData.imageFile);
-                const imgResponse = await fetch(`${apiUrl}/stations/item/${finalId}/image/sensor`, {
+                const imgResponse = await fetch(`${apiUrl}/stations/${finalId}/image/sensor`, {
                     method: "POST",
                     headers: { "Authorization": `Bearer ${token}` },
                     body: imgData,
@@ -555,13 +552,9 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
                     <label>Colaborador</label>
                     <input className="cms-input" name="collaborator" value={formData.collaborator} onChange={handleChange} placeholder="Ej. UPR Mayagüez" disabled={isSubmitting} />
                 </div>
-                <div className="cms-form-group">
+                <div className="cms-form-group span-2">
                     <label>Fecha de Instalación <span className="required-asterisk">*</span></label>
                     <input className="cms-input" type="date" name="station_installation_date" value={formData.station_installation_date} onChange={handleChange} disabled={isSubmitting} required />
-                </div>
-                <div className="cms-form-group">
-                    <label>Ruta Archivo FTP <span className="required-asterisk">*</span></label>
-                    <input className="cms-input" name="ftp_file_path" value={formData.ftp_file_path} onChange={handleChange} placeholder="/ruta/hacia/datos" disabled={isSubmitting} required />
                 </div>
 
                 {/* --- SECCIÓN: IMAGEN --- */}
