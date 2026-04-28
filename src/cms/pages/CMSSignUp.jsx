@@ -25,6 +25,8 @@ export default function CMSSignUp() {
   
   const navigate = useNavigate();
   const API_URL = `${import.meta.env.VITE_API_URL}`;
+  
+  // Matches exactly with: POST /admins/signup
   const signup_route = `${API_URL}/admins/signup`;
 
   useEffect(() => {
@@ -54,14 +56,15 @@ export default function CMSSignUp() {
 
     if (password !== confirmPassword) {
       alert("Las contraseñas no coinciden. Por favor verifique.");
+      setIsLoading(false);
       return;
     }
 
     if (getStrengthScore() < 4) {
       alert("La contraseña no es lo suficientemente segura.");
+      setIsLoading(false);
       return;
     }
-
 
     try {
       const response = await fetch(signup_route, {

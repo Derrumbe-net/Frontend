@@ -18,13 +18,21 @@ export default function About() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API_URL}/team-members`).then((r) => r.json()),
+      fetch(`${API_URL}/faculty-members`).then((r) => r.json()),
+      fetch(`${API_URL}/student-members`).then((r) => r.json()),
       fetch(`${API_URL}/funding-sources`).then((r) => r.json()),
     ])
-      .then(([members, funding]) => {
-        setFaculty(members.filter((m) => m.member_type === "faculty"));
-        setGraduate(members.filter((m) => m.member_type === "graduate"));
-        setUndergraduate(members.filter((m) => m.member_type === "undergraduate"));
+      .then(([facultyData, studentData, fundingData]) => {
+        const facultyMembers = facultyData || [];
+        const studentMembers = studentData || [];
+        const funding = fundingData || [];
+
+        setFaculty(facultyMembers);
+        
+        // Fixed: Use student_type instead of member_type based on your Go JSON
+        setGraduate(studentMembers.filter((m) => (m.student_type || m.member_type) === "graduate"));
+        setUndergraduate(studentMembers.filter((m) => (m.student_type || m.member_type) === "undergraduate"));
+        
         setFundingSources(funding);
       })
       .catch((err) => console.error("Error fetching about data:", err))
@@ -75,21 +83,21 @@ export default function About() {
           <h2 className="directory__subtitle">Facultad</h2>
           <div className="directory__profiles">
             {faculty.map((m) => (
-              <MemberCard key={m.member_id} member={m} showContact />
+              <MemberCard key={m.id || m.member_id} member={m} memberType="faculty" showContact />
             ))}
           </div>
 
           <h2 className="directory__subtitle">Estudiantes Graduados</h2>
           <div className="directory__profiles directory__profiles--students">
             {graduate.map((m) => (
-              <MemberCard key={m.member_id} member={m} />
+              <MemberCard key={m.id || m.student_member_id || m.member_id} member={m} memberType="student" />
             ))}
           </div>
 
           <h2 className="directory__subtitle">Estudiantes Subgraduados</h2>
           <div className="directory__profiles directory__profiles--students">
             {undergraduate.map((m) => (
-              <MemberCard key={m.member_id} member={m} />
+              <MemberCard key={m.id || m.student_member_id || m.member_id} member={m} memberType="student" />
             ))}
           </div>
 
@@ -98,7 +106,7 @@ export default function About() {
               <div className="directory__title funding__banner">Fuentes de Financiamiento</div>
               <div className="funding__grid">
                 {fundingSources.map((f) => (
-                  <FundingCard key={f.funding_id} source={f} />
+                  <FundingCard key={f.id || f.funding_id} source={f} />
                 ))}
               </div>
             </div>
@@ -109,9 +117,12 @@ export default function About() {
   );
 }
 
-function MemberCard({ member, showContact = false }) {
+function MemberCard({ member, memberType, showContact = false }) {
+  // Fixed: Added student_member_id to the fallback check
+  const id = member.id || member.student_member_id || member.member_id; 
+  
   const imgSrc = member.image_url
-    ? `${API_URL}/team-members/${member.member_id}/image`
+    ? `${API_URL}/${memberType}-members/item/${id}/image`
     : PLACEHOLDER;
 
   const hasLinkedIn = showContact && member.linkedin_url;
@@ -151,8 +162,10 @@ function MemberCard({ member, showContact = false }) {
 }
 
 function FundingCard({ source }) {
+  const id = source.id || source.funding_id;
+  
   const imgSrc = source.image_url
-    ? `${API_URL}/funding-sources/${source.funding_id}/image`
+    ? `${API_URL}/funding-sources/item/${id}/image`
     : null;
 
   const inner = (
