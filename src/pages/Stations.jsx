@@ -10,7 +10,7 @@ import stationSchematic from "../assets/station_schematic.png";
 import Cookies from 'js-cookie'; 
 const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 const BASE_STATIONS_URL = BASE_DOMAIN + "/stations";
-const BASE_FILES_DATA_URL = BASE_DOMAIN + "/stations/files/data";
+const BASE_LATEST_DATA_URL = BASE_DOMAIN + "/stations/latest";
 
 // Matches GET /stations/history/{id}/wc
 const getHistoryUrl = (stationId) => `${BASE_STATIONS_URL}/history/${stationId}/wc`;
@@ -223,28 +223,26 @@ function Stations() {
 
 
     // --- DATA CALCULATION LOGIC ---
-    const calculateMetricsFromRawData = (rows, stationInfo) => {
-        if (!rows || rows.length === 0) return null;
+    // --- DATA CALCULATION LOGIC ---
+    const calculateMetricsFromRawData = (reading, stationInfo) => {
+        if (!reading) return null;
 
-        // Sum precipitation across the provided rows (Received in mm)
-        const totalRainMm = rows.reduce((acc, row) => {
-            const val = parseFloat(row.precipitation);
-            return acc + (isNaN(val) ? 0 : val);
-        }, 0);
+        // Note: If your API sends this in inches directly (like "1.8"), remove the / 25.4 division
+        const precipValue = parseFloat(reading.precipitation);
+        const totalRainMm = isNaN(precipValue) ? 0 : precipValue;
+        const totalRainInches = totalRainMm / 25.4; 
 
-        // Convert mm to inches (1 inch = 25.4 mm)
-        const totalRainInches = totalRainMm / 25.4;
-
-        // Get limits and the latest row
-        const lastRow = rows[rows.length - 1];
         const wcRatios = [];
-        const limits = [stationInfo.wc1, stationInfo.wc2, stationInfo.wc3, stationInfo.wc4];
+        
+        // Updated to use the correct keys from your /stations payload
+        const limits = [stationInfo.wc1_max, stationInfo.wc2_max, stationInfo.wc3_max, stationInfo.wc4_max];
         const keys = ['wc1', 'wc2', 'wc3', 'wc4'];
 
         limits.forEach((limit, index) => {
-            const val = parseFloat(lastRow[keys[index]]);
+            const val = parseFloat(reading[keys[index]]);
             const max = parseFloat(limit);
-            if (!isNaN(val) && !isNaN(max) && max !== 0) {
+            
+            if (!isNaN(val) && !isNaN(max) && max > 0) {
                 wcRatios.push(val / max);
             }
         });
@@ -253,12 +251,15 @@ function Stations() {
         if (wcRatios.length > 0) {
             const sumRatio = wcRatios.reduce((a, b) => a + b, 0);
             avgSaturation = (sumRatio / wcRatios.length) * 100;
+            
+            // Cap at 100%
+            if (avgSaturation > 100) avgSaturation = 100;
         }
 
         return {
-            precipitation: totalRainInches,
+            precipitation: totalRainInches, // Or just precipValue if already in inches
             soil_saturation: avgSaturation,
-            last_updated: lastRow.recorded_at
+            last_updated: reading.recorded_at
         };
     };
 
@@ -267,21 +268,22 @@ function Stations() {
         if (!currentStations || !Array.isArray(currentStations) || currentStations.length === 0) return;
 
         try {
-            const response = await fetch(BASE_FILES_DATA_URL);
+            // Point to the updated endpoint
+            const response = await fetch(BASE_LATEST_DATA_URL); 
             if (!response.ok) return;
 
-            const filesData = await response.json();
+            const latestReadings = await response.json();
             
-            // Failsafe: Ensure filesData is an array
-            if (!Array.isArray(filesData)) return;
+            if (!Array.isArray(latestReadings)) return;
 
             const localUpdates = {};
 
-            filesData.forEach(fileRecord => {
-                const fileRecordId = fileRecord.id || fileRecord.station_id;
+            latestReadings.forEach(fileRecord => {
+                const fileRecordId = fileRecord.station_id;
                 const station = currentStations.find(s => (s.id || s.station_id) === fileRecordId);
                 
-                if (station && fileRecord.data && Array.isArray(fileRecord.data) && fileRecord.data.length > 0) {
+                // Removed the Array.isArray(fileRecord.data) check
+                if (station && fileRecord.data) {
                     const metrics = calculateMetricsFromRawData(fileRecord.data, station);
                     if (metrics) {
                         localUpdates[fileRecordId] = metrics;
@@ -289,7 +291,6 @@ function Stations() {
                 }
             });
 
-            // Always set state if we have valid base stations, even if localUpdates is empty
             const mergedStations = currentStations.map(s => {
                 const stId = s.id || s.station_id;
                 if (localUpdates[stId]) {
@@ -303,7 +304,6 @@ function Stations() {
             
         } catch (error) {
             console.error("Error fetching latest readings:", error);
-            // Fallback: If dynamic fetch fails, ensure map still renders base data
             setStations(currentStations);
         }
     };

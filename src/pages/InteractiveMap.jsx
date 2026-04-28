@@ -257,6 +257,12 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
         }).addTo(map);
 
         return () => {
+            // Nullify error handlers to prevent async crashes on unmount
+            if (municipalities) {
+                municipalities.onOverlayError = function() {};
+                municipalities._overlayOnError = function() {};
+            }
+            
             map.removeLayer(hillshade);
             map.removeLayer(municipalities);
         };
@@ -271,7 +277,13 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
             }).addTo(map);
         }
         return () => {
-            if (precipLayer) map.removeLayer(precipLayer);
+            if (precipLayer) {
+                // Nullify error handlers to prevent async crashes on unmount
+                precipLayer.onOverlayError = function() {};
+                precipLayer._overlayOnError = function() {};
+                
+                map.removeLayer(precipLayer);
+            }
         };
     }, [map, showPrecip]);
 
@@ -286,7 +298,10 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
             }).addTo(map);
         }
         return () => {
-            if (susceptibilityLayer) map.removeLayer(susceptibilityLayer);
+            if (susceptibilityLayer) {
+                // tiledMapLayers are generally safer, but you can add the override here too if needed
+                map.removeLayer(susceptibilityLayer);
+            }
         };
     }, [map, showSusceptibility]);
 
@@ -295,32 +310,28 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
 
 const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast }) => {
     const [stations, setStations] = useState([]);
-    const stationsRef = useRef([]);
+    const map = useMap();
 
-    const calculateMetricsFromRawData = (rows, stationInfo) => {
-        if (!rows || rows.length === 0) return null;
+    const calculateMetricsFromRawData = (reading, stationInfo) => {
+        if (!reading) return null;
 
-        // 1. Sum precipitation across the provided rows (Received in mm)
-        const totalRainMm = rows.reduce((acc, row) => {
-            const val = parseFloat(row.precipitation);
-            return acc + (isNaN(val) ? 0 : val);
-        }, 0);
+        // 1. Get precipitation
+        // Note: If your new API sends this in inches instead of mm, remove the `/ 25.4`.
+        const precipValue = parseFloat(reading.precipitation);
+        const totalRainMm = isNaN(precipValue) ? 0 : precipValue;
+        const totalRainInches = totalRainMm / 25.4; 
 
-        // 2. Convert mm to inches (1 inch = 25.4 mm)
-        const totalRainInches = totalRainMm / 25.4;
-
-        // Get limits and the latest row for soil saturation
-        const lastRow = rows[rows.length - 1];
+        // 2. Get limits and the latest reading for soil saturation
         const wcRatios = [];
         
         // Limits from the /stations API metadata
         const limits = [stationInfo.wc1_max, stationInfo.wc2_max, stationInfo.wc3_max, stationInfo.wc4_max];
         
-        // Values from the /stations/files/data raw readings array
+        // Values from the /stations/latest single data object
         const keys = ['wc1', 'wc2', 'wc3', 'wc4'];
 
         limits.forEach((limit, index) => {
-            const val = parseFloat(lastRow[keys[index]]);
+            const val = parseFloat(reading[keys[index]]);
             const max = parseFloat(limit);
             
             // Ensure both parsed successfully and max is greater than 0
@@ -339,9 +350,9 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         }
 
         return {
-            calculatedPrecip: totalRainInches, // Converted to inches
+            calculatedPrecip: totalRainInches, 
             calculatedSaturation: avgSaturation,
-            lastUpdated: lastRow.recorded_at
+            lastUpdated: reading.recorded_at
         };
     };
 
@@ -355,26 +366,26 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 const baseStations = await stationRes.json();
                 
                 const dataArray = Array.isArray(baseStations) ? baseStations : [];
-                stationsRef.current = dataArray;
 
                 if (dataArray.length === 0) return;
 
                 // 2. Fetch the latest readings immediately after
                 const dataRes = await fetch(BASE_FILES_DATA_URL);
                 if (!dataRes.ok) return;
-                const filesData = await dataRes.json();
+                const latestReadings = await dataRes.json();
 
                 const localUpdates = {};
 
-                if (Array.isArray(filesData)) {
-                    filesData.forEach(fileRecord => {
-                        const fileRecordId = fileRecord.id || fileRecord.station_id;
-                        const station = dataArray.find(s => (s.id || s.station_id) === fileRecordId);
+                if (Array.isArray(latestReadings)) {
+                    latestReadings.forEach(record => {
+                        const recordStationId = record.station_id;
+                        const station = dataArray.find(s => s.station_id === recordStationId);
                         
-                        if (station && fileRecord.data && Array.isArray(fileRecord.data) && fileRecord.data.length > 0) {
-                            const metrics = calculateMetricsFromRawData(fileRecord.data, station);
+                        // Check if station exists and the data object is present
+                        if (station && record.data) {
+                            const metrics = calculateMetricsFromRawData(record.data, station);
                             if (metrics) {
-                                localUpdates[fileRecordId] = {
+                                localUpdates[recordStationId] = {
                                     precipitation: metrics.calculatedPrecip,
                                     soil_saturation: metrics.calculatedSaturation,
                                     last_updated: metrics.lastUpdated
@@ -386,9 +397,8 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 
                 // Merge and set state
                 const updatedStations = dataArray.map(s => {
-                    const stId = s.id || s.station_id;
-                    if (localUpdates[stId]) {
-                        return { ...s, ...localUpdates[stId] };
+                    if (localUpdates[s.station_id]) {
+                        return { ...s, ...localUpdates[s.station_id] };
                     }
                     return s;
                 });
@@ -522,10 +532,8 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                     }
                 }
 
-                const stId = station.id || station.station_id;
-
                 return (
-                    <Marker key={stId} position={[station.latitude, station.longitude]} icon={icon}>
+                    <Marker key={station.station_id} position={[station.latitude, station.longitude]} icon={icon}>
                         <StationPopup station={station} />
                     </Marker>
                 );
