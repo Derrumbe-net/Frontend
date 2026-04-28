@@ -19,7 +19,7 @@ const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 const BASE_STATIONS_URL = `${BASE_DOMAIN}/stations`;
 
 // Matches GET /stations/files/data
-const BASE_FILES_DATA_URL = `${BASE_DOMAIN}/stations/files/data`;
+const BASE_FILES_DATA_URL = `${BASE_DOMAIN}/stations/latest`;
 
 // Matches GET /landslides
 const BASE_LANDSLIDES_URL = `${BASE_DOMAIN}/landslides`;

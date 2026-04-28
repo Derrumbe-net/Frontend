@@ -36,7 +36,7 @@ const StationPopup = ({ station }) => {
     if (station.sensor_image_url) {
         images.push({
             // Updated to match the new route: /stations/item/{id}/image/{type}
-            src: `${API_URL}/stations/item/${id}/image/sensor`,
+            src: `${API_URL}/stations/${id}/image`,
             label: 'Sensor View' // Added label for clarity
         });
     }
