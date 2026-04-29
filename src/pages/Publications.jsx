@@ -37,8 +37,8 @@ function Publications() {
                 ? publication1
                 : item.publication_url || "#",
             // Updated to match the new route: /publications/item/{id}/image
-            image: item.image_url
-              ? `${API_URL}/publications/item/${id}/image`
+            image: item.image_path
+              ? `${API_URL}/publications/${id}/image`
               : placeholder,
           };
         });

@@ -39,8 +39,8 @@ function Projects() {
                 : "past",
             description: item.description,
             // Updated to match the new route: /projects/item/{id}/image
-            image: item.image_url
-                        ? `${API_URL}/projects/item/${id}/image`
+            image: item.image_path
+                        ? `${API_URL}/projects/${id}/image`
                         : placeholder,
           };
         });
