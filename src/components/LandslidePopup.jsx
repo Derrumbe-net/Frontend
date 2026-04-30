@@ -26,14 +26,16 @@ const LandslidePopup = ({ landslide }) => {
 
     if (!landslide) return null;
 
-    const { landslide_id, landslide_date } = landslide;
+    const lsId = landslide.id || landslide.landslide_id;
+    const dateStr = landslide.landslide_date || landslide.date;
 
     // Fetch only when the popup is actually opened by the user.
     // Also uses a cache so re-opening the same popup never re-fetches.
     const handleOpen = useCallback(async () => {
+        if (!lsId) return;
         // Already fetched for this landslide — use cache
-        if (imageCache[landslide_id] !== undefined) {
-            setImages(imageCache[landslide_id]);
+        if (imageCache[lsId] !== undefined) {
+            setImages(imageCache[lsId]);
             setHasLoaded(true);
             return;
         }
@@ -43,29 +45,35 @@ const LandslidePopup = ({ landslide }) => {
         setHasLoaded(false);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/landslides/${landslide_id}/images`);
+            const response = await fetch(`${API_BASE_URL}/landslides/${lsId}/images`);
             if (response.ok) {
                 const data = await response.json();
-                const formatted = (data.images && Array.isArray(data.images))
-                    ? data.images.map((imgName, index) => ({
-                        src: `${API_BASE_URL}/landslides/${landslide_id}/images/${imgName}`,
+                
+                const imgArray = Array.isArray(data) ? data : (data.images || []);
+                
+                // Construct the URLs to hit your working GET /landslides/{id}/images/{filename} route
+                const formatted = imgArray.map((imgItem, index) => {
+                    const imgName = typeof imgItem === 'string' ? imgItem : (imgItem.filename || imgItem.name);
+                    return {
+                        src: `${API_BASE_URL}/landslides/${lsId}/images/${imgName}`,
                         label: `View ${index + 1}`
-                    }))
-                    : [];
-                imageCache[landslide_id] = formatted; // store in cache
+                    };
+                });
+                
+                imageCache[lsId] = formatted; // store in cache
                 setImages(formatted);
             } else {
-                imageCache[landslide_id] = []; // cache the empty result too
+                imageCache[lsId] = []; // cache the empty result too
             }
         } catch (error) {
             console.error("Error fetching landslide images:", error);
-            imageCache[landslide_id] = [];
+            imageCache[lsId] = [];
         } finally {
             setLoading(false);
             setHasLoaded(true);
             setCurrentIndex(0);
         }
-    }, [landslide_id, API_BASE_URL]);
+    }, [lsId, API_BASE_URL]);
 
     const formatDate = (dateString) => {
         if (!dateString) return "N/A";
@@ -167,7 +175,7 @@ const LandslidePopup = ({ landslide }) => {
                     <ul>
                         <li>
                             <strong>Date:</strong>
-                            <span>{formatDate(landslide_date)}</span>
+                            <span>{formatDate(dateStr)}</span>
                         </li>
                     </ul>
 
