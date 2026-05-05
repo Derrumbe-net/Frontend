@@ -78,17 +78,35 @@ const StationPopup = ({ station }) => {
         }
     };
 
-    const formattedLastUpdated = lastUpdated
-        ? new Date(lastUpdated).toLocaleString('en-US', {
-            timeZone: 'America/Puerto_Rico',
-            year: 'numeric', month: 'long', day: 'numeric',
-            hour: 'numeric', minute: '2-digit', hour12: true
-        })
-        : 'N/A';
+    let normalizedDate = lastUpdated;
+    if (normalizedDate) {
+        normalizedDate = normalizedDate.replace(' ', 'T').replace('Z', '');
+        if (!normalizedDate.includes('-04:00')) {
+            normalizedDate += '-04:00';
+        }
+    }
 
-    const formattedSoilSaturation = soilSaturation != null
-        ? Math.ceil(Number(soilSaturation))
-        : 'N/A';
+    const formattedLastUpdated =
+        normalizedDate
+            ? new Date(normalizedDate).toLocaleString('en-US', {
+                timeZone: 'America/Puerto_Rico',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            })
+            : 'N/A';
+
+
+    const formattedSoilSaturation =
+        soilSaturation !== null && soilSaturation !== undefined
+            ? Math.ceil(Number(soilSaturation))
+            : 'N/A';
+
+
+
 
     const formattedPrecip = precip != null
         ? Number(precip).toFixed(2)

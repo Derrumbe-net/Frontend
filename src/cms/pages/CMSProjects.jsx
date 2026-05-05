@@ -66,7 +66,7 @@ export default function CMSProjects() {
         try {
             const token = localStorage.getItem("cmsAdmin");
 
-            const response = await fetch(`${API_URL}/projects/item/${id}`, {
+            const response = await fetch(`${API_URL}/projects/${id}`, {
                 method: "DELETE",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -233,13 +233,13 @@ export default function CMSProjects() {
                                             <td>
                                                 {p.image_url || p.image_path ? (
                                                     <a
-                                                        href={`${API_URL}/projects/item/${id}/image`}
+                                                        href={`${API_URL}/projects/${id}/image`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         title="Ver imagen completa"
                                                     >
                                                         <img
-                                                            src={`${API_URL}/projects/item/${id}/image`}
+                                                            src={`${API_URL}/projects/${id}/image`}
                                                             alt="Project"
                                                             className="cms-thumb"
                                                         />
@@ -353,7 +353,7 @@ function ProjectForm({ project, onClose, refreshProjects, apiUrl }) {
             });
 
             if (project.image_url || project.image_path) {
-                setPreviewUrl(`${apiUrl}/projects/item/${projectId}/image`);
+                setPreviewUrl(`${apiUrl}/projects/${projectId}/image`);
             } else {
                 setPreviewUrl(null);
             }
@@ -403,7 +403,7 @@ function ProjectForm({ project, onClose, refreshProjects, apiUrl }) {
         const method = isEdit ? "PUT" : "POST";
         
         const url = isEdit
-            ? `${apiUrl}/projects/item/${projectId}`
+            ? `${apiUrl}/projects/${projectId}`
             : `${apiUrl}/projects`;
 
         try {
@@ -434,7 +434,7 @@ function ProjectForm({ project, onClose, refreshProjects, apiUrl }) {
                 const imageForm = new FormData();
                 imageForm.append("image", formData.imageFile);
 
-                await fetch(`${apiUrl}/projects/item/${finalProjId}/image`, {
+                await fetch(`${apiUrl}/projects/${finalProjId}/image`, {
                     method: "POST",
                     headers: { "Authorization": `Bearer ${token}` },
                     body: imageForm,

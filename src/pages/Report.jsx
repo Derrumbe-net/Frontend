@@ -291,15 +291,15 @@ function Report() {
 
     const dbPayload = {
       city: form.pueblo,
-      latitude: String(coords.lat),
-      longitude: String(coords.lng),
+      latitude: coords.lat,
+      longitude: coords.lng,
       reported_at: form.date,
-      description: form.description,
       physical_address: form.carretera || "",
       reporter_name: form.name || "Anonymous",
       reporter_phone: form.phone || "",
       reporter_email: form.email || "",
       image_url: "",
+      description: form.description,
     };
 
     try {
@@ -404,12 +404,6 @@ function Report() {
         </div>
 
         <div className="form-row">
-          <label htmlFor="description">Descripción: <small style={{color: '#666'}}>(Opcional)</small></label>
-          <textarea id="description" name="description" rows={4} value={form.description} onChange={onChange} style={fieldStyle}
-            placeholder="Ej. Deslizamiento bloqueando el carril derecho. Se observan árboles caídos y terreno inestable..." />
-        </div>
-
-        <div className="form-row">
           <label> Añadir Foto/Video <small style={{color: '#d9534f'}}>*</small>:</label>
           <div className="dropzone" ref={dropRef}>
             <div className="dropzone__hint">
@@ -500,6 +494,13 @@ function Report() {
             </MapContainer>
           </div>
         </div>
+
+        <div className="form-row">
+          <label htmlFor="description">Descripción: <small style={{color: '#666'}}>(Opcional)</small></label>
+          <textarea id="description" name="description" rows={4} value={form.description} onChange={onChange} style={fieldStyle}
+            placeholder="Ej. Deslizamiento bloqueando el carril derecho. Se observan árboles caídos y terreno inestable..." />
+        </div>
+
 
         <div className="form-actions">
           <button className="submit-btn" disabled={submitting}>

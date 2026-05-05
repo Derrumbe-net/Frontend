@@ -19,7 +19,7 @@ const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 const BASE_STATIONS_URL = `${BASE_DOMAIN}/stations`;
 
 // Matches GET /stations/files/data
-const BASE_FILES_DATA_URL = `${BASE_DOMAIN}/stations/files/data`;
+const BASE_FILES_DATA_URL = `${BASE_DOMAIN}/stations/latest`;
 
 // Matches GET /landslides
 const BASE_LANDSLIDES_URL = `${BASE_DOMAIN}/landslides`;
@@ -257,6 +257,12 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
         }).addTo(map);
 
         return () => {
+            // Nullify error handlers to prevent async crashes on unmount
+            if (municipalities) {
+                municipalities.onOverlayError = function() {};
+                municipalities._overlayOnError = function() {};
+            }
+            
             map.removeLayer(hillshade);
             map.removeLayer(municipalities);
         };
@@ -271,7 +277,13 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
             }).addTo(map);
         }
         return () => {
-            if (precipLayer) map.removeLayer(precipLayer);
+            if (precipLayer) {
+                // Nullify error handlers to prevent async crashes on unmount
+                precipLayer.onOverlayError = function() {};
+                precipLayer._overlayOnError = function() {};
+                
+                map.removeLayer(precipLayer);
+            }
         };
     }, [map, showPrecip]);
 
@@ -286,16 +298,64 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
             }).addTo(map);
         }
         return () => {
-            if (susceptibilityLayer) map.removeLayer(susceptibilityLayer);
+            if (susceptibilityLayer) {
+                // tiledMapLayers are generally safer, but you can add the override here too if needed
+                map.removeLayer(susceptibilityLayer);
+            }
         };
     }, [map, showSusceptibility]);
 
     return null;
 };
-const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast }) => {
-    const [stations, setStations] = useState([]);
-    const stationsRef = useRef([]);
 
+const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast, onDataUpdate, isPreview = false }) => {
+    const [stations, setStations] = useState([]);
+    const map = useMap();
+
+    const calculateMetricsFromRawData = (reading, stationInfo) => {
+        if (!reading) return null;
+
+        // 1. Get precipitation
+        const precipValue = parseFloat(reading.precipitation);
+        const totalRainMm = isNaN(precipValue) ? 0 : precipValue;
+        const totalRainInches = totalRainMm / 25.4; 
+
+        // 2. Get limits and the latest reading for soil saturation
+        const wcRatios = [];
+        
+        // Limits from the /stations API metadata
+        const limits = [stationInfo.wc1_max, stationInfo.wc2_max, stationInfo.wc3_max, stationInfo.wc4_max];
+        
+        // Values from the /stations/latest single data object
+        const keys = ['wc1', 'wc2', 'wc3', 'wc4'];
+
+        limits.forEach((limit, index) => {
+            const val = parseFloat(reading[keys[index]]);
+            const max = parseFloat(limit);
+            
+            // Ensure both parsed successfully and max is greater than 0
+            if (!isNaN(val) && !isNaN(max) && max > 0) {
+                wcRatios.push(val / max);
+            }
+        });
+
+        let avgSaturation = 0;
+        if (wcRatios.length > 0) {
+            const sumRatio = wcRatios.reduce((a, b) => a + b, 0);
+            avgSaturation = (sumRatio / wcRatios.length) * 100;
+            
+            // Cap saturation at 100% in case sensor readings temporarily exceed the calibrated max
+            if (avgSaturation > 100) avgSaturation = 100;
+        }
+
+        return {
+            calculatedPrecip: totalRainInches, 
+            calculatedSaturation: avgSaturation,
+            lastUpdated: reading.recorded_at
+        };
+    };
+
+    // Load data ONCE upon mount
     useEffect(() => {
         const loadInitialData = async () => {
             try {
@@ -303,91 +363,56 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 const stationRes = await fetch(BASE_STATIONS_URL);
                 if (!stationRes.ok) return;
                 const baseStations = await stationRes.json();
-
+                
                 const dataArray = Array.isArray(baseStations) ? baseStations : [];
-                stationsRef.current = dataArray;
-                console.log("[Stations] Base stations fetched:", dataArray);
 
-                if (dataArray.length === 0) {
-                    console.warn("[Stations] No stations returned from API");
-                    return;
-                }
+                if (dataArray.length === 0) return;
 
-                // 2. Fetch latest readings
-                const latestRes = await fetch(`${BASE_DOMAIN}/stations/latest`);
-                if (!latestRes.ok) return;
-                const latestData = await latestRes.json();
-                console.log("[Stations] Latest readings fetched:", latestData);
+                // 2. Fetch the latest readings immediately after
+                const dataRes = await fetch(BASE_FILES_DATA_URL);
+                if (!dataRes.ok) return;
+                const latestReadings = await dataRes.json();
 
-                // Build lookup map
-                const latestByStationId = {};
-                if (Array.isArray(latestData)) {
-                    latestData.forEach(entry => {
-                        if (entry.station_id && entry.data) {
-                            latestByStationId[entry.station_id] = entry.data;
+                const localUpdates = {};
+
+                if (Array.isArray(latestReadings)) {
+                    latestReadings.forEach(record => {
+                        const recordStationId = record.station_id;
+                        const station = dataArray.find(s => s.station_id === recordStationId);
+                        
+                        // Check if station exists and the data object is present
+                        if (station && record.data) {
+                            const metrics = calculateMetricsFromRawData(record.data, station);
+                            if (metrics) {
+                                localUpdates[recordStationId] = {
+                                    precipitation: metrics.calculatedPrecip,
+                                    soil_saturation: metrics.calculatedSaturation,
+                                    last_updated: metrics.lastUpdated
+                                };
+                            }
                         }
                     });
                 }
-                console.log("[Stations] Latest readings by station_id:", latestByStationId);
 
-                // 3. Merge and calculate
+                // Merge and set state
                 const updatedStations = dataArray.map(s => {
-                    const stId = s.id || s.station_id;
-                    const reading = latestByStationId[stId];
-
-                    if (!reading) {
-                        console.warn(`[Stations] No latest reading found for station_id=${stId}`);
-                        return s;
+                    if (localUpdates[s.station_id]) {
+                        return { ...s, ...localUpdates[s.station_id] };
                     }
-
-                    const wcSum =
-                        (parseFloat(reading.wc1) || 0) +
-                        (parseFloat(reading.wc2) || 0) +
-                        (parseFloat(reading.wc3) || 0) +
-                        (parseFloat(reading.wc4) || 0);
-
-                    const maxSum =
-                        (parseFloat(s.wc1_max) || 0) +
-                        (parseFloat(s.wc2_max) || 0) +
-                        (parseFloat(s.wc3_max) || 0) +
-                        (parseFloat(s.wc4_max) || 0);
-
-                    let saturation = 0;
-                    if (maxSum > 0) {
-                        saturation = (wcSum / maxSum) * 100;
-                        if (saturation > 100) saturation = 100;
-                    }
-
-                    const precipInches = (parseFloat(reading.precipitation) || 0) / 25.4;
-
-                    console.log(`[Stations] station_id=${stId}`, {
-                        wc1: reading.wc1, wc2: reading.wc2, wc3: reading.wc3, wc4: reading.wc4,
-                        wc1_max: s.wc1_max, wc2_max: s.wc2_max, wc3_max: s.wc3_max, wc4_max: s.wc4_max,
-                        wcSum, maxSum,
-                        saturation: `${saturation.toFixed(2)}%`,
-                        precipInches: `${precipInches.toFixed(4)} in`,
-                    });
-
-                    return {
-                        ...s,
-                        soil_saturation: saturation,
-                        precipitation: precipInches,
-                        last_updated: reading.recorded_at,
-                    };
+                    return s;
                 });
-
-                console.log("[Stations] Final merged stations:", updatedStations);
+                
                 setStations(updatedStations);
+                if (onDataUpdate) onDataUpdate(updatedStations); // Fixed connection to parent
 
             } catch (err) {
-                console.error("[Stations] Error loading station data:", err);
+                console.error("Error loading station data:", err);
             }
         };
 
         loadInitialData();
-    }, []);
+    }, [onDataUpdate]); // Added dependency
 
-    /** SOIL SATURATION ICON **/
     const createSaturationIcon = (saturation, lastUpdated) => {
         const { isOutdated, timeString } = getStationStatus(lastUpdated);
 
@@ -398,7 +423,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 
         const rounded = saturation != null ? Math.round(saturation) : "--";
 
-        const clockHtml = isOutdated ? `
+        const clockHtml = (isOutdated && !isPreview) ? `
             <span class="stale-clock" title="${timeString}" style="margin-left: 5px; display: flex; align-items: center; justify-content: center; cursor: help; opacity: 0.9;">
                 <svg viewBox="0 0 24 24" width="13" height="13">
                     <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/>
@@ -410,18 +435,17 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 
         return L.divIcon({
             html: `
-                <div class="${className}" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box; color: white;">
+                <div class="${className}" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box; color: white; font-size: ${isPreview ? '10px' : '14px'};">
                     <span>${rounded}%</span>
                     ${clockHtml}
                 </div>
             `,
             className: "",
-            iconSize: [65, 30],
-            iconAnchor: [32, 15],
+            iconSize: isPreview ? [40, 20] : [65, 30], 
+            iconAnchor: isPreview ? [20, 10] : [32, 15],
         });
     };
 
-    /** PRECIP COLOR SCALE (MRMS QPE) **/
     const getPrecipColor = (p) => {
         if (p > 8.0) return "#000066";
         if (p >= 7.0) return "#0000CC";
@@ -447,7 +471,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         if (p >= 0.10) return "#5FC2FF";
         if (p >= 0.05) return "#7FD6FF";
         if (p >= 0.01) return "#9FEAFF";
-        return "#DADADA";
+        return "#DADADA"; 
     };
 
     /** PRECIPITATION ICON **/
@@ -456,7 +480,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         const rounded = Number(precip).toFixed(2);
         const { isOutdated, timeString } = getStationStatus(lastUpdated);
 
-        const clockHtml = isOutdated ? `
+        const clockHtml = (isOutdated && !isPreview) ? `
             <span class="stale-clock" title="${timeString}" style="margin-left: 5px; display: flex; align-items: center; justify-content: center; cursor: help; opacity: 0.9;">
                 <svg viewBox="0 0 24 24" width="13" height="13">
                     <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/>
@@ -468,14 +492,14 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 
         return L.divIcon({
             html: `
-                <div class="precip-marker" style="background-color:${color}; color: white; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box;">
+                <div class="precip-marker" style="background-color:${color}; color: white; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box; font-size: ${isPreview ? '10px' : '14px'};">
                     <span>${rounded}"</span>
                     ${clockHtml}
                 </div>
             `,
             className: "",
-            iconSize: [65, 30],
-            iconAnchor: [32, 15],
+            iconSize: isPreview ? [40, 20] : [65, 30], 
+            iconAnchor: isPreview ? [20, 10] : [32, 15], 
         });
     };
 
@@ -497,17 +521,17 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 else {
                     if (station.soil_saturation != null) {
                         icon = createSaturationIcon(station.soil_saturation, station.last_updated);
-                    } else if (station.precipitation != null) {
+                    }
+                    else if (station.precipitation != null) {
                         icon = createPrecipIcon(station.precipitation, station.last_updated);
-                    } else {
+                    }
+                    else {
                         return null;
                     }
                 }
 
-                const stId = station.id || station.station_id;
-
                 return (
-                    <Marker key={stId} position={[station.latitude, station.longitude]} icon={icon}>
+                    <Marker key={station.station_id} position={[station.latitude, station.longitude]} icon={icon}>
                         <StationPopup station={station} />
                     </Marker>
                 );
@@ -525,7 +549,7 @@ const createLandslideIcon = () => {
     });
 };
 
-const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
+const PopulateLandslides = ({ selectedYear, setAvailableYears, onDataUpdate }) => {
     const [allLandslides, setAllLandslides] = useState([]);
     const customIcon = createLandslideIcon();
     const setAvailableYearsRef = useRef(setAvailableYears);
@@ -541,9 +565,13 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
                 return response.json();
             })
             .then((data) => {
-                setAllLandslides(data);
+                // SAFETY CHECK: Ensure data is an array before processing
+                const safeData = Array.isArray(data) ? data : [];
+                
+                setAllLandslides(safeData);
+                if (onDataUpdate) onDataUpdate(safeData);
 
-                const years = data.map(ls => {
+                const years = safeData.map(ls => {
                     if (!ls.landslide_date) return null;
                     return new Date(ls.landslide_date).getFullYear();
                 });
@@ -557,9 +585,10 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears }) => {
             .catch((err) => {
                 console.error("API Fetch Error:", err);
             });
-    }, []);
+    }, [onDataUpdate]); // Added dependency
 
-    const filteredLandslides = allLandslides.filter(landslide => {
+    // SECONDARY SAFETY CHECK: Fallback to empty array just in case
+    const filteredLandslides = (allLandslides || []).filter(landslide => {
         if (selectedYear === 'all') {
             return true;
         }
@@ -587,8 +616,8 @@ const getStationStatus = (lastUpdated) => {
     if (!lastUpdated) {
         return { isOutdated: true, timeString: "Desconocido" };
     }
-
-    const last = new Date(lastUpdated);
+    const cleanDate = lastUpdated.replace(' ', 'T').replace('Z', '');
+    const last = new Date(cleanDate + (cleanDate.includes('-04:00') ? '' : '-04:00'));
     const now = new Date();
     
     // Calculate time differences
@@ -696,7 +725,7 @@ const PrecipLegend = () => {
     );
 };
 
-export default function InteractiveMap() {
+export default function InteractiveMap({ isPreview = false }) {
     const center = [18.220833, -66.420149];
 
     const [showStations, setShowStations] = useState(true);
@@ -709,22 +738,26 @@ export default function InteractiveMap() {
     const [showSaturation, setShowSaturation] = useState(true);
     const [showPrecip12hr, setShowPrecip12hr] = useState(false);
 
-    const [showSaturationLegend, setShowSaturationLegend] = useState(true);
+    const [showSaturationLegend, setShowSaturationLegend] = useState(!isPreview);
     const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
     const [showPrecipLegend, setShowPrecipLegend] = useState(false);
 
     const [showZoomHint, setShowZoomHint] = useState(false);
     const hasShownZoomHint = useRef(false);
 
+    // --- Data States for KML Export ---
+    const [stationsData, setStationsData] = useState([]);
+    const [landslidesData, setLandslidesData] = useState([]);
+
     // --- RADAR / TIME LOGIC ---
-    const [showForecast, setShowForecast] = useState(true);
+    const [showForecast, setShowForecast] = useState(!isPreview);
     const [radarFrames, setRadarFrames] = useState([]);
     const [currentFrameIdx, setCurrentFrameIdx] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
     const [showDisclaimer, setShowDisclaimer] = useState(
-        localStorage.getItem('disclaimerAccepted') !== 'true'
+        isPreview ? false : (localStorage.getItem('disclaimerAccepted') !== 'true')
     );
 
     useEffect(() => {
@@ -777,7 +810,6 @@ export default function InteractiveMap() {
         showPrecipLegend
     ]);
 
-    // Fetch Custom Radar Frames from VPS
     useEffect(() => {
         if (!showForecast) return;
         
@@ -792,7 +824,6 @@ export default function InteractiveMap() {
             .catch(err => console.error("Error fetching radar frames:", err));
     }, [showForecast]);
 
-    // Animation Loop
     useEffect(() => {
         let interval;
         if (showForecast && isPlaying && !isDragging && radarFrames.length > 0) {
@@ -895,6 +926,71 @@ export default function InteractiveMap() {
         setShowPrecipLegend(false);
     };
 
+    // --- KML GENERATOR FUNCTION ---
+    const handleExportKML = (e) => {
+        e.stopPropagation(); // Prevents map clicks if placed directly over the map
+
+        let kmlString = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+        kmlString += `<kml xmlns="http://www.opengis.net/kml/2.2">\n`;
+        kmlString += `  <Document>\n`;
+        kmlString += `    <name>Derrumbe_Data</name>\n`;
+
+        // 1. Export Stations (Only if stations layer is visible)
+        if (showStations) {
+            stationsData.forEach(station => {
+                if (station.is_available !== 1) return;
+                const name = station.name || `Station ${station.station_id}`;
+                const sat = station.soil_saturation != null ? Math.round(station.soil_saturation) + '%' : 'N/A';
+                const precip = station.precipitation != null ? Number(station.precipitation).toFixed(2) + ' in' : 'N/A';
+                
+                kmlString += `    <Placemark>\n`;
+                kmlString += `      <name>${name}</name>\n`;
+                kmlString += `      <description><![CDATA[\n`;
+                kmlString += `        <b>Soil Saturation:</b> ${sat}<br>\n`;
+                kmlString += `        <b>12hr Precip:</b> ${precip}\n`;
+                kmlString += `      ]]></description>\n`;
+                kmlString += `      <Point>\n`;
+                kmlString += `        <coordinates>${station.longitude},${station.latitude},0</coordinates>\n`;
+                kmlString += `      </Point>\n`;
+                kmlString += `    </Placemark>\n`;
+            });
+        }
+
+        // 2. Export Landslides (Respecting active year filters)
+        const exportLandslides = (selectedYear && selectedYear !== 'all')
+            ? landslidesData.filter(ls => ls.landslide_date && new Date(ls.landslide_date).getFullYear() === parseInt(selectedYear))
+            : landslidesData;
+
+        exportLandslides.forEach(ls => {
+            const name = `Landslide Event ${ls.landslide_id || ''}`.trim();
+            const date = ls.landslide_date ? new Date(ls.landslide_date).toLocaleDateString() : 'Unknown Date';
+            
+            kmlString += `    <Placemark>\n`;
+            kmlString += `      <name>${name}</name>\n`;
+            kmlString += `      <description><![CDATA[\n`;
+            kmlString += `        <b>Date:</b> ${date}<br>\n`;
+            kmlString += `      ]]></description>\n`;
+            kmlString += `      <Point>\n`;
+            kmlString += `        <coordinates>${ls.longitude},${ls.latitude},0</coordinates>\n`;
+            kmlString += `      </Point>\n`;
+            kmlString += `    </Placemark>\n`;
+        });
+
+        kmlString += `  </Document>\n`;
+        kmlString += `</kml>`;
+
+        // Trigger Download
+        const blob = new Blob([kmlString], { type: "application/vnd.google-earth.kml+xml" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Derrumbe_Data_${new Date().toISOString().slice(0,10)}.kml`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     const isMobile = window.innerWidth < 768;
 
     let mapLabelText = "";
@@ -910,19 +1006,51 @@ export default function InteractiveMap() {
     }
 
     return (
-        <main>
+        <main className={isPreview ? "map-preview-mode" : ""}>
             {showDisclaimer && <Disclaimer onAgree={handleAgree} />}
 
             <MapContainer
                 id="map"
                 center={center}
-                zoom={isMobile ? 8 : 10}
+                zoom={isMobile ? (isPreview ? 7.1 : 8) : (isPreview ? 7.6 : 10)}
                 minZoom={7}
                 maxZoom={18}
-                scrollWheelZoom={true}
+                scrollWheelZoom={!isPreview}
+                dragging={!isPreview}
                 zoomControl={false}
-                style={{ height: '100vh', width: '100%' }}
+                style={{ height: isPreview ? '450px' : '100vh', width: '100%', position: 'relative' }}
             >
+            {/* --- FLOATING EXPORT BUTTON --- */}
+            {!isPreview && (
+                <div 
+                    style={{ 
+                        position: 'absolute', 
+                        top: '120px', /* Increased from 80px to push it down further from the +/- */
+                        right: '15px', 
+                        zIndex: 1000 
+                    }}
+                >
+                    <button 
+                        onClick={handleExportKML}
+                        style={{
+                            padding: '10px 14px',
+                            cursor: 'pointer',
+                            backgroundColor: '#ffffff',
+                            color: '#333',
+                            border: '2px solid rgba(0,0,0,0.2)',
+                            borderRadius: '4px',
+                            fontWeight: 'bold',
+                            boxShadow: '0 1px 5px rgba(0,0,0,0.4)',
+                            transition: 'background-color 0.2s'
+                        }}
+                        onMouseOver={(e) => e.target.style.backgroundColor = '#f4f4f4'}
+                        onMouseOut={(e) => e.target.style.backgroundColor = '#ffffff'}
+                    >
+                        📥 Exportar KML
+                    </button>
+                </div>
+            )}
+
                 {mapLabelText && <div className="map-label">{mapLabelText}</div>}
 
                 <TileLayer
@@ -936,43 +1064,51 @@ export default function InteractiveMap() {
                 </div>
                 )} 
 
-                <CtrlZoomHandler setShowZoomHint={setShowZoomHint} hasShownZoomHint={hasShownZoomHint} />
+                {!isPreview && <CtrlZoomHandler setShowZoomHint={setShowZoomHint} hasShownZoomHint={hasShownZoomHint} />}
                 <MobileTouchHandler />
 
-                <MapMenu
-                    showStations={showStations} onToggleStations={toggleStations}
-                    showPrecip={showPrecip} onTogglePrecip={togglePrecip}
-                    showSusceptibility={showSusceptibility} onToggleSusceptibility={toggleSusceptibility}
+                {!isPreview && (
+                    <MapMenu
+                        showStations={showStations} onToggleStations={toggleStations}
+                        showPrecip={showPrecip} onTogglePrecip={togglePrecip}
+                        showSusceptibility={showSusceptibility} onToggleSusceptibility={toggleSusceptibility}
 
-                    showSaturation={showSaturation} onToggleSaturation={toggleSaturation}
-                    showPrecip12hr={showPrecip12hr} onTogglePrecip12hr={togglePrecip12hr}
-        
-                    showSaturationLegend={showSaturationLegend} onToggleSaturationLegend={toggleSaturationLegend}
-                    showSusceptibilityLegend={showSusceptibilityLegend} onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
-                    showPrecipLegend={showPrecipLegend} onTogglePrecipLegend={togglePrecipLegend}
+                        showSaturation={showSaturation} onToggleSaturation={toggleSaturation}
+                        showPrecip12hr={showPrecip12hr} onTogglePrecip12hr={togglePrecip12hr}
+            
+                        showSaturationLegend={showSaturationLegend} onToggleSaturationLegend={toggleSaturationLegend}
+                        showSusceptibilityLegend={showSusceptibilityLegend} onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
+                        showPrecipLegend={showPrecipLegend} onTogglePrecipLegend={togglePrecipLegend}
 
-                    availableYears={availableYears} selectedYear={selectedYear} onYearChange={handleYearChange}
-                    showForecast={showForecast} onToggleForecast={toggleForecast}
+                        availableYears={availableYears} selectedYear={selectedYear} onYearChange={handleYearChange}
+                        showForecast={showForecast} onToggleForecast={toggleForecast}
 
-                    resetLayers={resetLayers}
-                    resetToDefault={resetToDefault}
-                />
+                        resetLayers={resetLayers}
+                        resetToDefault={resetToDefault}
+                    />
+                )}
 
                 <EsriOverlays
                     showPrecip={showPrecip}
                     showSusceptibility={showSusceptibility}
                 />
 
-                {!isMobile && <ZoomControl position="topright" />}
+                {!isMobile && !isPreview && <ZoomControl position="topright" />}
 
                 {showStations && (
                     <PopulateStations
                         showSaturation={showSaturation}
                         showPrecip12hr={showPrecip12hr}
+                        onDataUpdate={setStationsData}
+                        isPreview={isPreview}
                     />
                 )}
 
-                <PopulateLandslides selectedYear={selectedYear} setAvailableYears={setAvailableYears} />
+                <PopulateLandslides 
+                    selectedYear={selectedYear} 
+                    setAvailableYears={setAvailableYears} 
+                    onDataUpdate={setLandslidesData}
+                />
 
                 {showSaturationLegend && <SoilSaturationLegend />}
                 {showSusceptibilityLegend && <SusceptibilityLegend />}
@@ -987,7 +1123,7 @@ export default function InteractiveMap() {
                     />
                 )}
 
-                {showForecast && radarFrames.length > 0 && (
+                {showForecast && radarFrames.length > 0 && !isPreview && (
                     <TimeControlBar
                         frames={radarFrames}
                         currentIndex={currentFrameIdx}
@@ -999,9 +1135,11 @@ export default function InteractiveMap() {
                     />
                 )}
 
-                <div className="logo-container">
-                    <img src={LandslideLogo} alt="Landslide Hazard Mitigation Logo" className="landslide-logo" />
-                </div>
+                {!isPreview && (
+                    <div className="logo-container">
+                        <img src={LandslideLogo} alt="Landslide Hazard Mitigation Logo" className="landslide-logo" />
+                    </div>
+                )}
             </MapContainer>
         </main>
     );

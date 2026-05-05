@@ -474,9 +474,9 @@ function ReportForm({ report, onClose, refreshReports }) {
                 const landslidePayload = {
                     admin_id: adminId,
                     landslide_date: formData.reported_at,
-                    latitude: formData.latitude,
-                    longitude: formData.longitude,
-                    image_url: sharedFolder
+                    latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+                    longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+                    image_url: sharedFolder // Explicitly send folder name
                 };
 
                 const lsRes = await fetch(`${API_URL}/landslides`, {
@@ -499,6 +499,8 @@ function ReportForm({ report, onClose, refreshReports }) {
 
             const reportPayload = {
                 ...formData,
+                latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+                longitude: formData.longitude ? parseFloat(formData.longitude) : null,
                 landslide_id: finalLandslideId,
                 image_url: sharedFolder 
             };

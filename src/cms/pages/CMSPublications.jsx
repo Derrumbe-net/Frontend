@@ -41,7 +41,7 @@ export default function CMSPublicaciones() {
         try {
             const token = localStorage.getItem("cmsAdmin");
 
-            const response = await fetch(`${API_URL}/publications/item/${id}`, {
+            const response = await fetch(`${API_URL}/publications/${id}`, {
                 method: "DELETE",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -225,13 +225,13 @@ export default function CMSPublicaciones() {
                                             <td>
                                                 {pub.image_url || pub.image_path ? (
                                                     <a
-                                                        href={`${API_URL}/publications/item/${id}/image`}
+                                                        href={`${API_URL}/publications/${id}/image`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         title="Ver imagen completa"
                                                     >
                                                         <img
-                                                            src={`${API_URL}/publications/item/${id}/image`}
+                                                            src={`${API_URL}/publications/${id}/image`}
                                                             alt="Publication"
                                                             className="cms-thumb"
                                                         />
@@ -332,7 +332,7 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
                 imageFile: null,
             });
             if (publication.image_url || publication.image_path) {
-                setPreviewUrl(`${apiUrl}/publications/item/${pubId}/image`);
+                setPreviewUrl(`${apiUrl}/publications/${pubId}/image`);
             }
         }
     }, [publication, apiUrl, pubId]);
@@ -435,7 +435,7 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
         const method = isEdit ? "PUT" : "POST";
         
         const url = isEdit
-            ? `${apiUrl}/publications/item/${pubId}`
+            ? `${apiUrl}/publications/${pubId}`
             : `${apiUrl}/publications`;
 
         const bodyData = {
@@ -470,7 +470,7 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
                 const imageForm = new FormData();
                 imageForm.append("image", formData.imageFile);
 
-                await fetch(`${apiUrl}/publications/item/${finalPubId}/image`, {
+                await fetch(`${apiUrl}/publications/${finalPubId}/image`, {
                     method: "POST",
                     headers: { "Authorization": `Bearer ${token}` },
                     body: imageForm,
