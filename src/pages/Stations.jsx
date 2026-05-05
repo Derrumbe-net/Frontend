@@ -20,8 +20,7 @@ try {
 const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 const BASE_STATIONS_URL = BASE_DOMAIN + "/stations";
 const BASE_LATEST_DATA_URL = BASE_DOMAIN + "/stations/latest";
-// TODO Update with new sensor_readings route
-const getHistoryUrl = (stationId) => `${BASE_STATIONS_URL}/history/${stationId}/wc`;
+const getHistoryUrl = (stationId, startDate, endDate) => `${BASE_STATIONS_URL}/historical/${stationId}?start_date=${startDate}&end_date=${endDate}`;
 const getSensorImageUrl = (stationId) => `${BASE_STATIONS_URL}/item/${stationId}/image/sensor`;
 const getDataImageUrl = (stationId) => `${BASE_STATIONS_URL}/item/${stationId}/image/data`;
 
@@ -68,7 +67,8 @@ const createStatusIcon = (color) => {
 const StationsMap = ({ stations, selectedMetric, onStationSelect, selectedStationId }) => {
     const getStatusColor = (station) => {
         if (station.last_updated) {
-            const lastUpdate = new Date(station.last_updated.replace(" ", "T"));
+            let lastUpdate = new Date(station.last_updated.replace(" ", "T").replace('Z', ''));
+            lastUpdate += '-04:00';
             const diffHours = (new Date() - lastUpdate) / (1000 * 60 * 60);
             if (diffHours >= 12) return "#6c757d"; // Offline
             if (diffHours >= 1) return "#ffc107"; // Warning
@@ -181,7 +181,7 @@ const generateDummyObservations = (sensorIndex, wcMax, stationId, year) => {
     return data;
 };
 
-const buildPercentileSeries = (percentiles, year) => {
+const buildPercentileSeries = (percentiles, startDate, endDate) => {
     const bandKeys = [
         ['p0',  'p2' ], ['p2',  'p5' ], ['p5',  'p10'], ['p10', 'p20'],
         ['p20', 'p30'], ['p30', 'p70'], ['p70', 'p80'], ['p80', 'p90'],
@@ -191,12 +191,20 @@ const buildPercentileSeries = (percentiles, year) => {
     const bandSeries = PERCENTILE_BANDS.map(() => []);
     const median = [];
 
-    for (let month = 0; month < 12; month++) {
+    let current = new Date(startDate.getTime());
+    current.setDate(1);
+
+    while (current <= endDate) {
+        const month = current.getMonth();
+        const year = current.getFullYear();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const p = percentiles[month];
         
         for (let d = 1; d <= daysInMonth; d++) {
-            const ts = new Date(year, month, d).getTime();
+            const date = new Date(year, month, d);
+            if (date < startDate || date > endDate) continue;
+            
+            const ts = date.getTime();
             bandKeys.forEach(([loKey, hiKey], idx) => {
                 const lo = p[loKey] !== undefined ? p[loKey] : 0;
                 const hi = p[hiKey] !== undefined ? p[hiKey] : 0.62;
@@ -204,38 +212,54 @@ const buildPercentileSeries = (percentiles, year) => {
             });
             median.push([ts, p.p50]);
         }
+        current.setMonth(current.getMonth() + 1);
     }
     return { bandSeries, median };
 };
 
-const buildMonthBands = (year) => {
+const buildMonthBands = (startDate, endDate) => {
     const bands = [];
-    for (let month = 0; month < 12; month++) {
-        const from = new Date(year, month, 1).getTime();
-        const to   = new Date(year, month + 1, 0, 23, 59, 59).getTime();
+    let current = new Date(startDate.getTime());
+    current.setDate(1);
+
+    while (current <= endDate) {
+        const from = new Date(current.getFullYear(), current.getMonth(), 1).getTime();
+        const to   = new Date(current.getFullYear(), current.getMonth() + 1, 0, 23, 59, 59).getTime();
         bands.push({ from, to });
+        current.setMonth(current.getMonth() + 1);
     }
     return bands;
 };
 
-const computeObsMedian = (obsSeries, year) => {
+const computeObsMedian = (obsSeries, startDate, endDate) => {
     const byMonth = {};
     obsSeries.forEach(([ts, val]) => {
         const d = new Date(ts);
-        const key = d.getMonth();
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
         if (!byMonth[key]) byMonth[key] = [];
         byMonth[key].push(val);
     });
     const result = [];
-    for (let m = 0; m < 12; m++) {
-        const vals = byMonth[m];
-        if (!vals || vals.length === 0) continue;
-        vals.sort((a, b) => a - b);
-        const mid = vals[Math.floor(vals.length / 2)];
-        const daysInMonth = new Date(year, m + 1, 0).getDate();
-        for (let d = 1; d <= daysInMonth; d++) {
-            result.push([new Date(year, m, d).getTime(), mid]);
+    let current = new Date(startDate.getTime());
+    current.setDate(1);
+
+    while (current <= endDate) {
+        const month = current.getMonth();
+        const year = current.getFullYear();
+        const key = `${year}-${month}`;
+        const vals = byMonth[key];
+        if (vals && vals.length > 0) {
+            vals.sort((a, b) => a - b);
+            const mid = vals[Math.floor(vals.length / 2)];
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            for (let d = 1; d <= daysInMonth; d++) {
+                const date = new Date(year, month, d);
+                if (date >= startDate && date <= endDate) {
+                    result.push([date.getTime(), mid]);
+                }
+            }
         }
+        current.setMonth(current.getMonth() + 1);
     }
     return result;
 };
@@ -244,78 +268,93 @@ const computeObsMedian = (obsSeries, year) => {
 const StationChart = ({ station, sensorIndex }) => {
     const [chartOptions, setChartOptions] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [usingDummy, setUsingDummy] = useState(false);
 
     useEffect(() => {
         if (!station) return;
         setLoading(true);
-        setUsingDummy(false);
 
         const stId = station.id || station.station_id;
         const wcMax = station[`wc${sensorIndex}`];
         const percentiles = STATIC_PERCENTILES;
 
-        fetch(getHistoryUrl(stId))
+        const now = new Date();
+        const endDateStr = now.toISOString().split('T')[0];
+        const lastYear = new Date();
+        lastYear.setFullYear(now.getFullYear() - 1);
+        const startDateStr = lastYear.toISOString().split('T')[0];
+
+        const rangeStart = lastYear.getTime();
+        const rangeEnd = now.getTime();
+
+        fetch(getHistoryUrl(stId, startDateStr, endDateStr))
             .then(res => res.json())
             .then(data => {
-                const wcKey = `wc${sensorIndex}`;
-                const historyData = data.history || [];
-                const defaultYear = new Date().getFullYear() - 1;
-                const allTimestamps = historyData
-                    .map(item => new Date(item.timestamp).getFullYear())
-                    .filter(y => !isNaN(y));
-                
-                const dataYear = allTimestamps.length > 0 ? Math.max(...allTimestamps) : defaultYear;
-                const rangeStart = new Date(dataYear, 0, 1).getTime();
-                const rangeEnd   = new Date(dataYear, 11, 31, 23, 59, 59).getTime();
+                const historyData = Array.isArray(data) ? data : [];
+                let obsSeries = [];
 
-                let obsSeries = historyData
-                    .map(item => {
-                        const val = item[wcKey];
-                        const ts  = new Date(item.timestamp).getTime();
-                        return (val !== undefined && ts >= rangeStart && ts <= rangeEnd)
-                            ? [ts, parseFloat(val)]
-                            : null;
-                    })
-                    .filter(Boolean);
+                if (sensorIndex === 'sat') {
+                    obsSeries = historyData
+                        .map(item => {
+                            const ts = new Date(item.recorded_at).getTime();
+                            if (!(ts >= rangeStart && ts <= rangeEnd)) return null;
 
-                if (obsSeries.length === 0) {
-                    obsSeries = generateDummyObservations(sensorIndex, wcMax, stId, dataYear);
-                    setUsingDummy(true);
+                            const wcRatios = [];
+                            const limits = [station.wc1_max, station.wc2_max, station.wc3_max, station.wc4_max];
+                            const keys = ['wc1', 'wc2', 'wc3', 'wc4'];
+
+                            limits.forEach((limit, idx) => {
+                                const val = parseFloat(item[keys[idx]]);
+                                const max = parseFloat(limit);
+                                if (!isNaN(val) && !isNaN(max) && max > 0) wcRatios.push(val / max);
+                            });
+
+                            if (wcRatios.length === 0) return null;
+                            const avgSaturation = (wcRatios.reduce((a, b) => a + b, 0) / wcRatios.length) * 100;
+                            return [ts, parseFloat(Math.min(avgSaturation, 100).toFixed(2))];
+                        })
+                        .filter(Boolean);
+                } else {
+                    const wcKey = `wc${sensorIndex}`;
+                    obsSeries = historyData
+                        .map(item => {
+                            const val = item[wcKey];
+                            const ts  = new Date(item.recorded_at).getTime();
+                            return (val !== undefined && ts >= rangeStart && ts <= rangeEnd)
+                                ? [ts, parseFloat(val)]
+                                : null;
+                        })
+                        .filter(Boolean);
                 }
 
-                const pSeries = buildPercentileSeries(percentiles, dataYear);
-                const monthBands = buildMonthBands(dataYear);
-                const medianSeries = computeObsMedian(obsSeries, dataYear);
+                if (obsSeries.length === 0) {
+                    setChartOptions(null);
+                    setLoading(false);
+                    return;
+                }
 
-                setChartOptions(buildChartOptions(pSeries, obsSeries, medianSeries, monthBands, wcMax, sensorIndex));
+                if (sensorIndex === 'sat') {
+                    setChartOptions(buildChartOptions(null, obsSeries, null, buildMonthBands(lastYear, now), null, sensorIndex));
+                } else {
+                    const pSeries = buildPercentileSeries(percentiles, lastYear, now);
+                    const medianSeries = computeObsMedian(obsSeries, lastYear, now);
+                    setChartOptions(buildChartOptions(pSeries, obsSeries, medianSeries, buildMonthBands(lastYear, now), wcMax, sensorIndex));
+                }
                 setLoading(false);
             })
             .catch(() => {
-                const defaultYear = new Date().getFullYear() - 1;
-                const obsSeries = generateDummyObservations(sensorIndex, wcMax, stId, defaultYear);
-                setUsingDummy(true);
-                const pSeries = buildPercentileSeries(percentiles, defaultYear);
-                const monthBands = buildMonthBands(defaultYear);
-                const medianSeries = computeObsMedian(obsSeries, defaultYear);
-                setChartOptions(buildChartOptions(pSeries, obsSeries, medianSeries, monthBands, wcMax, sensorIndex));
+                setChartOptions(null);
                 setLoading(false);
             });
     }, [station, sensorIndex]);
 
     if (loading) return <div className="panel-msg">Cargando datos...</div>;
-    if (!chartOptions) return <div className="panel-msg">No hay datos recientes para este sensor.</div>;
+    if (!chartOptions) return <div className="panel-msg">No hay datos históricos disponibles para este sensor.</div>;
 
     return (
         <div>
             <HighchartsReact highcharts={Highcharts} options={chartOptions} />
-            {usingDummy && (
-                <p style={{ fontSize: '10px', color: '#999', textAlign: 'center', margin: '2px 0 4px', fontStyle: 'italic' }}>
-                    * Percentiles de ejemplo — sin historial real disponible para esta estación
-                </p>
-            )}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'center', margin: '4px 0 8px', padding: '6px 8px', background: '#f8f9fa', borderRadius: 6, border: '1px solid #e9ecef' }}>
-                {[...PERCENTILE_BANDS].reverse().map(b => (
+                {sensorIndex !== 'sat' && [...PERCENTILE_BANDS].reverse().map(b => (
                     <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9.5px', fontWeight: '600', color: '#333' }}>
                         <span style={{ display: 'inline-block', width: 13, height: 10, background: b.fill, borderRadius: 2, border: '1px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
                         {b.label.replace(/ – .+/, '')}
@@ -323,7 +362,7 @@ const StationChart = ({ station, sensorIndex }) => {
                 ))}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9.5px', fontWeight: '600', color: '#333' }}>
                     <span style={{ display: 'inline-block', width: 13, height: 2, background: '#111', borderRadius: 1 }} />
-                    Observado
+                    {sensorIndex === 'sat' ? 'Saturación' : 'Observado'}
                 </div>
             </div>
         </div>
@@ -501,6 +540,12 @@ function Stations() {
                                                     Sensor {num}
                                                 </button>
                                             ))}
+                                            <button
+                                                className={`sensor-btn ${selectedSensor === 'sat' ? 'active' : ''}`}
+                                                onClick={() => setSelectedSensor('sat')}
+                                            >
+                                                Saturación
+                                            </button>
                                         </div>
                                         <StationChart station={selectedStation} sensorIndex={selectedSensor} />
                                     </div>
@@ -515,10 +560,23 @@ function Stations() {
                                             />
                                         </div>
                                         <ul className="meta-list">
+                                            <li>
+                                                <strong>Fecha de Instalación:</strong> {selectedStation.station_installation_date ? new Date(selectedStation.station_installation_date).toLocaleDateString() : "N/A"}
+                                            </li>
                                             <li><strong>Unidad Geológica:</strong> {selectedStation.geological_unit || "N/A"}</li>
                                             <li><strong>Unidad de Suelo:</strong> {selectedStation.land_unit || "N/A"}</li>
-                                            <li><strong>Elevación:</strong> {selectedStation.elevation || "N/A"}</li>
-                                            <li><strong>Pendiente:</strong> {selectedStation.slope || "N/A"}</li>
+                                            <li><strong>Susceptibilidad:</strong> {selectedStation.susceptibility || "N/A"}</li>
+                                            <li>
+                                                <strong>Profundidad:</strong> {selectedStation.depth ? (
+                                                    <div style={{ marginLeft: '10px', marginTop: '4px' }}>
+                                                        {selectedStation.depth.split(',').map((d, index) => (
+                                                            <div key={index}>Sensor {index + 1}: {d.trim()}</div>
+                                                        ))}
+                                                    </div>
+                                                ) : "N/A"}
+                                            </li>
+                                            <li><strong>Elevación:</strong> {selectedStation.elevation != null ? `${selectedStation.elevation} m` : "N/A"}</li>
+                                            <li><strong>Pendiente:</strong> {selectedStation.slope != null ? `${selectedStation.slope}°` : "N/A"}</li>
                                             <li><strong>Colaborador:</strong> {selectedStation.collaborator || "N/A"}</li>
                                         </ul>
                                     </div>
@@ -544,12 +602,49 @@ function Stations() {
                 <div className="footer-layout-wrapper">
                     <div className="footer-text-column">
                         <h2>Sensores y equipos de la estación</h2>
-                        <p>Cada estación de la Red de Pronóstico de Deslizamientos de Tierra de Puerto Rico incluye sensores subterráneos que miden el contenido volumétrico de agua...</p>
-                        <p>El conjunto de sensores se instala a intervalos de 0.25d, 0.50d, 0.75d y 1.00d...</p>
+                            <p>
+                            Cada estación de la Red de Pronóstico de Deslizamientos de Tierra de Puerto Rico incluye estaciones de monitoreo equipadas con sensores subterráneos que miden el contenido volumétrico de agua, la presión de succión del suelo, la temperatura del suelo y la presión del agua subterránea. Los sensores se instalan en un hoyo excavado a mano hasta la base del suelo, donde se encuentra material de lecho rocoso meteorizado.
+                        </p>
+                        <p>
+                            El conjunto de sensores se instala a intervalos de 0.25d, 0.50d, 0.75d y 1.00d, donde "d" es la profundidad total del perfil del suelo. La distribución de los sensores se muestra en el diagrama adjunto.
+                        </p>
+                        <p>
+                            Los sensores sobre el suelo miden la temperatura del aire, la presión barométrica y la lluvia. Cada estación está controlada por un registrador de datos que recopila datos cada 5 minutos y transmite datos cada hora a través de un módem celular a nuestro servidor local entre las 7:00 y las 20:00 AST. Debido a que las estaciones funcionan con energía solar y batería, los datos generalmente no se transmiten durante la noche para ahorrar energía.
+                        </p>
                     </div>
                     <div className="footer-image-column">
                         <img src={stationSchematic} alt="Esquema de sensores" className="schematic-img" />
                     </div>
+                </div>
+      <div className="footer-full-width">
+                    <h2 className="secondary-footer-header">Datos de la estación</h2>
+                    <p>
+                        Los datos medidos incluyen el contenido volumétrico de agua, la succión del suelo, el nivel de agua subterránea, la temperatura del suelo, la temperatura del aire, la presión barométrica y la lluvia.
+                    </p>
+
+                    <ul className="glossary-list">
+                        <li>
+                            <strong>El contenido volumétrico de agua (VWC)</strong> es la relación entre el volumen de agua y el volumen total del suelo. Los valores normalmente no superan los 0,5 cm³/cm³. El contenido volumétrico de agua se puede utilizar para calcular la saturación del suelo.
+                        </li>
+                        <li>
+                            <strong>La succión del suelo</strong> es la presión negativa de los poros dentro del suelo. Cuando la presión de los poros del suelo es positiva, no hay succión. Nuestros sensores solo miden presiones negativas de hasta 0 kPa. Cuando los sensores leen ~0 kPa, la presión de los poros del suelo podría ser positiva.
+                        </li>
+                        <li>
+                            <strong>El nivel de agua subterránea del suelo</strong> se mide con un piezómetro de cuerda vibrante. El piezómetro mide la presión del agua subterránea por encima de su posición. Las unidades informadas están en centímetros de agua. Las lecturas del piezómetro se corrigen según las variaciones de presión atmosférica del barómetro sobre el suelo.
+                        </li>
+                        <li>
+                            <strong>La temperatura del suelo</strong> también se mide con nuestro instrumento piezómetro. Las unidades informadas son grados Celsius.
+                        </li>
+                        <li>
+                            <strong>La temperatura del aire</strong> se mide con un termómetro situado sobre la superficie. Las unidades que se indican son grados Celsius. Los valores de temperatura del aire que se indican pueden ser excesivamente altos si el sensor está expuesto directamente al sol.
+                        </li>
+                        <li>
+                            <strong>La presión atmosférica</strong> se mide con un barómetro situado sobre la superficie.
+                        </li>
+                        <li>
+                            <strong>La cantidad y la tasa de lluvia</strong> se miden con un pluviómetro de cubeta basculante. Las unidades que se indican son milímetros.
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -558,7 +653,7 @@ function Stations() {
 
 // Chart Options Helper
 function buildChartOptions(pSeries, obsSeries, medianSeries, monthBands, wcMax, sensorIndex) {
-    const bandSeriesConfig = PERCENTILE_BANDS.map((band, idx) => ({
+    const bandSeriesConfig = pSeries ? PERCENTILE_BANDS.map((band, idx) => ({
         name: band.label,
         type: 'arearange',
         data: pSeries.bandSeries[idx],
@@ -569,29 +664,44 @@ function buildChartOptions(pSeries, obsSeries, medianSeries, monthBands, wcMax, 
         lineWidth: 0,
         marker: { enabled: false },
         enableMouseTracking: true,
-    }));
+    })) : [];
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "July", "Aug", "Sept", "Oct", "Nov", "Dec"];
 
     return {
-        chart: { backgroundColor: '#ffffff', height: 310, style: { fontFamily: "'Inter', sans-serif" } },
+        chart: { 
+            backgroundColor: '#ffffff', 
+            height: 310, 
+            style: { fontFamily: "'Inter', sans-serif" }
+        },
         title: { text: '' },
         xAxis: {
             type: 'datetime',
             min: monthBands[0].from,
-            max: monthBands[11].to,
-            tickPositions: [...monthBands.map(b => b.from), monthBands[11].to + 1],
+            max: monthBands[monthBands.length - 1].to,
+            tickPositions: [...monthBands.map(b => b.from), monthBands[monthBands.length - 1].to + 1],
             labels: {
+                autoRotation: [-45],
+                padding: 2,
+                style: { fontSize: '9px' },
                 formatter: function() {
-                    if (this.value > monthBands[11].from) return '';
-                    let m = Highcharts.dateFormat('%b', this.value);
-                    return m.charAt(0).toUpperCase() + m.slice(1);
+                    const lastBand = monthBands[monthBands.length - 1];
+                    if (this.value > lastBand.from) return '';
+                    const date = new Date(this.value);
+                    return monthNames[date.getUTCMonth()];
                 }
             },
             plotBands: monthBands,
         },
         yAxis: {
-            title: { text: 'VWC (m³/m³)' },
-            min: 0, max: 0.6,
-            labels: { formatter() { return this.value.toFixed(2); } }
+            title: { text: sensorIndex === 'sat' ? 'Saturación (%)' : 'VWC (m³/m³)' },
+            min: 0, 
+            max: sensorIndex === 'sat' ? 100 : 0.6,
+            labels: { 
+                formatter() { 
+                    return sensorIndex === 'sat' ? this.value.toFixed(0) : this.value.toFixed(2); 
+                } 
+            }
         },
         tooltip: {
             shared: false,
@@ -602,14 +712,22 @@ function buildChartOptions(pSeries, obsSeries, medianSeries, monthBands, wcMax, 
                 if (this.series.type === 'arearange') {
                     content += `<b>${this.series.name}</b>: ${this.point.low.toFixed(4)} - ${this.point.high.toFixed(4)}`;
                 } else {
-                    content += `Observación: ${this.y.toFixed(4)}`;
+                    const val = sensorIndex === 'sat' ? this.y.toFixed(2) + '%' : this.y.toFixed(4);
+                    content += `${sensorIndex === 'sat' ? 'Saturación' : 'Observación'}: ${val}`;
                 }
                 return content + `</div>`;
             }
         },
         series: [
             ...bandSeriesConfig,
-            { name: 'Observado', type: 'spline', data: obsSeries, color: '#111', lineWidth: 2, zIndex: 14 }
+            { 
+                name: sensorIndex === 'sat' ? 'Saturación' : 'Observado', 
+                type: 'spline', 
+                data: obsSeries, 
+                color: '#111', 
+                lineWidth: 2, 
+                zIndex: 14 
+            }
         ]
     };
 }

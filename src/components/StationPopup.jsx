@@ -64,9 +64,17 @@ const StationPopup = ({ station }) => {
         }
     };
 
+    let normalizedDate = lastUpdated;
+    if (normalizedDate) {
+        normalizedDate = normalizedDate.replace(' ', 'T').replace('Z', '');
+        if (!normalizedDate.includes('-04:00')) {
+            normalizedDate += '-04:00';
+        }
+    }
+
     const formattedLastUpdated =
-        lastUpdated
-            ? new Date(lastUpdated).toLocaleString('en-US', {
+        normalizedDate
+            ? new Date(normalizedDate).toLocaleString('en-US', {
                 timeZone: 'America/Puerto_Rico',
                 year: 'numeric',
                 month: 'long',
@@ -76,6 +84,7 @@ const StationPopup = ({ station }) => {
                 hour12: true
             })
             : 'N/A';
+
 
     const formattedSoilSaturation =
         soilSaturation !== null && soilSaturation !== undefined

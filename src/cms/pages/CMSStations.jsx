@@ -330,7 +330,6 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
         wc4_max: "",
         soil_saturation: "",
         precipitation: "",
-        landslide_forecast: "",
         collaborator: "", 
         station_installation_date: "", 
         imageFile: null,
@@ -358,7 +357,6 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
                 wc4_max: station.wc4_max || "",
                 soil_saturation: station.soil_saturation || "",
                 precipitation: station.precipitation || "",
-                landslide_forecast: station.landslide_forecast || "",
                 collaborator: station.collaborator || "",
                 station_installation_date: station.station_installation_date?.slice(0, 10) || "",
                 imageFile: null
@@ -544,10 +542,6 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
 
                 {/* --- SECCIÓN: DATOS ADICIONALES --- */}
                 <div className="cms-form-section-title span-2">Datos Adicionales</div>
-                <div className="cms-form-group">
-                    <label>Pronóstico de Deslizamiento (%)</label>
-                    <input className="cms-input" type="number" step="any" name="landslide_forecast" value={formData.landslide_forecast} onChange={handleChange} placeholder="Ej. 37.73" disabled={isSubmitting} />
-                </div>
                 <div className="cms-form-group">
                     <label>Colaborador</label>
                     <input className="cms-input" name="collaborator" value={formData.collaborator} onChange={handleChange} placeholder="Ej. UPR Mayagüez" disabled={isSubmitting} />
