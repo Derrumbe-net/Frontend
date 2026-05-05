@@ -292,60 +292,10 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
 
     return null;
 };
-
 const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast }) => {
     const [stations, setStations] = useState([]);
     const stationsRef = useRef([]);
 
-    const calculateMetricsFromRawData = (rows, stationInfo) => {
-        if (!rows || rows.length === 0) return null;
-
-        // 1. Sum precipitation across the provided rows (Received in mm)
-        const totalRainMm = rows.reduce((acc, row) => {
-            const val = parseFloat(row.precipitation);
-            return acc + (isNaN(val) ? 0 : val);
-        }, 0);
-
-        // 2. Convert mm to inches (1 inch = 25.4 mm)
-        const totalRainInches = totalRainMm / 25.4;
-
-        // Get limits and the latest row for soil saturation
-        const lastRow = rows[rows.length - 1];
-        const wcRatios = [];
-        
-        // Limits from the /stations API metadata
-        const limits = [stationInfo.wc1_max, stationInfo.wc2_max, stationInfo.wc3_max, stationInfo.wc4_max];
-        
-        // Values from the /stations/files/data raw readings array
-        const keys = ['wc1', 'wc2', 'wc3', 'wc4'];
-
-        limits.forEach((limit, index) => {
-            const val = parseFloat(lastRow[keys[index]]);
-            const max = parseFloat(limit);
-            
-            // Ensure both parsed successfully and max is greater than 0
-            if (!isNaN(val) && !isNaN(max) && max > 0) {
-                wcRatios.push(val / max);
-            }
-        });
-
-        let avgSaturation = 0;
-        if (wcRatios.length > 0) {
-            const sumRatio = wcRatios.reduce((a, b) => a + b, 0);
-            avgSaturation = (sumRatio / wcRatios.length) * 100;
-            
-            // Cap saturation at 100% in case sensor readings temporarily exceed the calibrated max
-            if (avgSaturation > 100) avgSaturation = 100;
-        }
-
-        return {
-            calculatedPrecip: totalRainInches, // Converted to inches
-            calculatedSaturation: avgSaturation,
-            lastUpdated: lastRow.recorded_at
-        };
-    };
-
-    // Load data ONCE upon mount
     useEffect(() => {
         const loadInitialData = async () => {
             try {
@@ -353,50 +303,84 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 const stationRes = await fetch(BASE_STATIONS_URL);
                 if (!stationRes.ok) return;
                 const baseStations = await stationRes.json();
-                
+
                 const dataArray = Array.isArray(baseStations) ? baseStations : [];
                 stationsRef.current = dataArray;
+                console.log("[Stations] Base stations fetched:", dataArray);
 
-                if (dataArray.length === 0) return;
+                if (dataArray.length === 0) {
+                    console.warn("[Stations] No stations returned from API");
+                    return;
+                }
 
-                // 2. Fetch the latest readings immediately after
-                const dataRes = await fetch(BASE_FILES_DATA_URL);
-                if (!dataRes.ok) return;
-                const filesData = await dataRes.json();
+                // 2. Fetch latest readings
+                const latestRes = await fetch(`${BASE_DOMAIN}/stations/latest`);
+                if (!latestRes.ok) return;
+                const latestData = await latestRes.json();
+                console.log("[Stations] Latest readings fetched:", latestData);
 
-                const localUpdates = {};
-
-                if (Array.isArray(filesData)) {
-                    filesData.forEach(fileRecord => {
-                        const fileRecordId = fileRecord.id || fileRecord.station_id;
-                        const station = dataArray.find(s => (s.id || s.station_id) === fileRecordId);
-                        
-                        if (station && fileRecord.data && Array.isArray(fileRecord.data) && fileRecord.data.length > 0) {
-                            const metrics = calculateMetricsFromRawData(fileRecord.data, station);
-                            if (metrics) {
-                                localUpdates[fileRecordId] = {
-                                    precipitation: metrics.calculatedPrecip,
-                                    soil_saturation: metrics.calculatedSaturation,
-                                    last_updated: metrics.lastUpdated
-                                };
-                            }
+                // Build lookup map
+                const latestByStationId = {};
+                if (Array.isArray(latestData)) {
+                    latestData.forEach(entry => {
+                        if (entry.station_id && entry.data) {
+                            latestByStationId[entry.station_id] = entry.data;
                         }
                     });
                 }
+                console.log("[Stations] Latest readings by station_id:", latestByStationId);
 
-                // Merge and set state
+                // 3. Merge and calculate
                 const updatedStations = dataArray.map(s => {
                     const stId = s.id || s.station_id;
-                    if (localUpdates[stId]) {
-                        return { ...s, ...localUpdates[stId] };
+                    const reading = latestByStationId[stId];
+
+                    if (!reading) {
+                        console.warn(`[Stations] No latest reading found for station_id=${stId}`);
+                        return s;
                     }
-                    return s;
+
+                    const wcSum =
+                        (parseFloat(reading.wc1) || 0) +
+                        (parseFloat(reading.wc2) || 0) +
+                        (parseFloat(reading.wc3) || 0) +
+                        (parseFloat(reading.wc4) || 0);
+
+                    const maxSum =
+                        (parseFloat(s.wc1_max) || 0) +
+                        (parseFloat(s.wc2_max) || 0) +
+                        (parseFloat(s.wc3_max) || 0) +
+                        (parseFloat(s.wc4_max) || 0);
+
+                    let saturation = 0;
+                    if (maxSum > 0) {
+                        saturation = (wcSum / maxSum) * 100;
+                        if (saturation > 100) saturation = 100;
+                    }
+
+                    const precipInches = (parseFloat(reading.precipitation) || 0) / 25.4;
+
+                    console.log(`[Stations] station_id=${stId}`, {
+                        wc1: reading.wc1, wc2: reading.wc2, wc3: reading.wc3, wc4: reading.wc4,
+                        wc1_max: s.wc1_max, wc2_max: s.wc2_max, wc3_max: s.wc3_max, wc4_max: s.wc4_max,
+                        wcSum, maxSum,
+                        saturation: `${saturation.toFixed(2)}%`,
+                        precipInches: `${precipInches.toFixed(4)} in`,
+                    });
+
+                    return {
+                        ...s,
+                        soil_saturation: saturation,
+                        precipitation: precipInches,
+                        last_updated: reading.recorded_at,
+                    };
                 });
-                
+
+                console.log("[Stations] Final merged stations:", updatedStations);
                 setStations(updatedStations);
 
             } catch (err) {
-                console.error("Error loading station data:", err);
+                console.error("[Stations] Error loading station data:", err);
             }
         };
 
@@ -432,7 +416,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 </div>
             `,
             className: "",
-            iconSize: [65, 30], 
+            iconSize: [65, 30],
             iconAnchor: [32, 15],
         });
     };
@@ -463,7 +447,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         if (p >= 0.10) return "#5FC2FF";
         if (p >= 0.05) return "#7FD6FF";
         if (p >= 0.01) return "#9FEAFF";
-        return "#DADADA"; 
+        return "#DADADA";
     };
 
     /** PRECIPITATION ICON **/
@@ -490,8 +474,8 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 </div>
             `,
             className: "",
-            iconSize: [65, 30], 
-            iconAnchor: [32, 15], 
+            iconSize: [65, 30],
+            iconAnchor: [32, 15],
         });
     };
 
@@ -513,11 +497,9 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 else {
                     if (station.soil_saturation != null) {
                         icon = createSaturationIcon(station.soil_saturation, station.last_updated);
-                    }
-                    else if (station.precipitation != null) {
+                    } else if (station.precipitation != null) {
                         icon = createPrecipIcon(station.precipitation, station.last_updated);
-                    }
-                    else {
+                    } else {
                         return null;
                     }
                 }
