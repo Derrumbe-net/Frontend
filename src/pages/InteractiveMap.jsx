@@ -614,8 +614,8 @@ const getStationStatus = (lastUpdated) => {
     if (!lastUpdated) {
         return { isOutdated: true, timeString: "Desconocido" };
     }
-
-    const last = new Date(lastUpdated);
+    const cleanDate = lastUpdated.replace(' ', 'T').replace('Z', '');
+    const last = new Date(cleanDate + (cleanDate.includes('-04:00') ? '' : '-04:00'));
     const now = new Date();
     
     // Calculate time differences
@@ -1134,3 +1134,4 @@ export default function InteractiveMap() {
         </main>
     );
 }
+
