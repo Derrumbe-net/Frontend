@@ -309,7 +309,7 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
 };
 
 // Added onDataUpdate prop to lift state
-const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast, onDataUpdate }) => {
+const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast, onDataUpdate, isPreview = false }) => {
     const [stations, setStations] = useState([]);
     const map = useMap();
 
@@ -424,7 +424,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 
         const rounded = saturation != null ? Math.round(saturation) : "--";
 
-        const clockHtml = isOutdated ? `
+        const clockHtml = (isOutdated && !isPreview) ? `
             <span class="stale-clock" title="${timeString}" style="margin-left: 5px; display: flex; align-items: center; justify-content: center; cursor: help; opacity: 0.9;">
                 <svg viewBox="0 0 24 24" width="13" height="13">
                     <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/>
@@ -436,14 +436,14 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 
         return L.divIcon({
             html: `
-                <div class="${className}" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box; color: white;">
+                <div class="${className}" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box; color: white; font-size: ${isPreview ? '10px' : '14px'};">
                     <span>${rounded}%</span>
                     ${clockHtml}
                 </div>
             `,
             className: "",
-            iconSize: [65, 30], 
-            iconAnchor: [32, 15],
+            iconSize: isPreview ? [40, 20] : [65, 30], 
+            iconAnchor: isPreview ? [20, 10] : [32, 15],
         });
     };
 
@@ -481,7 +481,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         const rounded = Number(precip).toFixed(2);
         const { isOutdated, timeString } = getStationStatus(lastUpdated);
 
-        const clockHtml = isOutdated ? `
+        const clockHtml = (isOutdated && !isPreview) ? `
             <span class="stale-clock" title="${timeString}" style="margin-left: 5px; display: flex; align-items: center; justify-content: center; cursor: help; opacity: 0.9;">
                 <svg viewBox="0 0 24 24" width="13" height="13">
                     <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2" fill="none"/>
@@ -493,14 +493,14 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 
         return L.divIcon({
             html: `
-                <div class="precip-marker" style="background-color:${color}; color: white; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box;">
+                <div class="precip-marker" style="background-color:${color}; color: white; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box; font-size: ${isPreview ? '10px' : '14px'};">
                     <span>${rounded}"</span>
                     ${clockHtml}
                 </div>
             `,
             className: "",
-            iconSize: [65, 30], 
-            iconAnchor: [32, 15], 
+            iconSize: isPreview ? [40, 20] : [65, 30], 
+            iconAnchor: isPreview ? [20, 10] : [32, 15], 
         });
     };
 
@@ -723,7 +723,7 @@ const PrecipLegend = () => {
     );
 };
 
-export default function InteractiveMap() {
+export default function InteractiveMap({ isPreview = false }) {
     const center = [18.220833, -66.420149];
 
     const [showStations, setShowStations] = useState(true);
@@ -736,7 +736,7 @@ export default function InteractiveMap() {
     const [showSaturation, setShowSaturation] = useState(true);
     const [showPrecip12hr, setShowPrecip12hr] = useState(false);
 
-    const [showSaturationLegend, setShowSaturationLegend] = useState(true);
+    const [showSaturationLegend, setShowSaturationLegend] = useState(!isPreview);
     const [showSusceptibilityLegend, setShowSusceptibilityLegend] = useState(false);
     const [showPrecipLegend, setShowPrecipLegend] = useState(false);
 
@@ -748,14 +748,14 @@ export default function InteractiveMap() {
     const [landslidesData, setLandslidesData] = useState([]);
 
     // --- RADAR / TIME LOGIC ---
-    const [showForecast, setShowForecast] = useState(true);
+    const [showForecast, setShowForecast] = useState(!isPreview);
     const [radarFrames, setRadarFrames] = useState([]);
     const [currentFrameIdx, setCurrentFrameIdx] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
     const [showDisclaimer, setShowDisclaimer] = useState(
-        localStorage.getItem('disclaimerAccepted') !== 'true'
+        isPreview ? false : (localStorage.getItem('disclaimerAccepted') !== 'true')
     );
 
     useEffect(() => {
@@ -1004,47 +1004,50 @@ export default function InteractiveMap() {
     }
 
     return (
-        <main>
+        <main className={isPreview ? "map-preview-mode" : ""}>
             {showDisclaimer && <Disclaimer onAgree={handleAgree} />}
 
             <MapContainer
                 id="map"
                 center={center}
-                zoom={isMobile ? 8 : 10}
+                zoom={isMobile ? (isPreview ? 7.1 : 8) : (isPreview ? 7.6 : 10)}
                 minZoom={7}
                 maxZoom={18}
-                scrollWheelZoom={true}
+                scrollWheelZoom={!isPreview}
+                dragging={!isPreview}
                 zoomControl={false}
-                style={{ height: '100vh', width: '100%', position: 'relative' }}
+                style={{ height: isPreview ? '450px' : '100vh', width: '100%', position: 'relative' }}
             >
             {/* --- FLOATING EXPORT BUTTON --- */}
-            <div 
-                style={{ 
-                    position: 'absolute', 
-                    top: '120px', /* Increased from 80px to push it down further from the +/- */
-                    right: '15px', 
-                    zIndex: 1000 
-                }}
-            >
-                <button 
-                    onClick={handleExportKML}
-                    style={{
-                        padding: '10px 14px',
-                        cursor: 'pointer',
-                        backgroundColor: '#ffffff',
-                        color: '#333',
-                        border: '2px solid rgba(0,0,0,0.2)',
-                        borderRadius: '4px',
-                        fontWeight: 'bold',
-                        boxShadow: '0 1px 5px rgba(0,0,0,0.4)',
-                        transition: 'background-color 0.2s'
+            {!isPreview && (
+                <div 
+                    style={{ 
+                        position: 'absolute', 
+                        top: '120px', /* Increased from 80px to push it down further from the +/- */
+                        right: '15px', 
+                        zIndex: 1000 
                     }}
-                    onMouseOver={(e) => e.target.style.backgroundColor = '#f4f4f4'}
-                    onMouseOut={(e) => e.target.style.backgroundColor = '#ffffff'}
                 >
-                    📥 Exportar KML
-                </button>
-            </div>
+                    <button 
+                        onClick={handleExportKML}
+                        style={{
+                            padding: '10px 14px',
+                            cursor: 'pointer',
+                            backgroundColor: '#ffffff',
+                            color: '#333',
+                            border: '2px solid rgba(0,0,0,0.2)',
+                            borderRadius: '4px',
+                            fontWeight: 'bold',
+                            boxShadow: '0 1px 5px rgba(0,0,0,0.4)',
+                            transition: 'background-color 0.2s'
+                        }}
+                        onMouseOver={(e) => e.target.style.backgroundColor = '#f4f4f4'}
+                        onMouseOut={(e) => e.target.style.backgroundColor = '#ffffff'}
+                    >
+                        📥 Exportar KML
+                    </button>
+                </div>
+            )}
 
                 {mapLabelText && <div className="map-label">{mapLabelText}</div>}
 
@@ -1059,40 +1062,43 @@ export default function InteractiveMap() {
                 </div>
                 )} 
 
-                <CtrlZoomHandler setShowZoomHint={setShowZoomHint} hasShownZoomHint={hasShownZoomHint} />
+                {!isPreview && <CtrlZoomHandler setShowZoomHint={setShowZoomHint} hasShownZoomHint={hasShownZoomHint} />}
                 <MobileTouchHandler />
 
-                <MapMenu
-                    showStations={showStations} onToggleStations={toggleStations}
-                    showPrecip={showPrecip} onTogglePrecip={togglePrecip}
-                    showSusceptibility={showSusceptibility} onToggleSusceptibility={toggleSusceptibility}
+                {!isPreview && (
+                    <MapMenu
+                        showStations={showStations} onToggleStations={toggleStations}
+                        showPrecip={showPrecip} onTogglePrecip={togglePrecip}
+                        showSusceptibility={showSusceptibility} onToggleSusceptibility={toggleSusceptibility}
 
-                    showSaturation={showSaturation} onToggleSaturation={toggleSaturation}
-                    showPrecip12hr={showPrecip12hr} onTogglePrecip12hr={togglePrecip12hr}
-        
-                    showSaturationLegend={showSaturationLegend} onToggleSaturationLegend={toggleSaturationLegend}
-                    showSusceptibilityLegend={showSusceptibilityLegend} onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
-                    showPrecipLegend={showPrecipLegend} onTogglePrecipLegend={togglePrecipLegend}
+                        showSaturation={showSaturation} onToggleSaturation={toggleSaturation}
+                        showPrecip12hr={showPrecip12hr} onTogglePrecip12hr={togglePrecip12hr}
+            
+                        showSaturationLegend={showSaturationLegend} onToggleSaturationLegend={toggleSaturationLegend}
+                        showSusceptibilityLegend={showSusceptibilityLegend} onToggleSusceptibilityLegend={toggleSusceptibilityLegend}
+                        showPrecipLegend={showPrecipLegend} onTogglePrecipLegend={togglePrecipLegend}
 
-                    availableYears={availableYears} selectedYear={selectedYear} onYearChange={handleYearChange}
-                    showForecast={showForecast} onToggleForecast={toggleForecast}
+                        availableYears={availableYears} selectedYear={selectedYear} onYearChange={handleYearChange}
+                        showForecast={showForecast} onToggleForecast={toggleForecast}
 
-                    resetLayers={resetLayers}
-                    resetToDefault={resetToDefault}
-                />
+                        resetLayers={resetLayers}
+                        resetToDefault={resetToDefault}
+                    />
+                )}
 
                 <EsriOverlays
                     showPrecip={showPrecip}
                     showSusceptibility={showSusceptibility}
                 />
 
-                {!isMobile && <ZoomControl position="topright" />}
+                {!isMobile && !isPreview && <ZoomControl position="topright" />}
 
                 {showStations && (
                     <PopulateStations
                         showSaturation={showSaturation}
                         showPrecip12hr={showPrecip12hr}
                         onDataUpdate={setStationsData}
+                        isPreview={isPreview}
                     />
                 )}
 
@@ -1115,7 +1121,7 @@ export default function InteractiveMap() {
                     />
                 )}
 
-                {showForecast && radarFrames.length > 0 && (
+                {showForecast && radarFrames.length > 0 && !isPreview && (
                     <TimeControlBar
                         frames={radarFrames}
                         currentIndex={currentFrameIdx}
@@ -1127,9 +1133,11 @@ export default function InteractiveMap() {
                     />
                 )}
 
-                <div className="logo-container">
-                    <img src={LandslideLogo} alt="Landslide Hazard Mitigation Logo" className="landslide-logo" />
-                </div>
+                {!isPreview && (
+                    <div className="logo-container">
+                        <img src={LandslideLogo} alt="Landslide Hazard Mitigation Logo" className="landslide-logo" />
+                    </div>
+                )}
             </MapContainer>
         </main>
     );

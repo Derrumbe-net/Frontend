@@ -49,7 +49,7 @@ export default function CMSTeamMembers() {
       const normalizedFac = (facData || []).map(f => ({
         ...f,
         member_type: 'faculty',
-        role: f.faculty_role || f.role,
+        faculty_role: f.faculty_role,
         id: f.faculty_member_id || f.id
       }));
 
@@ -164,7 +164,7 @@ export default function CMSTeamMembers() {
         m.id || m.faculty_member_id || m.student_member_id || "",
         `"${m.name || ""}"`,
         TYPE_LABELS[m.member_type] || m.member_type || "",
-        `"${m.role || ""}"`,
+        `"${m.faculty_role || ""}"`,
         `"${m.email || ""}"`,
         `"${m.phone || ""}"`,
         `"${m.extension || m.phone_ext || ""}"`,
@@ -283,7 +283,7 @@ export default function CMSTeamMembers() {
                             {TYPE_LABELS[m.member_type] || m.member_type}
                           </span>
                           <br />
-                          <span style={{ fontSize: "0.8rem", color: "#718096" }}>{m.role}</span>
+                          <span style={{ fontSize: "0.8rem", color: "#718096" }}>{m.faculty_role}</span>
                         </td>
                         <td style={{ fontSize: "0.82rem", color: "#4b4b4b" }}>
                           {m.email   && <div>{m.email}</div>}
@@ -355,7 +355,7 @@ function MemberForm({ member, onClose, refreshMembers }) {
 
   const [formData, setFormData] = useState({
     name:          member?.name          ?? "",
-    role:          member?.role          ?? "",
+    faculty_role:          member?.faculty_role          ?? "",
     email:         member?.email         ?? "",
     phone:         member?.phone         ?? "",
     phone_ext:     member?.phone_ext     ?? member?.extension ?? "",
@@ -387,7 +387,7 @@ function MemberForm({ member, onClose, refreshMembers }) {
     if (!formData.name.trim()) {
       Swal.fire("Error", "El nombre es obligatorio.", "warning"); return false;
     }
-    if (formData.member_type === 'faculty' && !formData.role.trim()) {
+    if (formData.member_type === 'faculty' && !formData.faculty_role.trim()) {
       Swal.fire("Error", "El rol es obligatorio para la facultad.", "warning"); return false;
     }
     return true;
@@ -499,22 +499,10 @@ function MemberForm({ member, onClose, refreshMembers }) {
           <label>Rol / Posición {formData.member_type === 'faculty' && <span className="required-asterisk">*</span>}</label>
           <input
             className="cms-input"
-            name="role"
-            value={formData.role}
+            name="faculty_role"
+            value={formData.faculty_role}
             onChange={handleChange}
             placeholder="Ej. Coordinator and PI"
-          />
-        </div>
-
-        <div className="cms-form-group">
-          <label>Orden de aparición</label>
-          <input
-            className="cms-input"
-            type="number"
-            name="display_order"
-            value={formData.display_order}
-            onChange={handleChange}
-            min={0}
           />
         </div>
 
