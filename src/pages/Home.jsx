@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "../styles/Home_module.css";
 import heroImage from '../assets/landing_page_background.webp';
-import mapPreview from '../assets/InteractiveMapGIF.gif';
+import InteractiveMap from "./InteractiveMap";
 import landslidePhoto from '../assets/landslide_landing_page.webp';
 import newsImage from '../assets/alturas_de_belgica.gif';
 import officeImage from '../assets/office_door.webp';
@@ -61,13 +61,17 @@ function Home() {
             Herramienta interactiva que muestra, en tiempo real, datos de saturación del suelo,
             susceptibilidad a deslizamientos y estimaciones de precipitación en Puerto Rico.
           </p>
-          {/* Changed <a> to <Link> for internal React Router navigation */}
           <Link to="/mapa-interactivo" className="landing__map-link">¡Haz clic en el mapa!</Link>
         </div>
 
-        <Link to="/mapa-interactivo">
-          <img className="landing__map-image" src={mapPreview} alt="Mapa interactivo" loading="lazy" />
-        </Link>
+        <div className="landing__map-preview-container">
+          <Link to="/mapa-interactivo" className="landing__map-preview-link">
+            <div className="landing__map-preview-wrapper">
+              <InteractiveMap isPreview={true} />
+              <div className="landing__map-overlay"></div>
+            </div>
+          </Link>
+        </div>
       </section>
 
       {/* SECTION: REPORTAR */}

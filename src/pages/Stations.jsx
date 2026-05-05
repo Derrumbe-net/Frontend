@@ -333,11 +333,15 @@ const StationChart = ({ station, sensorIndex }) => {
                 }
 
                 if (sensorIndex === 'sat') {
-                    setChartOptions(buildChartOptions(null, obsSeries, null, buildMonthBands(lastYear, now), null, sensorIndex));
+                    const actualMin = obsSeries[0][0];
+                    const actualMax = obsSeries[obsSeries.length - 1][0];
+                    setChartOptions(buildChartOptions(null, obsSeries, null, buildMonthBands(lastYear, now), null, sensorIndex, actualMin, actualMax));
                 } else {
                     const pSeries = buildPercentileSeries(percentiles, lastYear, now);
                     const medianSeries = computeObsMedian(obsSeries, lastYear, now);
-                    setChartOptions(buildChartOptions(pSeries, obsSeries, medianSeries, buildMonthBands(lastYear, now), wcMax, sensorIndex));
+                    const actualMin = obsSeries[0][0];
+                    const actualMax = obsSeries[obsSeries.length - 1][0];
+                    setChartOptions(buildChartOptions(pSeries, obsSeries, medianSeries, buildMonthBands(lastYear, now), wcMax, sensorIndex, actualMin, actualMax));
                 }
                 setLoading(false);
             })
@@ -652,7 +656,7 @@ function Stations() {
 }
 
 // Chart Options Helper
-function buildChartOptions(pSeries, obsSeries, medianSeries, monthBands, wcMax, sensorIndex) {
+function buildChartOptions(pSeries, obsSeries, medianSeries, monthBands, wcMax, sensorIndex, chartMin, chartMax) {
     const bandSeriesConfig = pSeries ? PERCENTILE_BANDS.map((band, idx) => ({
         name: band.label,
         type: 'arearange',
@@ -677,18 +681,18 @@ function buildChartOptions(pSeries, obsSeries, medianSeries, monthBands, wcMax, 
         title: { text: '' },
         xAxis: {
             type: 'datetime',
-            min: monthBands[0].from,
-            max: monthBands[monthBands.length - 1].to,
-            tickPositions: [...monthBands.map(b => b.from), monthBands[monthBands.length - 1].to + 1],
+            min: chartMin,
+            max: chartMax,
+            tickPositions: [...monthBands.map(b => b.from), monthBands[monthBands.length - 1].to + 1]
+                .filter(pos => pos >= chartMin && pos <= chartMax),
             labels: {
-                autoRotation: [-45],
+                rotation: -45,
+                align: 'right',
                 padding: 2,
                 style: { fontSize: '9px' },
                 formatter: function() {
-                    const lastBand = monthBands[monthBands.length - 1];
-                    if (this.value > lastBand.from) return '';
                     const date = new Date(this.value);
-                    return monthNames[date.getUTCMonth()];
+                    return `${monthNames[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
                 }
             },
             plotBands: monthBands,
