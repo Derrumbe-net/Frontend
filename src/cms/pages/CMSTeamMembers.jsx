@@ -29,7 +29,7 @@ export default function CMSTeamMembers() {
   const [currentPage, setCurrentPage] = useState(1);
   
   // Estados para la función de ordenar
-  const [sortConfig, setSortConfig] = useState({ key: "display_order", direction: "asc" });
+  const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
   
   const itemsPerPage = 8;
 
@@ -156,7 +156,7 @@ export default function CMSTeamMembers() {
 
   // Función para exportar a CSV
   const exportToCSV = () => {
-    const headers = ["ID", "Nombre", "Tipo", "Rol", "Email", "Teléfono", "Extensión", "LinkedIn", "Orden"];
+    const headers = ["ID", "Nombre", "Tipo", "Rol", "Email", "Teléfono", "Extensión", "LinkedIn"];
     
     const rows = sorted.map(m => {
       // Envolvemos en comillas dobles para evitar problemas con comas en los textos
@@ -168,8 +168,7 @@ export default function CMSTeamMembers() {
         `"${m.email || ""}"`,
         `"${m.phone || ""}"`,
         `"${m.extension || m.phone_ext || ""}"`,
-        `"${m.linkedin_url || ""}"`,
-        m.display_order || 0
+        `"${m.linkedin_url || ""}"`
       ];
     });
 
@@ -243,19 +242,13 @@ export default function CMSTeamMembers() {
                     Rol / Tipo {getSortIcon("member_type")}
                   </th>
                   <th>Contacto</th>
-                  <th 
-                    style={{ cursor: "pointer", userSelect: "none", textAlign: "center" }} 
-                    onClick={() => handleSort("display_order")}
-                  >
-                    Orden {getSortIcon("display_order")}
-                  </th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: "center", color: "#a0aec0", padding: "32px" }}>
+                    <td colSpan={5} style={{ textAlign: "center", color: "#a0aec0", padding: "32px" }}>
                       No hay miembros en esta categoría.
                     </td>
                   </tr>
@@ -294,7 +287,6 @@ export default function CMSTeamMembers() {
                             </a>
                           )}
                         </td>
-                        <td style={{ textAlign: "center" }}>{m.display_order || 0}</td>
                         <td>
                           <button className="cms-icon-btn" onClick={() => handleOpenForm(m)} title="Editar">
                             <FaEdit />
@@ -361,7 +353,6 @@ function MemberForm({ member, onClose, refreshMembers }) {
     phone_ext:     member?.phone_ext     ?? member?.extension ?? "",
     linkedin_url:  member?.linkedin_url  ?? "",
     member_type:   member?.member_type   ?? "faculty",
-    display_order: member?.display_order ?? 0,
     imageFile:     null,
   });
 
@@ -416,7 +407,6 @@ function MemberForm({ member, onClose, refreshMembers }) {
       : `${API_URL}/${endpoint}`;
 
     const { imageFile, ...bodyData } = formData;
-    bodyData.display_order = parseInt(bodyData.display_order, 10) || 0;
 
     try {
       const token = localStorage.getItem("cmsAdmin");
