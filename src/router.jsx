@@ -22,6 +22,8 @@ import CMSLayout from './cms/layout/CMSLayout';
 import CMSDashboard from './cms/pages/CMSDashboard';
 import CMSLogin from './cms/pages/CMSLogin';
 import CMSSignUp from './cms/pages/CMSSignUp';
+import CMSForgotPassword from './cms/pages/CMSForgotPassword';
+import CMSResetPassword from './cms/pages/CMSResetPassword';
 import CMSProjects from './cms/pages/CMSProjects';
 import CMSPublications from './cms/pages/CMSPublications';
 import CMSReports from './cms/pages/CMSReports';
@@ -65,6 +67,14 @@ const router = createBrowserRouter([
   {
     path: '/cms/signup',
     element: <CMSSignUp />,
+  },
+  {
+    path: '/cms/forgot-password',
+    element: <CMSForgotPassword />,
+  },
+  {
+    path: '/cms/reset-password',
+    element: <CMSResetPassword />,
   },
   {
     path: '/cms',

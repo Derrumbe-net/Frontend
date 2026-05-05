@@ -114,6 +114,12 @@ export default function CMSLogin() {
             required
           />
 
+          <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+            <Link to="/cms/forgot-password" style={{ fontSize: '0.9rem', color: '#007bff' }}>
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
+
           <button type="submit">Iniciar Sesión</button>
           
           <Link to="/cms/signup" className="cms-signup-link">
