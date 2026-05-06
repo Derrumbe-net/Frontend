@@ -21,8 +21,9 @@ const BASE_DOMAIN = `${import.meta.env.VITE_API_URL}`;
 const BASE_STATIONS_URL = BASE_DOMAIN + "/stations";
 const BASE_LATEST_DATA_URL = BASE_DOMAIN + "/stations/latest";
 const getHistoryUrl = (stationId, startDate, endDate) => `${BASE_STATIONS_URL}/historical/${stationId}?start_date=${startDate}&end_date=${endDate}`;
-const getSensorImageUrl = (stationId) => `${BASE_STATIONS_URL}/item/${stationId}/image/sensor`;
-const getDataImageUrl = (stationId) => `${BASE_STATIONS_URL}/item/${stationId}/image/data`;
+
+const getSensorImageUrl = (stationId) => `${BASE_STATIONS_URL}/item/${stationId}/images/sensor`;
+const getDataImageUrl = (stationId) => `${BASE_STATIONS_URL}/item/${stationId}/images/plot`;
 
 const isMobile = window.innerWidth < 768;
 
