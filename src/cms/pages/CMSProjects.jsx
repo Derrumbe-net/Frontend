@@ -122,7 +122,7 @@ export default function CMSProjects() {
 
     // 3. Exportación a CSV
     const exportToCSV = () => {
-        const headers = ["ID", "Título", "Año de Inicio", "Año de Fin", "Estado", "Descripción"];
+        const headers = ["ID", "Título", "Año de Inicio", "Año de Fin", "Estado", "Descripción", "Imagen"];
         
         const rows = sortedProjects.map(p => {
             const id = p.id || p.project_id || "";
@@ -130,6 +130,7 @@ export default function CMSProjects() {
             const title = p.title ? p.title.replace(/"/g, '""') : "";
             const desc = p.description ? p.description.replace(/"/g, '""') : "";
             const status = p.project_status === 'active' ? 'Actual' : 'Completado';
+            const imgPath = p.image_path || "";
 
             return [
                 id,
@@ -137,7 +138,8 @@ export default function CMSProjects() {
                 p.start_year || "",
                 p.end_year || "",
                 status,
-                `"${desc}"`
+                `"${desc}"`,
+                `"${imgPath}"`
             ];
         });
 
@@ -336,6 +338,7 @@ function ProjectForm({ project, onClose, refreshProjects, apiUrl }) {
         end_year: "",
         project_status: "active",
         description: "",
+        image_path: "", 
         imageFile: null,
     });
 
@@ -349,6 +352,7 @@ function ProjectForm({ project, onClose, refreshProjects, apiUrl }) {
                 end_year: project.end_year,
                 project_status: project.project_status,
                 description: project.description,
+                image_path: project.image_path || "", 
                 imageFile: null,
             });
 
@@ -401,10 +405,19 @@ function ProjectForm({ project, onClose, refreshProjects, apiUrl }) {
         if (!confirm.isConfirmed) return;
 
         const method = isEdit ? "PUT" : "POST";
-        
-        const url = isEdit
-            ? `${apiUrl}/projects/${projectId}`
-            : `${apiUrl}/projects`;
+        const url = isEdit ? `${apiUrl}/projects/${projectId}` : `${apiUrl}/projects`;
+
+        const uploadedFileName = formData.imageFile ? formData.imageFile.name : formData.image_path;
+
+        const bodyData = {
+            title: formData.title,
+            start_year: Number(formData.start_year),
+            end_year: Number(formData.end_year),
+            project_status: formData.project_status,
+            description: formData.description,
+            image_path: uploadedFileName || "",
+            admin_id: 1, 
+        };
 
         try {
             const token = localStorage.getItem("cmsAdmin");
@@ -419,7 +432,7 @@ function ProjectForm({ project, onClose, refreshProjects, apiUrl }) {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`,
                 },
-                body: JSON.stringify({ ...formData, admin_id: 1 }),
+                body: JSON.stringify(bodyData),
             });
 
             if (!response.ok) {
@@ -430,15 +443,25 @@ function ProjectForm({ project, onClose, refreshProjects, apiUrl }) {
             const result = await response.json();
             const finalProjId = isEdit ? projectId : (result.id || result.project_id);
 
+            // Upload Image if new file selected
             if (formData.imageFile && finalProjId) {
                 const imageForm = new FormData();
                 imageForm.append("image", formData.imageFile);
 
-                await fetch(`${apiUrl}/projects/${finalProjId}/image`, {
+                const imageResponse = await fetch(`${apiUrl}/projects/${finalProjId}/image`, {
                     method: "POST",
                     headers: { "Authorization": `Bearer ${token}` },
                     body: imageForm,
                 });
+                
+                if (!imageResponse.ok) {
+                    const errData = await imageResponse.json();
+                    console.error("Image upload failed:", errData);
+                    Swal.fire("Aviso", `El proyecto se guardó, pero la imagen falló: ${errData.error || "Error desconocido"}`, "warning");
+                    refreshProjects();
+                    onClose();
+                    return;
+                }
             }
 
             Swal.fire("Éxito", "Operación exitosa", "success");
