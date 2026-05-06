@@ -29,7 +29,7 @@ export default function CMSTeamMembers() {
   const [currentPage, setCurrentPage] = useState(1);
   
   // Estados para la función de ordenar
-  const [sortConfig, setSortConfig] = useState({ key: "display_order", direction: "asc" });
+  const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
   
   const itemsPerPage = 8;
 
@@ -49,7 +49,7 @@ export default function CMSTeamMembers() {
       const normalizedFac = (facData || []).map(f => ({
         ...f,
         member_type: 'faculty',
-        role: f.faculty_role || f.role,
+        faculty_role: f.faculty_role,
         id: f.faculty_member_id || f.id
       }));
 
@@ -156,7 +156,7 @@ export default function CMSTeamMembers() {
 
   // Función para exportar a CSV
   const exportToCSV = () => {
-    const headers = ["ID", "Nombre", "Tipo", "Rol", "Email", "Teléfono", "Extensión", "LinkedIn", "Orden"];
+    const headers = ["ID", "Nombre", "Tipo", "Rol", "Email", "Teléfono", "Extensión", "LinkedIn"];
     
     const rows = sorted.map(m => {
       // Envolvemos en comillas dobles para evitar problemas con comas en los textos
@@ -164,12 +164,11 @@ export default function CMSTeamMembers() {
         m.id || m.faculty_member_id || m.student_member_id || "",
         `"${m.name || ""}"`,
         TYPE_LABELS[m.member_type] || m.member_type || "",
-        `"${m.role || ""}"`,
+        `"${m.faculty_role || ""}"`,
         `"${m.email || ""}"`,
         `"${m.phone || ""}"`,
         `"${m.extension || m.phone_ext || ""}"`,
-        `"${m.linkedin_url || ""}"`,
-        m.display_order || 0
+        `"${m.linkedin_url || ""}"`
       ];
     });
 
@@ -243,19 +242,13 @@ export default function CMSTeamMembers() {
                     Rol / Tipo {getSortIcon("member_type")}
                   </th>
                   <th>Contacto</th>
-                  <th 
-                    style={{ cursor: "pointer", userSelect: "none", textAlign: "center" }} 
-                    onClick={() => handleSort("display_order")}
-                  >
-                    Orden {getSortIcon("display_order")}
-                  </th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: "center", color: "#a0aec0", padding: "32px" }}>
+                    <td colSpan={5} style={{ textAlign: "center", color: "#a0aec0", padding: "32px" }}>
                       No hay miembros en esta categoría.
                     </td>
                   </tr>
@@ -283,7 +276,7 @@ export default function CMSTeamMembers() {
                             {TYPE_LABELS[m.member_type] || m.member_type}
                           </span>
                           <br />
-                          <span style={{ fontSize: "0.8rem", color: "#718096" }}>{m.role}</span>
+                          <span style={{ fontSize: "0.8rem", color: "#718096" }}>{m.faculty_role}</span>
                         </td>
                         <td style={{ fontSize: "0.82rem", color: "#4b4b4b" }}>
                           {m.email   && <div>{m.email}</div>}
@@ -294,7 +287,6 @@ export default function CMSTeamMembers() {
                             </a>
                           )}
                         </td>
-                        <td style={{ textAlign: "center" }}>{m.display_order || 0}</td>
                         <td>
                           <button className="cms-icon-btn" onClick={() => handleOpenForm(m)} title="Editar">
                             <FaEdit />
@@ -355,13 +347,12 @@ function MemberForm({ member, onClose, refreshMembers }) {
 
   const [formData, setFormData] = useState({
     name:          member?.name          ?? "",
-    role:          member?.role          ?? "",
+    faculty_role:          member?.faculty_role          ?? "",
     email:         member?.email         ?? "",
     phone:         member?.phone         ?? "",
     phone_ext:     member?.phone_ext     ?? member?.extension ?? "",
     linkedin_url:  member?.linkedin_url  ?? "",
     member_type:   member?.member_type   ?? "faculty",
-    display_order: member?.display_order ?? 0,
     imageFile:     null,
   });
 
@@ -387,7 +378,7 @@ function MemberForm({ member, onClose, refreshMembers }) {
     if (!formData.name.trim()) {
       Swal.fire("Error", "El nombre es obligatorio.", "warning"); return false;
     }
-    if (formData.member_type === 'faculty' && !formData.role.trim()) {
+    if (formData.member_type === 'faculty' && !formData.faculty_role.trim()) {
       Swal.fire("Error", "El rol es obligatorio para la facultad.", "warning"); return false;
     }
     return true;
@@ -416,7 +407,6 @@ function MemberForm({ member, onClose, refreshMembers }) {
       : `${API_URL}/${endpoint}`;
 
     const { imageFile, ...bodyData } = formData;
-    bodyData.display_order = parseInt(bodyData.display_order, 10) || 0;
 
     try {
       const token = localStorage.getItem("cmsAdmin");
@@ -499,22 +489,10 @@ function MemberForm({ member, onClose, refreshMembers }) {
           <label>Rol / Posición {formData.member_type === 'faculty' && <span className="required-asterisk">*</span>}</label>
           <input
             className="cms-input"
-            name="role"
-            value={formData.role}
+            name="faculty_role"
+            value={formData.faculty_role}
             onChange={handleChange}
             placeholder="Ej. Coordinator and PI"
-          />
-        </div>
-
-        <div className="cms-form-group">
-          <label>Orden de aparición</label>
-          <input
-            className="cms-input"
-            type="number"
-            name="display_order"
-            value={formData.display_order}
-            onChange={handleChange}
-            min={0}
           />
         </div>
 

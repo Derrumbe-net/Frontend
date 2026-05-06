@@ -308,6 +308,7 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
     return null;
 };
 
+// Added onDataUpdate prop to lift state
 const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecast, onDataUpdate, isPreview = false }) => {
     const [stations, setStations] = useState([]);
     const map = useMap();
