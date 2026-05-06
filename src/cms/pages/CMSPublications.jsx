@@ -122,7 +122,7 @@ export default function CMSPublicaciones() {
 
     // 3. Exportación a CSV
     const exportToCSV = () => {
-        const headers = ["ID", "Título", "Enlace", "Fecha de Publicación", "Descripción"];
+        const headers = ["ID", "Título", "Enlace", "Fecha de Publicación", "Descripción", "Imagen"];
         
         const rows = sortedPublications.map(pub => {
             const id = pub.id || pub.publication_id || "";
@@ -131,13 +131,15 @@ export default function CMSPublicaciones() {
             const url = pub.publication_url ? pub.publication_url.replace(/"/g, '""') : "";
             const desc = pub.description ? pub.description.replace(/"/g, '""') : "";
             const date = pub.published_date || "";
+            const imgPath = pub.image_path || "";
 
             return [
                 id,
                 `"${title}"`,
                 `"${url}"`,
                 `"${date}"`,
-                `"${desc}"`
+                `"${desc}"`,
+                `"${imgPath}"`
             ];
         });
 
@@ -318,7 +320,11 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
     const [isValidating, setIsValidating] = useState(false);
 
     const [formData, setFormData] = useState({
-        title: "", publication_url: "", description: "", imageFile: null,
+        title: "", 
+        publication_url: "", 
+        description: "", 
+        image_path: "", 
+        imageFile: null,
     });
 
     const [previewUrl, setPreviewUrl] = useState(null);
@@ -329,6 +335,7 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
                 title: publication.title,
                 publication_url: publication.publication_url,
                 description: publication.description,
+                image_path: publication.image_path || "", 
                 imageFile: null,
             });
             if (publication.image_url || publication.image_path) {
@@ -433,20 +440,19 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
         if (!confirm.isConfirmed) return;
 
         const method = isEdit ? "PUT" : "POST";
-        
-        const url = isEdit
-            ? `${apiUrl}/publications/${pubId}`
-            : `${apiUrl}/publications`;
+        const url = isEdit ? `${apiUrl}/publications/${pubId}` : `${apiUrl}/publications`;
+
+        const uploadedFileName = formData.imageFile ? formData.imageFile.name : formData.image_path;
 
         const bodyData = {
-            ...formData,
+            title: formData.title,
+            description: formData.description,
             publication_url: finalUrl,
-            admin_id: 1,
+            image_path: uploadedFileName || "", 
         };
 
         try {
             const token = localStorage.getItem("cmsAdmin");
-            
             if (!token) { Swal.fire("Error", "Sesión expirada.", "error"); return; }
 
             const response = await fetch(url, {
@@ -470,11 +476,20 @@ function PublicationForm({ publication, onClose, refreshPublications, apiUrl }) 
                 const imageForm = new FormData();
                 imageForm.append("image", formData.imageFile);
 
-                await fetch(`${apiUrl}/publications/${finalPubId}/image`, {
+                const imageResponse = await fetch(`${apiUrl}/publications/${finalPubId}/image`, {
                     method: "POST",
                     headers: { "Authorization": `Bearer ${token}` },
                     body: imageForm,
                 });
+
+                if (!imageResponse.ok) {
+                    const errData = await imageResponse.json();
+                    console.error("Image upload failed:", errData);
+                    Swal.fire("Aviso", `La publicación se guardó, pero la imagen falló: ${errData.error || "Error desconocido"}`, "warning");
+                    refreshPublications();
+                    onClose();
+                    return;
+                }
             }
 
             Swal.fire("Éxito", "Operación realizada correctamente", "success");
