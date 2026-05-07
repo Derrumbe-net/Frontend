@@ -683,7 +683,7 @@ const PrecipLegend = () => {
 };
 
 export default function InteractiveMap({ isPreview = false }) {
-    const center = [18.220833, -66.420149];
+    const center = isPreview ? [17.9, -66.4] : [18.220833, -66.420149];
 
     const [showStations, setShowStations] = useState(true);
     const [selectedYear, setSelectedYear] = useState("");
@@ -716,6 +716,31 @@ export default function InteractiveMap({ isPreview = false }) {
     const [showDisclaimer, setShowDisclaimer] = useState(
         isPreview ? false : (localStorage.getItem('disclaimerAccepted') !== 'true')
     );
+
+    const [mapHeight, setMapHeight] = useState('100dvh');
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+    useEffect(() => {
+        if (isPreview || !isMobile) return;
+        
+        const updateHeight = () => {
+            const navbar = document.querySelector('.nav');
+            const footer = document.querySelector('.footer');
+            if (navbar && footer) {
+                const navH = navbar.offsetHeight;
+                const footH = footer.offsetHeight;
+                setMapHeight(`calc(100dvh - ${navH}px - ${footH}px)`);
+            }
+        };
+
+        // Small delay to ensure navbar and footer are rendered
+        const timer = setTimeout(updateHeight, 100);
+        window.addEventListener('resize', updateHeight);
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', updateHeight);
+        };
+    }, [isMobile, isPreview]);
 
     useEffect(() => {
         try {
@@ -851,7 +876,7 @@ export default function InteractiveMap({ isPreview = false }) {
             setShowSaturation(true);
             setShowPrecip12hr(false);
 
-            setShowSaturationLegend(true);
+            setShowSaturationLegend(false);
             setShowSusceptibilityLegend(false);
             setShowPrecipLegend(false);
         }
@@ -878,12 +903,12 @@ export default function InteractiveMap({ isPreview = false }) {
         setShowSusceptibility(false);
         setShowForecast(false);
 
-        setShowSaturationLegend(true);
+        setShowSaturationLegend(false);
         setShowSusceptibilityLegend(false);
         setShowPrecipLegend(false);
     };
 
-    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    
 
     let mapLabelText = "";
 
@@ -911,7 +936,7 @@ export default function InteractiveMap({ isPreview = false }) {
                 dragging={!isPreview}
                 zoomControl={false}
                 style={{ 
-                    height: isPreview ? '450px' : isMobile ? 'calc(100svh - 51px - 179px)' : '100vh', 
+                    height: isPreview ? '450px' : isMobile ? mapHeight : '100vh', 
                     width: '100%', 
                     position: 'relative' 
                 }}
