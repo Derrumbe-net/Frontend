@@ -218,19 +218,12 @@ export default function CMSStations() {
                                 ) : (
                                     paginatedStations.map((s) => {
                                         const id = s.id || s.station_id;
-                                        // CHECK FOR ALL POSSIBLE IMAGE PATH PROPERTIES HERE
-                                        const hasImage = s.image_url || s.sensor_image_url || s.image_path || s.sensor_image_path;
-
+                                        const hasImage = s.sensor_image_path || s.sensor_image_url;
                                         return (
                                             <tr key={id}>
                                                 <td>
                                                     {hasImage ? (
-                                                        <a
-                                                            href={`${API_URL}/stations/item/${id}/images/sensor`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            title="Ver imagen completa"
-                                                        >
+                                                        <a href={`${API_URL}/stations/item/${id}/images/sensor`} target="_blank" rel="noopener noreferrer">
                                                             <img 
                                                                 src={`${API_URL}/stations/item/${id}/images/sensor?t=${new Date().getTime()}`} 
                                                                 alt={s.name} 
@@ -352,10 +345,8 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
                 imageFile: null
             });
 
-            // FIXED: Checking for _path variants as well!
-            const hasImage = station.image_url || station.sensor_image_url || station.image_path || station.sensor_image_path;
-            
-            if (hasImage) {
+            const hasSensorImg = station.sensor_image_path || station.sensor_image_url;
+            if (hasSensorImg) {
                 setPreviewUrl(`${apiUrl}/stations/item/${stationId}/images/sensor?t=${new Date().getTime()}`);
             } else {
                 setPreviewUrl(null);
