@@ -225,10 +225,13 @@ export default function CMSStations() {
                                 ) : (
                                     paginatedStations.map((s) => {
                                         const id = s.id || s.station_id;
+                                        // CHECK FOR ALL POSSIBLE IMAGE PATH PROPERTIES HERE
+                                        const hasImage = s.image_url || s.sensor_image_url || s.image_path || s.sensor_image_path;
+
                                         return (
                                             <tr key={id}>
                                                 <td>
-                                                    {s.image_url || s.sensor_image_url ? (
+                                                    {hasImage ? (
                                                         <a
                                                             href={`${API_URL}/stations/item/${id}/images/sensor`}
                                                             target="_blank"
@@ -362,7 +365,10 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
                 imageFile: null
             });
 
-            if (station.image_url || station.sensor_image_url) {
+            // FIXED: Checking for _path variants as well!
+            const hasImage = station.image_url || station.sensor_image_url || station.image_path || station.sensor_image_path;
+            
+            if (hasImage) {
                 setPreviewUrl(`${apiUrl}/stations/item/${stationId}/images/sensor?t=${new Date().getTime()}`);
             } else {
                 setPreviewUrl(null);
