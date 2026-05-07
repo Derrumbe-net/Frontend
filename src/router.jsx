@@ -16,6 +16,7 @@ import Request from './pages/Request'
 import Stations from './pages/Stations';
 import SusceptibilityMap from './pages/SusceptibilityMap';
 import SusceptibilityMunicipalitiesMap from './pages/SusceptibilityMunicipalitiesMap';
+import NotFound from './pages/PageNotFound';
 
 // CMS (Admin Dashboard)
 import CMSLayout from './cms/layout/CMSLayout';
@@ -56,6 +57,7 @@ const router = createBrowserRouter([
       { path: 'solicitud', element: <Request />},
       { path: 'landslideready-individuos', element: <LandslideReadyPR_Individuos /> },
       { path: 'landslideready-municipios', element: <LandslideReadyPR_Municipios /> },
+      { path: '*', element: <NotFound /> },
     ],
   },
 
