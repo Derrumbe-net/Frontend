@@ -250,21 +250,8 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
             errorTileUrl: '', 
         }).addTo(map);
 
-        const municipalities = EL.dynamicMapLayer({
-            url: 'https://services5.arcgis.com/TQ9qkk0dURXSP7LQ/arcgis/rest/services/LIMITES_LEGALES_MUNICIPIOS/MapServer',
-            opacity: 1,
-            f: 'image',
-        }).addTo(map);
-
         return () => {
-            // Nullify error handlers to prevent async crashes on unmount
-            if (municipalities) {
-                municipalities.onOverlayError = function() {};
-                municipalities._overlayOnError = function() {};
-            }
-            
             map.removeLayer(hillshade);
-            map.removeLayer(municipalities);
         };
     }, [map]);
 
@@ -278,10 +265,8 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
         }
         return () => {
             if (precipLayer) {
-                // Nullify error handlers to prevent async crashes on unmount
                 precipLayer.onOverlayError = function() {};
                 precipLayer._overlayOnError = function() {};
-                
                 map.removeLayer(precipLayer);
             }
         };
@@ -299,7 +284,6 @@ const EsriOverlays = ({ showPrecip, showSusceptibility }) => {
         }
         return () => {
             if (susceptibilityLayer) {
-                // tiledMapLayers are generally safer, but you can add the override here too if needed
                 map.removeLayer(susceptibilityLayer);
             }
         };
@@ -316,25 +300,17 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
     const calculateMetricsFromRawData = (reading, stationInfo) => {
         if (!reading) return null;
 
-        // 1. Get precipitation
         const precipValue = parseFloat(reading.precipitation);
         const totalRainMm = isNaN(precipValue) ? 0 : precipValue;
         const totalRainInches = totalRainMm / 25.4; 
 
-        // 2. Get limits and the latest reading for soil saturation
         const wcRatios = [];
-        
-        // Limits from the /stations API metadata
         const limits = [stationInfo.wc1_max, stationInfo.wc2_max, stationInfo.wc3_max, stationInfo.wc4_max];
-        
-        // Values from the /stations/latest single data object
         const keys = ['wc1', 'wc2', 'wc3', 'wc4'];
 
         limits.forEach((limit, index) => {
             const val = parseFloat(reading[keys[index]]);
             const max = parseFloat(limit);
-            
-            // Ensure both parsed successfully and max is greater than 0
             if (!isNaN(val) && !isNaN(max) && max > 0) {
                 wcRatios.push(val / max);
             }
@@ -344,15 +320,14 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         if (wcRatios.length > 0) {
             const sumRatio = wcRatios.reduce((a, b) => a + b, 0);
             avgSaturation = (sumRatio / wcRatios.length) * 100;
-            
-            // Cap saturation at 100% in case sensor readings temporarily exceed the calibrated max
             if (avgSaturation > 100) avgSaturation = 100;
         }
 
         return {
             calculatedPrecip: totalRainInches, 
             calculatedSaturation: avgSaturation,
-            lastUpdated: reading.recorded_at
+            // Safety check for date fields
+            lastUpdated: reading.recorded_at || reading.last_updated || reading.created_at
         };
     };
 
@@ -360,13 +335,12 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
     useEffect(() => {
         const loadInitialData = async () => {
             try {
-                // 1. Fetch base stations
+                // 1. Fetch base stations (Now includes sensor_image_path and plot_image_path!)
                 const stationRes = await fetch(BASE_STATIONS_URL);
                 if (!stationRes.ok) return;
                 const baseStations = await stationRes.json();
                 
                 const dataArray = Array.isArray(baseStations) ? baseStations : [];
-
                 if (dataArray.length === 0) return;
 
                 // 2. Fetch the latest readings immediately after
@@ -378,14 +352,22 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 
                 if (Array.isArray(latestReadings)) {
                     latestReadings.forEach(record => {
-                        const recordStationId = record.station_id;
-                        const station = dataArray.find(s => s.station_id === recordStationId);
+                        const recordStationId = record.station_id || record.id;
                         
-                        // Check if station exists and the data object is present
-                        if (station && record.data) {
-                            const metrics = calculateMetricsFromRawData(record.data, station);
+                        // FIX: Wrap IDs in Number() so production strings map correctly to ints
+                        const station = dataArray.find(s => 
+                            Number(s.station_id) === Number(recordStationId) || 
+                            Number(s.id) === Number(recordStationId)
+                        );
+                        
+                        const readingData = record.data || record;
+                        
+                        if (station && readingData) {
+                            const metrics = calculateMetricsFromRawData(readingData, station);
                             if (metrics) {
+                                // FIX: Use spread operator to preserve all fields
                                 localUpdates[recordStationId] = {
+                                    ...readingData,
                                     precipitation: metrics.calculatedPrecip,
                                     soil_saturation: metrics.calculatedSaturation,
                                     last_updated: metrics.lastUpdated
@@ -395,16 +377,17 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                     });
                 }
 
-                // Merge and set state
+                // Merge and set state (Image paths from base stations are safely retained here!)
                 const updatedStations = dataArray.map(s => {
-                    if (localUpdates[s.station_id]) {
-                        return { ...s, ...localUpdates[s.station_id] };
+                    const id = s.station_id || s.id;
+                    if (localUpdates[id]) {
+                        return { ...s, ...localUpdates[id] };
                     }
                     return s;
                 });
                 
                 setStations(updatedStations);
-                if (onDataUpdate) onDataUpdate(updatedStations); // Fixed connection to parent
+                if (onDataUpdate) onDataUpdate(updatedStations); 
 
             } catch (err) {
                 console.error("Error loading station data:", err);
@@ -412,7 +395,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         };
 
         loadInitialData();
-    }, [onDataUpdate]); // Added dependency
+    }, [onDataUpdate]);
 
     const createSaturationIcon = (saturation, lastUpdated) => {
         const { isOutdated, timeString } = getStationStatus(lastUpdated);
@@ -434,9 +417,14 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
             </span>
         ` : "";
 
+        // Inline background colors as a fallback
+        let bgColor = "#e0c853"; 
+        if (saturation >= 90) bgColor = "#001f57"; 
+        else if (saturation >= 80) bgColor = "#63b3ff"; 
+
         return L.divIcon({
             html: `
-                <div class="${className}" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box; color: white; font-size: ${isPreview ? '10px' : '14px'};">
+                <div class="${className}" style="background-color: ${bgColor}; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; box-sizing: border-box; color: white; font-size: ${isPreview ? '10px' : '14px'}; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.4);">
                     <span>${rounded}%</span>
                     ${clockHtml}
                 </div>
@@ -475,10 +463,9 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         return "#DADADA"; 
     };
 
-    /** PRECIPITATION ICON **/
     const createPrecipIcon = (precip, lastUpdated) => {
         const color = getPrecipColor(precip);
-        const rounded = Number(precip).toFixed(2);
+        const rounded = precip != null ? Number(precip).toFixed(2) : "--";
         const { isOutdated, timeString } = getStationStatus(lastUpdated);
 
         const clockHtml = (isOutdated && !isPreview) ? `
@@ -507,32 +494,31 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
     return (
         <>
             {stations.map(station => {
-                if ((station.is_available !== 1 && station.is_available !== true) || !station.latitude) return null;
+                const lat = parseFloat(station.latitude);
+                const lng = parseFloat(station.longitude);
+                
+                // Safe check for is_available 
+                const isAvailable = station.is_available === 1 || station.is_available === "1" || station.is_available === true;
+
+                // FIX: Guard against string decimals crashing the map!
+                if (!isAvailable || isNaN(lat) || isNaN(lng)) {
+                    return null;
+                }
+
                 let icon = null;
 
                 if (showLandslideForecast && station.landslide_forecast != null && typeof createForecastIcon === 'function') {
                     icon = createForecastIcon(station.landslide_forecast);
                 }
-                else if (showSaturation && station.soil_saturation != null) {
-                    icon = createSaturationIcon(station.soil_saturation, station.last_updated);
-                }
-                else if (showPrecip12hr && station.precipitation != null) {
+                else if (showPrecip12hr) {
                     icon = createPrecipIcon(station.precipitation, station.last_updated);
                 }
                 else {
-                    if (station.soil_saturation != null) {
-                        icon = createSaturationIcon(station.soil_saturation, station.last_updated);
-                    }
-                    else if (station.precipitation != null) {
-                        icon = createPrecipIcon(station.precipitation, station.last_updated);
-                    }
-                    else {
-                        return null;
-                    }
+                    icon = createSaturationIcon(station.soil_saturation, station.last_updated);
                 }
 
                 return (
-                    <Marker key={station.station_id} position={[station.latitude, station.longitude]} icon={icon}>
+                    <Marker key={station.station_id || station.id || Math.random()} position={[lat, lng]} icon={icon}>
                         <StationPopup station={station} />
                     </Marker>
                 );
@@ -566,7 +552,6 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears, onDataUpdate }) =
                 return response.json();
             })
             .then((data) => {
-                // SAFETY CHECK: Ensure data is an array before processing
                 const safeData = Array.isArray(data) ? data : [];
                 
                 setAllLandslides(safeData);
@@ -586,9 +571,8 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears, onDataUpdate }) =
             .catch((err) => {
                 console.error("API Fetch Error:", err);
             });
-    }, [onDataUpdate]); // Added dependency
+    }, [onDataUpdate]); 
 
-    // SECONDARY SAFETY CHECK: Fallback to empty array just in case
     const filteredLandslides = (allLandslides || []).filter(landslide => {
         if (selectedYear === 'all') {
             return true;
@@ -603,8 +587,14 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears, onDataUpdate }) =
         <>
             {filteredLandslides.map(landslide => {
                 const lsId = landslide.id || landslide.landslide_id;
+                // FIX: Float conversion for landslides
+                const lat = parseFloat(landslide.latitude);
+                const lng = parseFloat(landslide.longitude);
+                
+                if(isNaN(lat) || isNaN(lng)) return null;
+
                 return (
-                    <Marker key={lsId} position={[landslide.latitude, landslide.longitude]} icon={customIcon}>
+                    <Marker key={lsId} position={[lat, lng]} icon={customIcon}>
                         <LandslidePopup landslide={landslide} />
                     </Marker>
                 );
@@ -1020,7 +1010,6 @@ export default function InteractiveMap({ isPreview = false }) {
                 {showSusceptibilityLegend && <SusceptibilityLegend />}
                 {showPrecipLegend && <PrecipLegend />}
 
-                {/* Path B: Custom Cached Image Overlay */}
                 {showForecast && radarFrames.length > 0 && radarFrames[currentFrameIdx] && (
                     <ImageOverlay 
                         url={`${BASE_DOMAIN}${radarFrames[currentFrameIdx].url}`} 

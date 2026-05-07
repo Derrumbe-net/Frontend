@@ -19,47 +19,37 @@ const API_URL = import.meta.env.VITE_API_URL;
 const StationPopup = ({ station }) => {
     const [currentImgIndex, setCurrentImgIndex] = useState(0);
     const [images, setImages] = useState([]);
-    const [imagesLoading, setImagesLoading] = useState(true);
-
-    const id = station?.id || station?.station_id;
 
     useEffect(() => {
-        if (!id) return;
+        if (!station) return;
 
-        setImagesLoading(true);
-        setImages([]);
+        const id = station.id || station.station_id;
+        const imgs = [];
+
+        // We no longer need to fetch! We check the paths directly from the optimized station object
+        if (station.sensor_image_path) {
+            imgs.push({
+                src: `${API_URL}/stations/item/${id}/images/sensor`,
+                label: 'Sensor View'
+            });
+        }
+        if (station.plot_image_path) {
+            imgs.push({
+                src: `${API_URL}/stations/item/${id}/images/plot`,
+                label: 'Data Plot'
+            });
+        }
+
+        setImages(imgs);
         setCurrentImgIndex(0);
-
-        fetch(`${API_URL}/stations/item/${id}/images`)
-            .then(res => {
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return res.json();
-            })
-            .then(data => {
-                const imgs = [];
-                if (data.sensor_image_url) {
-                    imgs.push({
-                        src: `${API_URL}${data.sensor_image_url}`,
-                        label: 'Sensor View'
-                    });
-                }
-                if (data.plot_image_url) {
-                    imgs.push({
-                        src: `${API_URL}${data.plot_image_url}`,
-                        label: 'Data Plot'
-                    });
-                }
-                setImages(imgs);
-            })
-            .catch(err => console.error("Failed to load station images:", err))
-            .finally(() => setImagesLoading(false));
-    }, [id]);
+    }, [station]);
 
     if (!station) return null;
 
+    // Fixed: Ensure we pull 'name' first since that matches the new DB schema!
+    const stationName = station.name || station.city || "Estación Desconocida";
     const soilSaturation = station.soil_saturation;
     const lastUpdated = station.last_updated;
-    const city = station.city;
     const precip = station.precipitation;
 
     const nextImage = (e) => {
@@ -79,7 +69,7 @@ const StationPopup = ({ station }) => {
     };
 
     let normalizedDate = lastUpdated;
-    if (normalizedDate) {
+    if (normalizedDate && typeof normalizedDate === 'string') {
         normalizedDate = normalizedDate.replace(' ', 'T').replace('Z', '');
         if (!normalizedDate.includes('-04:00')) {
             normalizedDate += '-04:00';
@@ -99,14 +89,10 @@ const StationPopup = ({ station }) => {
             })
             : 'N/A';
 
-
     const formattedSoilSaturation =
         soilSaturation !== null && soilSaturation !== undefined
             ? Math.ceil(Number(soilSaturation))
             : 'N/A';
-
-
-
 
     const formattedPrecip = precip != null
         ? Number(precip).toFixed(2)
@@ -116,12 +102,10 @@ const StationPopup = ({ station }) => {
         <Popup maxWidth={350}>
             <div className="custom-popup-content">
                 <div className="info roboto-condensed">
-                    <h2 className="bebas-neue">{city}</h2>
+                    <h2 className="bebas-neue">{stationName}</h2>
 
-                    {/* Carousel */}
-                    {imagesLoading ? (
-                        <div className="carousel-loading">Loading images...</div>
-                    ) : images.length > 0 ? (
+                    {/* Instant Carousel - No more Loading State! */}
+                    {images.length > 0 && (
                         <div className="popup-carousel">
                             <div
                                 className="carousel-image-container"
@@ -153,7 +137,7 @@ const StationPopup = ({ station }) => {
                                 </div>
                             )}
                         </div>
-                    ) : null}
+                    )}
 
                     <ul>
                         <li><strong>Last Updated:</strong> <span>{formattedLastUpdated} AST</span></li>
