@@ -28,9 +28,7 @@ export default function CMSTeamMembers() {
   const [filterType, setFilterType] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Estados para la función de ordenar
   const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
-  
   const itemsPerPage = 8;
 
   useEffect(() => { fetchMembers(); }, []);
@@ -45,7 +43,6 @@ export default function CMSTeamMembers() {
       const facData = await facRes.json();
       const stuData = await stuRes.json();
 
-      // Normalizamos algunos campos temporalmente por si el backend no los envía unificados
       const normalizedFac = (facData || []).map(f => ({
         ...f,
         member_type: 'faculty',
@@ -60,7 +57,6 @@ export default function CMSTeamMembers() {
       }));
 
       const combined = [...normalizedFac, ...normalizedStu];
-
       setMembers(combined);
     } catch (err) {
       console.error("Error fetching team members:", err);
@@ -82,9 +78,11 @@ export default function CMSTeamMembers() {
     try {
       const token = localStorage.getItem("cmsAdmin");
       const id = member.id || member.member_id;
-      const endpoint = member.member_type === "faculty" ? "faculty-members" : "student-members";
+      
+      const isFaculty = member.member_type === "faculty";
+      const endpoint = isFaculty ? `faculty-members/${id}` : `student-members/item/${id}`;
 
-      const res = await fetch(`${API_URL}/${endpoint}/${id}`, {
+      const res = await fetch(`${API_URL}/${endpoint}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -109,17 +107,14 @@ export default function CMSTeamMembers() {
     setEditMember(null);
   };
 
-  // 1. Filtrar
   const filtered = filterType === "all"
     ? members
     : members.filter((m) => m.member_type === filterType);
 
-  // 2. Ordenar
   const sorted = [...filtered].sort((a, b) => {
     let aValue = a[sortConfig.key];
     let bValue = b[sortConfig.key];
 
-    // Manejo de strings nulos/undefined
     if (typeof aValue === 'string') aValue = aValue.toLowerCase();
     if (typeof bValue === 'string') bValue = bValue.toLowerCase();
     
@@ -131,7 +126,6 @@ export default function CMSTeamMembers() {
     return 0;
   });
 
-  // 3. Paginar sobre los datos ordenados
   const totalPages  = Math.ceil(sorted.length / itemsPerPage);
   const startIndex  = (currentPage - 1) * itemsPerPage;
   const paginated   = sorted.slice(startIndex, startIndex + itemsPerPage);
@@ -154,12 +148,10 @@ export default function CMSTeamMembers() {
     return sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />;
   };
 
-  // Función para exportar a CSV
   const exportToCSV = () => {
     const headers = ["ID", "Nombre", "Tipo", "Rol", "Email", "Teléfono", "Extensión", "LinkedIn"];
     
     const rows = sorted.map(m => {
-      // Envolvemos en comillas dobles para evitar problemas con comas en los textos
       return [
         m.id || m.faculty_member_id || m.student_member_id || "",
         `"${m.name || ""}"`,
@@ -177,8 +169,7 @@ export default function CMSTeamMembers() {
       ...rows.map(r => r.join(","))
     ].join("\n");
 
-    // Crear y descargar el blob
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" }); // \uFEFF añade BOM para caracteres especiales en Excel
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" }); 
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -262,7 +253,7 @@ export default function CMSTeamMembers() {
                         <td>
                           {m.image_url || m.image_path ? (
                             <img
-                              src={`${API_URL}/${endpoint}/${id}/image`}
+                              src={`${API_URL}/${endpoint}/item/${id}/image?t=${new Date().getTime()}`}
                               alt={m.name}
                               className="cms-thumb cms-thumb--circle"
                             />
@@ -347,7 +338,7 @@ function MemberForm({ member, onClose, refreshMembers }) {
 
   const [formData, setFormData] = useState({
     name:          member?.name          ?? "",
-    faculty_role:          member?.faculty_role          ?? "",
+    faculty_role:  member?.faculty_role  ?? "",
     email:         member?.email         ?? "",
     phone:         member?.phone         ?? "",
     phone_ext:     member?.phone_ext     ?? member?.extension ?? "",
@@ -359,7 +350,7 @@ function MemberForm({ member, onClose, refreshMembers }) {
   const endpointForPreview = member?.member_type === "faculty" ? "faculty-members" : "student-members";
 
   const [previewUrl, setPreviewUrl] = useState(
-    (member?.image_url || member?.image_path) ? `${API_URL}/${endpointForPreview}/${memberId}/image` : null
+    (member?.image_url || member?.image_path) ? `${API_URL}/${endpointForPreview}/item/${memberId}/image?t=${new Date().getTime()}` : null
   );
 
   const handleChange = (e) => {
@@ -399,19 +390,44 @@ function MemberForm({ member, onClose, refreshMembers }) {
     });
     if (!confirmed.isConfirmed) return;
 
-    const endpoint = formData.member_type === "faculty" ? "faculty-members" : "student-members";
+    const isFaculty = formData.member_type === "faculty";
+    const endpoint = isFaculty ? "faculty-members" : "student-members";
     const method = isEdit ? "PUT" : "POST";
     
-    const url = isEdit
-      ? `${API_URL}/${endpoint}/${memberId}`
-      : `${API_URL}/${endpoint}`;
+    let url = "";
+    if (isEdit) {
+      url = isFaculty ? `${API_URL}/${endpoint}/${memberId}` : `${API_URL}/${endpoint}/item/${memberId}`;
+    } else {
+      url = `${API_URL}/${endpoint}`; 
+    }
 
-    const { imageFile, ...bodyData } = formData;
+    // ====================================================
+    // FIX: Perfect Data Mapping for Go Backend DTOs
+    // ====================================================
+    let bodyData = {};
+    if (isFaculty) {
+        bodyData = {
+            name: formData.name,
+            faculty_role: formData.faculty_role,
+            email: formData.email,
+            phone: formData.phone,
+            extension: formData.phone_ext, // Maps phone_ext to Go's 'extension'
+            linkedin_url: formData.linkedin_url,
+            image_path: member?.image_path || "" // Protects existing image path from wiping!
+        };
+    } else {
+        bodyData = {
+            name: formData.name,
+            student_type: formData.member_type, // Maps member_type to Go's 'student_type'
+            image_path: member?.image_path || "" // Protects existing image path from wiping!
+        };
+    }
 
     try {
       const token = localStorage.getItem("cmsAdmin");
       if (!token) { Swal.fire("Error", "Sesión expirada.", "error"); return; }
 
+      // 1. Submit JSON Details
       const res = await fetch(url, {
         method,
         headers: {
@@ -421,20 +437,33 @@ function MemberForm({ member, onClose, refreshMembers }) {
         body: JSON.stringify(bodyData),
       });
 
-      if (!res.ok) { Swal.fire("Error", "No se pudo guardar el miembro.", "error"); return; }
+      if (!res.ok) { 
+        const errData = await res.json();
+        Swal.fire("Error", `No se pudo guardar: ${errData.error || res.statusText}`, "error"); 
+        return; 
+      }
 
       const result  = await res.json();
       const finalMemberId = isEdit ? memberId : (result.id || result.member_id || result.faculty_member_id || result.student_member_id);
 
-      if (imageFile && finalMemberId) {
+      // 2. Upload Image if exists
+      if (formData.imageFile && finalMemberId) {
         const imgForm = new FormData();
-        imgForm.append("image", imageFile);
+        imgForm.append("image", formData.imageFile);
         
-        await fetch(`${API_URL}/${endpoint}/${finalMemberId}/image`, {
+        const imgUploadUrl = isFaculty
+          ? `${API_URL}/${endpoint}/${finalMemberId}/image`
+          : `${API_URL}/${endpoint}/item/${finalMemberId}/image`;
+
+        const imgRes = await fetch(imgUploadUrl, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: imgForm,
         });
+
+        if (!imgRes.ok) {
+            Swal.fire("Aviso", "Los datos se guardaron, pero hubo un error subiendo la imagen.", "warning");
+        }
       }
 
       Swal.fire("Éxito", "Operación realizada correctamente.", "success");
@@ -493,6 +522,7 @@ function MemberForm({ member, onClose, refreshMembers }) {
             value={formData.faculty_role}
             onChange={handleChange}
             placeholder="Ej. Coordinator and PI"
+            disabled={formData.member_type !== 'faculty'}
           />
         </div>
 

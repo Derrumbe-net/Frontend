@@ -30,8 +30,8 @@ export default function About() {
         setFaculty(facultyMembers);
         
         // Fixed: Use student_type instead of member_type based on your Go JSON
-        setGraduate(studentMembers.filter((m) => (m.student_type || m.member_type) === "graduate"));
-        setUndergraduate(studentMembers.filter((m) => (m.student_type || m.member_type) === "undergraduate"));
+        setGraduate(studentMembers.filter((m) => (m.student_type) === "graduate"));
+        setUndergraduate(studentMembers.filter((m) => (m.student_type) === "undergraduate"));
         
         setFundingSources(funding);
       })
@@ -116,20 +116,29 @@ export default function About() {
     </section>
   );
 }
-
 function MemberCard({ member, memberType, showContact = false }) {
-  // Fixed: Added student_member_id to the fallback check
-  const id = member.id || member.student_member_id || member.member_id; 
+  // 1. Identify the ID (Check for both specific and generic names)
+  const id = member.student_member_id || member.faculty_member_id || member.member_id || member.id; 
   
-  const imgSrc = member.image_url
-    ? `${API_URL}/${memberType}-members/item/${id}/image`
+  // 2. Identify the Role/Description
+  const role = member.faculty_role || member.student_type || member.role || "Miembro";
+
+  // 3. Build the Image URL (Handle potential casing issues from Go)
+  const path = member.image_path || member.ImagePath;
+  const imgSrc = path 
+    ? `${API_URL}/${memberType}-members/item/${id}/image` 
     : PLACEHOLDER;
 
   const hasLinkedIn = showContact && member.linkedin_url;
 
   return (
     <div className="directory__card">
-      <img src={imgSrc} alt={member.name} className="profile" />
+      <img 
+        src={imgSrc} 
+        alt={member.name} 
+        className="profile" 
+        onError={(e) => { e.target.src = PLACEHOLDER; }} 
+      />
 
       <div className="directory__info">
         <div className="directory__linkedin">
@@ -146,13 +155,14 @@ function MemberCard({ member, memberType, showContact = false }) {
 
         <div className="directory__person-info">
           <strong>{member.name}</strong>
-          <p>{member.role}</p>
+          <p className="directory__role">{role}</p>
 
           {showContact && (member.email || member.phone) && (
-            <p>
+            <p className="directory__contact">
               {member.email     && <>{member.email}<br /></>}
               {member.phone     && <>{member.phone}<br /></>}
-              {member.phone_ext && <>{member.phone_ext}</>}
+              {/* Use 'extension' to match your Go DTO */}
+              {member.extension && <>Ext. {member.extension}</>}
             </p>
           )}
         </div>
@@ -164,7 +174,7 @@ function MemberCard({ member, memberType, showContact = false }) {
 function FundingCard({ source }) {
   const id = source.id || source.funding_id;
   
-  const imgSrc = source.image_url
+  const imgSrc = source.image_path
     ? `${API_URL}/funding-sources/item/${id}/image`
     : null;
 

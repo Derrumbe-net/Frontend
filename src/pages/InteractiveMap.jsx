@@ -317,7 +317,6 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         if (!reading) return null;
 
         // 1. Get precipitation
-        // Note: If your new API sends this in inches instead of mm, remove the `/ 25.4`.
         const precipValue = parseFloat(reading.precipitation);
         const totalRainMm = isNaN(precipValue) ? 0 : precipValue;
         const totalRainInches = totalRainMm / 25.4; 
@@ -405,6 +404,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 });
                 
                 setStations(updatedStations);
+                if (onDataUpdate) onDataUpdate(updatedStations); // Fixed connection to parent
 
             } catch (err) {
                 console.error("Error loading station data:", err);
@@ -412,7 +412,7 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
         };
 
         loadInitialData();
-    }, []);
+    }, [onDataUpdate]); // Added dependency
 
     const createSaturationIcon = (saturation, lastUpdated) => {
         const { isOutdated, timeString } = getStationStatus(lastUpdated);
@@ -550,7 +550,6 @@ const createLandslideIcon = () => {
     });
 };
 
-// Added onDataUpdate prop
 const PopulateLandslides = ({ selectedYear, setAvailableYears, onDataUpdate }) => {
     const [allLandslides, setAllLandslides] = useState([]);
     const customIcon = createLandslideIcon();
@@ -567,10 +566,13 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears, onDataUpdate }) =
                 return response.json();
             })
             .then((data) => {
-                setAllLandslides(data);
-                if (onDataUpdate) onDataUpdate(data);
+                // SAFETY CHECK: Ensure data is an array before processing
+                const safeData = Array.isArray(data) ? data : [];
+                
+                setAllLandslides(safeData);
+                if (onDataUpdate) onDataUpdate(safeData);
 
-                const years = data.map(ls => {
+                const years = safeData.map(ls => {
                     if (!ls.landslide_date) return null;
                     return new Date(ls.landslide_date).getFullYear();
                 });
@@ -584,9 +586,10 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears, onDataUpdate }) =
             .catch((err) => {
                 console.error("API Fetch Error:", err);
             });
-    }, []);
+    }, [onDataUpdate]); // Added dependency
 
-    const filteredLandslides = allLandslides.filter(landslide => {
+    // SECONDARY SAFETY CHECK: Fallback to empty array just in case
+    const filteredLandslides = (allLandslides || []).filter(landslide => {
         if (selectedYear === 'all') {
             return true;
         }
@@ -1142,4 +1145,3 @@ export default function InteractiveMap({ isPreview = false }) {
         </main>
     );
 }
-

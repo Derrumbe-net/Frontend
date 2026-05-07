@@ -18,7 +18,6 @@ export default function CMSReports() {
     const [editReport, setEditReport] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
 
-    // Estado para la configuración de ordenamiento (por defecto, los más recientes primero)
     const [sortConfig, setSortConfig] = useState({ key: "reported_at", direction: "desc" });
 
     const API_URL = `${import.meta.env.VITE_API_URL}`;
@@ -49,7 +48,6 @@ export default function CMSReports() {
         setEditReport(null);
     };
 
-    // 1. Lógica de ordenamiento
     const handleSort = (key) => {
         let direction = "asc";
         if (sortConfig.key === key && sortConfig.direction === "asc") {
@@ -78,14 +76,11 @@ export default function CMSReports() {
         return 0;
     });
 
-    // 2. Paginación basada en los datos ordenados
     const totalPages = Math.ceil(sortedReports.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedReports = sortedReports.slice(startIndex, startIndex + itemsPerPage);
 
-    // 3. Exportación a CSV
     const exportToCSV = () => {
-        // Incluimos campos extra que están en el form para hacer el reporte más útil
         const headers = [
             "ID", "Fecha del Evento", "Pueblo", "Dirección Física", 
             "Latitud", "Longitud", "Estado", "Reportado Por", 
@@ -95,7 +90,6 @@ export default function CMSReports() {
         const rows = sortedReports.map(r => {
             const id = r.id || r.report_id || "";
             const date = r.reported_at ? r.reported_at.slice(0, 10) : "";
-            // Escapar comillas dobles
             const city = r.city ? r.city.replace(/"/g, '""') : "";
             const address = r.physical_address ? r.physical_address.replace(/"/g, '""') : "";
             const status = r.is_validated ? "Validado" : "Pendiente";
@@ -206,7 +200,8 @@ export default function CMSReports() {
                                     return (
                                         <tr key={id}>
                                             <td>
-                                                <ReportThumbnail reportId={id} hasFolder={!!r.image_url} />
+                                                {/* FIXED: Check image_path instead of image_url so it correctly triggers a fetch */}
+                                                <ReportThumbnail reportId={id} hasFolder={!!r.image_path || !!r.image_url} />
                                             </td>
                                             <td>{r.reported_at?.slice(0, 10)}</td>
                                             <td style={{ fontWeight: '600' }}>{r.city}</td>
@@ -280,11 +275,11 @@ function ReportThumbnail({ reportId, hasFolder }) {
     useEffect(() => {
         if (!hasFolder) return;
 
-        fetch(`${API_URL}/reports/item/${reportId}/images`)
+        fetch(`${API_URL}/reports/${reportId}/images`)
             .then(res => res.json())
             .then(data => {
-                if (data.images && data.images.length > 0) {
-                    setFirstImage(data.images[0]);
+                if (data && Array.isArray(data) && data.length > 0) {
+                    setFirstImage(data[0]); // Adjusted: Your Go backend returns a direct array, not { images: [...] }
                 }
             })
             .catch(err => console.error("Thumb load error", err));
@@ -294,7 +289,7 @@ function ReportThumbnail({ reportId, hasFolder }) {
         return <span className="no-img" style={{fontSize:'0.8rem', color:'#999'}}>Sin imagen</span>;
     }
 
-    const imageUrl = `${API_URL}/reports/item/${reportId}/images/${firstImage}`;
+    const imageUrl = `${API_URL}/reports/${reportId}/images/${firstImage}`;
 
     return (
         <a href={imageUrl} target="_blank" rel="noopener noreferrer" title="Ver imagen completa">
@@ -342,7 +337,7 @@ function ReportForm({ report, onClose, refreshReports }) {
                 physical_address: report.physical_address || "",
                 latitude: report.latitude || "",
                 longitude: report.longitude || "",
-                is_validated: report.is_validated || 0,
+                is_validated: report.is_validated ? 1 : 0, // Ensure it sets to 1/0
                 landslide_id: report.landslide_id || report.id || null
             });
             fetchServerImages();
@@ -356,11 +351,12 @@ function ReportForm({ report, onClose, refreshReports }) {
 
     const fetchServerImages = async () => {
         try {
-            const res = await fetch(`${API_URL}/reports/item/${reportId}/images`);
+            const res = await fetch(`${API_URL}/reports/${reportId}/images`);
             if (res.ok) {
                 const data = await res.json();
-                if (data.images && Array.isArray(data.images)) {
-                    setExistingImages(data.images);
+                // Adjusted: Your Go backend returns a direct array, not { images: [...] }
+                if (Array.isArray(data)) {
+                    setExistingImages(data);
                 } else {
                     setExistingImages([]);
                 }
@@ -400,7 +396,7 @@ function ReportForm({ report, onClose, refreshReports }) {
 
         try {
             const token = localStorage.getItem("cmsAdmin");
-            const res = await fetch(`${API_URL}/reports/item/${reportId}/images/${filename}`, {
+            const res = await fetch(`${API_URL}/reports/${reportId}/images/${filename}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -461,7 +457,8 @@ function ReportForm({ report, onClose, refreshReports }) {
                 console.warn("Could not parse Admin ID from token, defaulting to 1");
             }
 
-            let sharedFolder = report.image_url;
+            // FIXED: Look for image_path from the backend
+            let sharedFolder = report.image_path || report.image_url;
             if (!sharedFolder && formData.reported_at) {
                 const datePart = formData.reported_at.slice(0, 10);
                 sharedFolder = `${datePart}_${reportId}`;
@@ -476,7 +473,7 @@ function ReportForm({ report, onClose, refreshReports }) {
                     landslide_date: formData.reported_at,
                     latitude: formData.latitude ? parseFloat(formData.latitude) : null,
                     longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-                    image_url: sharedFolder // Explicitly send folder name
+                    image_url: sharedFolder // Left this as image_url, assumes landslides expects it
                 };
 
                 const lsRes = await fetch(`${API_URL}/landslides`, {
@@ -502,10 +499,14 @@ function ReportForm({ report, onClose, refreshReports }) {
                 latitude: formData.latitude ? parseFloat(formData.latitude) : null,
                 longitude: formData.longitude ? parseFloat(formData.longitude) : null,
                 landslide_id: finalLandslideId,
-                image_url: sharedFolder 
+                // FIXED: Send 'image_path' to match Go Backend structs
+                image_path: sharedFolder, 
+
+                is_validated: formData.is_validated === 1,
+                reported_at: formData.reported_at ? new Date(formData.reported_at).toISOString() : null
             };
 
-            const res = await fetch(`${API_URL}/reports/item/${reportId}`, {
+            const res = await fetch(`${API_URL}/reports/${reportId}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -530,7 +531,7 @@ function ReportForm({ report, onClose, refreshReports }) {
                     const uploadForm = new FormData();
                     uploadForm.append("image_file", file);
 
-                    const imgRes = await fetch(`${API_URL}/reports/item/${reportId}/upload`, {
+                    const imgRes = await fetch(`${API_URL}/reports/${reportId}/upload`, {
                         method: "POST",
                         headers: { Authorization: `Bearer ${token}` },
                         body: uploadForm
@@ -623,7 +624,7 @@ function ReportForm({ report, onClose, refreshReports }) {
                     {existingImages.length > 0 ? (
                         <div className="cms-image-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
                             {existingImages.map((filename, idx) => {
-                                const imgUrl = `${API_URL}/reports/item/${reportId}/images/${filename}`;
+                                const imgUrl = `${API_URL}/reports/${reportId}/images/${filename}`;
                                 return (
                                     <div key={idx} className="cms-image-card" style={{ position: 'relative', width: '150px', height: '150px', border:'1px solid #ddd', borderRadius:'8px', overflow:'hidden' }}>
                                         <a href={imgUrl} target="_blank" rel="noopener noreferrer" title="Click para ver imagen completa">
