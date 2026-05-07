@@ -27,6 +27,8 @@ const BASE_LANDSLIDES_URL = `${BASE_DOMAIN}/landslides`;
 // --- CONSTANTS FOR RADAR ---
 const FRAME_SPEED = 1500; // 1.5 seconds per frame
 
+const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
 const Disclaimer = ({ onAgree }) => {
     return (
         <div className="disclaimer-overlay">
@@ -52,9 +54,6 @@ const CtrlZoomHandler = ({ setShowZoomHint }) => {
     const lastShownRef = useRef(0);
 
     useEffect(() => {
-        const isMobile = window.innerWidth < 768;
-        if (isMobile) return;
-
         const container = map.getContainer();
 
         const handleWheel = (e) => {
@@ -86,39 +85,6 @@ const CtrlZoomHandler = ({ setShowZoomHint }) => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
     }, [map, setShowZoomHint]);
-
-    return null;
-};
-
-const MobileTouchHandler = () => {
-    const map = useMap();
-
-    useEffect(() => {
-        const isMobile = window.innerWidth < 768;
-        if (!isMobile) return;
-
-        const container = map.getContainer();
-
-        const handleTouchStart = (e) => {
-            if (e.touches.length === 2) {
-                map.dragging.disable();
-            } else {
-                map.dragging.enable();
-            }
-        };
-
-        const handleTouchEnd = () => {
-            map.dragging.enable();
-        };
-
-        container.addEventListener("touchstart", handleTouchStart, { passive: true });
-        container.addEventListener("touchend", handleTouchEnd, { passive: true });
-
-        return () => {
-            container.removeEventListener("touchstart", handleTouchStart);
-            container.removeEventListener("touchend", handleTouchEnd);
-        };
-    }, [map]);
 
     return null;
 };
@@ -430,8 +396,8 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 </div>
             `,
             className: "",
-            iconSize: isPreview ? [40, 20] : [65, 30], 
-            iconAnchor: isPreview ? [20, 10] : [32, 15],
+            iconSize: isPreview ? [40, 20] : isMobile ? [27, 15] : [65, 30],
+            iconAnchor: isPreview ? [20, 10] : isMobile ? [13, 7] : [32, 15],
         });
     };
 
@@ -486,8 +452,8 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
                 </div>
             `,
             className: "",
-            iconSize: isPreview ? [40, 20] : [65, 30], 
-            iconAnchor: isPreview ? [20, 10] : [32, 15], 
+            iconSize: isPreview ? [40, 20] : isMobile ? [27, 15] : [65, 30],
+            iconAnchor: isPreview ? [20, 10] : isMobile ? [13, 7] : [32, 15],
         });
     };
 
@@ -530,8 +496,8 @@ const PopulateStations = ({ showSaturation, showPrecip12hr, showLandslideForecas
 const createLandslideIcon = () => {
     return L.icon({
         iconUrl: GreenPinIcon,
-        iconSize: [30, 40],        
-        iconAnchor: [15, 30],      
+        iconSize: isMobile ? [15, 20] : [30, 40],
+        iconAnchor: isMobile ? [7.5, 15] : [15, 30],      
         popupAnchor: [0, -10]      
     });
 };
@@ -917,7 +883,7 @@ export default function InteractiveMap({ isPreview = false }) {
         setShowPrecipLegend(false);
     };
 
-    const isMobile = window.innerWidth < 768;
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
 
     let mapLabelText = "";
 
@@ -944,7 +910,11 @@ export default function InteractiveMap({ isPreview = false }) {
                 scrollWheelZoom={!isPreview}
                 dragging={!isPreview}
                 zoomControl={false}
-                style={{ height: isPreview ? '450px' : '100vh', width: '100%', position: 'relative' }}
+                style={{ 
+                    height: isPreview ? '450px' : isMobile ? 'calc(100svh - 51px - 179px)' : '100vh', 
+                    width: '100%', 
+                    position: 'relative' 
+                }}
             >
 
                 {mapLabelText && <div className="map-label">{mapLabelText}</div>}
@@ -961,7 +931,6 @@ export default function InteractiveMap({ isPreview = false }) {
                 )} 
 
                 {!isPreview && <CtrlZoomHandler setShowZoomHint={setShowZoomHint} hasShownZoomHint={hasShownZoomHint} />}
-                <MobileTouchHandler />
 
                 {!isPreview && (
                     <MapMenu

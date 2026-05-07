@@ -292,9 +292,40 @@
 
 /* Mobile Adjustments */
 @media (max-width: 768px) {
-    .leaflet-popup-content-wrapper { width: 300px !important; }
-    .custom-popup-content .info h2 { font-size: 22px; }
-    .carousel-image-container { height: 160px; }
+    .leaflet-popup-content-wrapper { 
+        width: 200px !important;
+        max-width: 200px !important;
+    }
+
+    .leaflet-popup-content {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    .custom-popup-content .info {
+        padding: 8px !important;
+    }
+
+    .custom-popup-content .info h2 { 
+        font-size: 14px !important;
+        margin-bottom: 6px !important;
+    }
+
+    .custom-popup-content .info ul li { 
+        font-size: 11px !important; 
+        padding: 3px 0 !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .carousel-image-container { 
+        height: 100px !important;
+    }
+
+    .carousel-btn {
+        width: 22px !important;
+        height: 22px !important;
+    }
 }
 
 #disclaimer-modal {

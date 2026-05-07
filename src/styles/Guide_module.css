@@ -325,14 +325,17 @@
 
   .guide__flipbook-container {
     margin-top: 2.5rem !important;
-    padding-left: 1rem !important;
-    padding-right: 1.5rem !important;
+    padding: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
     box-sizing: border-box !important;
+    transform: translateX(-15px);
   }
 
   .guide__flipbook {
-    width: 100% !important;
-    max-width: 100% !important;
+    width: 90% !important;
+    max-width: 90% !important;
   }
 
   /* =====================================================
@@ -344,7 +347,7 @@
 
   .landslide__extra-info h2 {
     font-size: 1.6rem !important;
-    text-align: left !important;
+    text-align: center !important;
     padding-left: 0.5rem !important;
     padding-right: 1.5rem !important;
   }

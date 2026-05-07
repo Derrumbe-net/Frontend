@@ -97,30 +97,6 @@
   transform: scale(1.05);
 }
 
-@media (max-width: 900px) {
-  .hero {
-    min-height: 25vh;
-  }
-
-  .hero__logo {
-    height: clamp(40px, 14vw, 65px);
-  }
-
-  .hero__title {
-    font-size: clamp(0.75rem, 3vw, 1rem);
-  }
-
-  .btn.btn--report,
-  .btn.btn--outline {
-    font-size: 0.5rem;
-    padding: 0.2rem 0.5rem;
-  }
-
-  .hero__buttons {
-    gap: 0.5rem;
-  }
-}
-
 /* ===== MAPA INTERACTIVO ===== */
 .landing__map {
   background-color: #DFE8DA;
@@ -132,13 +108,14 @@
   justify-content: center;
   align-items: center;
   gap: 2rem;
+  box-sizing: border-box; /* ← add this */
+  overflow: hidden;        /* ← add this */
 }
 
 .landing__map-text {
   flex: 1;
   min-width: 300px;
   max-width: 500px;
-  margin-left: -70px;
 }
 
 .landing__map-text h2 {
@@ -155,19 +132,21 @@
 }
 
 .landing__map-link {
-  font-weight: 700;
+  font-weight: 900;
+  text-decoration: none;
+  color: #000;
 }
 
 .landing__map-preview-container {
   flex: 1;
-  max-width: 800px;
+  max-width: 500px;
   width: 100%;
 }
 
 .landing__map-preview-wrapper {
   position: relative;
   width: 100%;
-  height: 400px;
+  height: 300px;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -359,9 +338,56 @@
 }
 
 /* ============================================
-   MOBILE RESPONSIVE FIXES (EXCLUDING HERO)
+   MOBILE RESPONSIVE FIXES
    ============================================ */
 @media (max-width: 768px) {
+  
+  /* ---------------------------
+     HERO SECTION
+  --------------------------- */
+  .hero {
+    min-height: 35vh;
+  }
+
+  .hero__title {
+    font-size: clamp(1.5rem, 4vw, 1.4rem);
+  }
+
+  .btn.btn--report,
+  .btn.btn--outline {
+    font-size: 0.75rem !important; 
+    padding: 0.5rem 1rem !important;
+  }
+
+  .hero__buttons {
+    gap: 0.5rem;
+  }
+
+  .hero__overlay {
+    flex-direction: column;
+  }
+
+  .hero__logos {
+      flex-direction: row !important; 
+      gap: 1rem !important;
+      flex-wrap: wrap !important;
+      justify-content: center !important;
+  }
+
+  .hero__logo {
+      height: clamp(60px, 10vw, 45px) !important;
+      order: 2;
+  }
+
+  .hero__title {
+      order: 1;
+      width: 100% !important;
+      font-size: clamp(1.5rem, 4vw, 1.4rem) !important;
+  }
+
+  .hero__buttons {
+    order: 3;
+  }
 
   /* ---------------------------
      MAP SECTION
@@ -375,7 +401,7 @@
   .landing__map-text {
     margin: 0 !important;
     max-width: 100% !important;
-    padding-right: 1.50rem !important;
+    padding-right: 1rem !important;
     padding-left: 0.50rem !important;
     box-sizing: border-box !important;
     text-align: justify !important;
@@ -384,15 +410,12 @@
   .landing__map-text h2 {
     font-size: 1.35rem !important;
     font-weight: 800;
-    margin: 0 0 0.75rem 0;
     text-align: justify !important;
-    padding-right: 1.50rem !important;
   }
 
   .landing__map-text p {
     text-align: left !important;
     font-size: 0.95rem !important;
-    padding-right: 1.50rem !important;
     line-height: 1.4;
     margin-bottom: 1rem;
     text-align: justify !important;
@@ -408,7 +431,6 @@
   .landing__map-preview-container {
     width: 95% !important;
     max-width: 100% !important;
-    padding-right: 2.5rem !important;
     box-sizing: border-box !important;
   }
 
@@ -421,7 +443,8 @@
     max-width: 100% !important;
     height: auto !important;
     object-fit: cover !important;
-    padding-right: 2.5rem !important;
+    padding-right: 2rem !important;
+    padding-left: 0.75rem !important;
     box-sizing: border-box !important;
   }
 

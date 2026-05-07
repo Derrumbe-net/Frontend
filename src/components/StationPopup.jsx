@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Popup } from 'react-leaflet';
 import '../styles/StationPopup.css';
 
+const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
 const ChevronLeft = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M15 18l-6-6 6-6" />
@@ -99,7 +101,7 @@ const StationPopup = ({ station }) => {
         : '0.00';
 
     return (
-        <Popup maxWidth={350}>
+        <Popup maxWidth={isMobile ? 200 : 350}>
             <div className="custom-popup-content">
                 <div className="info roboto-condensed">
                     <h2 className="bebas-neue">{stationName}</h2>

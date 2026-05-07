@@ -190,21 +190,21 @@
 
 .legend-soil-saturation {
   position: absolute;
-  bottom: 60px;
+  bottom: 70px;
   right: 30px;
   width: 150px;
 }
 
 .legend-landslide-susceptibility {
   position: absolute;
-  bottom: 170px; /* Adjust stack height */
+  bottom: calc(70px + 90px + 20px); 
   right: 30px;
   width: 150px;
 }
 
 .legend-precipitation {
   position: absolute;
-  top: 162px;       /* right below the map menu buttons */
+  bottom: calc(70px + 90px + 10px + 120px + 41px);
   right: 30px;
   max-height: 25vh;
   overflow-y: auto;
@@ -480,30 +480,34 @@
     font-size: 0.6rem; 
   }
 
-  /* Stack them vertically on the right */
-  .legend-landslide-susceptibility,
-  .legend-soil-saturation {
-    right: 15px !important;
-    width: 130px;
-    transform-origin: bottom right;
-  } 
-
-  /* Top legend */
-  .legend-landslide-susceptibility {
-    bottom: 140px !important; /* 👈 sits above */
-  }
-
-  /* Bottom legend */
+  /* Soil Saturation — bottom right */
   .legend-soil-saturation {
     bottom: 70px !important;
+    right: 15px !important;
+    left: auto !important;
+    top: auto !important;
+    width: 130px;
+    transform-origin: bottom right;
   }
 
-  /* Precipitation legend (left side → make smaller + move up) */
-  .legend-precipitation {
-    top: 250px !important;
-    left: 15px !important;
+  /* Susceptibility — stacked above soil saturation on the right */
+  .legend-landslide-susceptibility {
+    bottom: 150px !important;
+    right: 15px !important;
+    left: auto !important;
+    top: auto !important;
     width: 130px;
-    max-height: 41.8vh !important;
+    transform-origin: bottom right;
+  }
+
+  /* Precipitation — bottom LEFT */
+  .legend-precipitation {
+    bottom: 70px !important;
+    left: 15px !important;
+    right: auto !important;
+    top: auto !important;
+    width: 130px;
+    max-height: 35vh !important;
     transform-origin: bottom left;
   }
 
@@ -529,5 +533,17 @@
     bottom: 150px;
     left: 10px;
     font-size: 1rem;
+  }
+
+  .saturation-marker {
+    width: 27px !important;
+    height: 15px !important;
+    font-size: 7px !important;
+  }
+
+  .precip-marker {
+    width: 27px !important;
+    height: 15px !important;
+    font-size: 7px !important;
   }
 }
