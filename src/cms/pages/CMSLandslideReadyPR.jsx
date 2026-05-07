@@ -1,22 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaEdit, FaPlus, FaTrash, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import Swal from "sweetalert2";
 import "../styles/CMSProjects.css";
 
-// ─── hardcoded seed data (replace with API fetch later) ───────────────────────
-const SEED = [
-    { id: 1, name: "Utuado",     stage: "Completado", start_year: 2023, renewal_year: 2024 },
-    { id: 2, name: "Maricao",    stage: "Completado", start_year: 2023, renewal_year: 2024 },
-    { id: 3, name: "Ponce",      stage: "Completado", start_year: 2023, renewal_year: 2024 },
-    { id: 4, name: "Adjuntas",   stage: "Completado", start_year: 2023, renewal_year: 2024 },
-    { id: 5, name: "Cabo Rojo",  stage: "Completado", start_year: 2023, renewal_year: 2024 },
-    { id: 6, name: "San Germán", stage: "Completado", start_year: 2023, renewal_year: 2024 },
-];
-
 const STAGE_OPTIONS = ["Completado", "En Progreso", "Pendiente"];
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function CMSLandslideReadyPR() {
-    const [municipalities, setMunicipalities] = useState(SEED);
+    const [municipalities, setMunicipalities] = useState([]);
     const [showForm, setShowForm]             = useState(false);
     const [editItem, setEditItem]             = useState(null);
     const [currentPage, setCurrentPage]       = useState(1);
@@ -26,12 +17,16 @@ export default function CMSLandslideReadyPR() {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginated  = municipalities.slice(startIndex, startIndex + itemsPerPage);
 
-    // ── TODO: replace with real fetch ──
-    // const API_URL = `${import.meta.env.VITE_API_URL}`;
-    // useEffect(() => {
-    //   fetch(`${API_URL}/landslideready-municipalities`)
-    //     .then(r => r.json()).then(setMunicipalities);
-    // }, []);
+    // Fetch data from the real API on component mount
+    useEffect(() => {
+        fetch(`${API_URL}/municipalities`)
+            .then(r => {
+                if (!r.ok) throw new Error("Failed to fetch");
+                return r.json();
+            })
+            .then(data => setMunicipalities(data || []))
+            .catch(err => console.error("Error loading municipalities:", err));
+    }, []);
 
     const handleOpenForm = (item = null) => {
         setEditItem(item);
@@ -51,20 +46,41 @@ export default function CMSLandslideReadyPR() {
             cancelButtonText: "Cancelar",
             confirmButtonColor: "#e55353",
         });
+        
         if (!confirm.isConfirmed) return;
 
-        // TODO: await fetch(`${API_URL}/landslideready-municipalities/${id}`, { method: "DELETE", ... })
-        setMunicipalities(prev => prev.filter(m => m.id !== id));
-        Swal.fire("Eliminado", "El municipio fue eliminado correctamente.", "success");
+        const token = localStorage.getItem("cmsAdmin"); // Adjust this key if your token name is different
+
+        try {
+            const res = await fetch(`${API_URL}/municipalities/${id}`, { 
+                method: "DELETE",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (!res.ok) throw new Error("Failed to delete");
+
+            setMunicipalities(prev => prev.filter(m => m.id !== id));
+            Swal.fire("Eliminado", "El municipio fue eliminado correctamente.", "success");
+            
+            // Adjust pagination if you delete the last item on a page
+            if (paginated.length === 1 && currentPage > 1) {
+                setCurrentPage(prev => prev - 1);
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire("Error", "No se pudo eliminar el municipio.", "error");
+        }
     };
 
-    const handleSave = (item) => {
-        if (item.id) {
-            setMunicipalities(prev => prev.map(m => m.id === item.id ? item : m));
-        } else {
-            const newId = Date.now();
-            setMunicipalities(prev => [...prev, { ...item, id: newId }]);
-        }
+    const handleSave = (savedItem) => {
+        setMunicipalities(prev => {
+            const exists = prev.find(m => m.id === savedItem.id);
+            if (exists) {
+                return prev.map(m => m.id === savedItem.id ? savedItem : m);
+            } else {
+                return [...prev, savedItem];
+            }
+        });
         handleCloseForm();
     };
 
@@ -124,12 +140,12 @@ export default function CMSLandslideReadyPR() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {paginated.map((m, idx) => (
+                                {paginated.length > 0 ? paginated.map((m) => (
                                     <tr key={m.id}>
                                         <td style={{ fontWeight: 600 }}>{m.name}</td>
                                         <td>{stagePill(m.stage)}</td>
                                         <td>{m.start_year ?? "—"}</td>
-                                        <td>{m.renewal_year ?? "—"}</td>
+                                        <td>{m.renovation_year ?? "—"}</td>
                                         <td>
                                             <button
                                                 className="cms-icon-btn"
@@ -147,32 +163,40 @@ export default function CMSLandslideReadyPR() {
                                             </button>
                                         </td>
                                     </tr>
-                                ))}
+                                )) : (
+                                    <tr>
+                                        <td colSpan="5" style={{ textAlign: "center", padding: "2rem" }}>
+                                            No hay municipios registrados.
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
 
-                    <div className="cms-pagination">
-                        <button
-                            className="cms-icon-btn"
-                            disabled={currentPage === 1}
-                            onClick={() => setCurrentPage(p => p - 1)}
-                            title="Página anterior"
-                        >
-                            <FaChevronLeft />
-                        </button>
-                        <span className="cms-page-info">
-                            Página {currentPage} de {totalPages || 1}
-                        </span>
-                        <button
-                            className="cms-icon-btn"
-                            disabled={currentPage === totalPages || totalPages === 0}
-                            onClick={() => setCurrentPage(p => p + 1)}
-                            title="Siguiente página"
-                        >
-                            <FaChevronRight />
-                        </button>
-                    </div>
+                    {totalPages > 1 && (
+                        <div className="cms-pagination">
+                            <button
+                                className="cms-icon-btn"
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(p => p - 1)}
+                                title="Página anterior"
+                            >
+                                <FaChevronLeft />
+                            </button>
+                            <span className="cms-page-info">
+                                Página {currentPage} de {totalPages}
+                            </span>
+                            <button
+                                className="cms-icon-btn"
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(p => p + 1)}
+                                title="Siguiente página"
+                            >
+                                <FaChevronRight />
+                            </button>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="cms-card">
@@ -194,10 +218,10 @@ function MunicipalityForm({ item, onClose, onSave }) {
     const isEdit = !!item;
 
     const [formData, setFormData] = useState({
-        name:         item?.name         ?? "",
-        stage:        item?.stage        ?? "Completado",
-        start_year:   item?.start_year   ?? "",
-        renewal_year: item?.renewal_year ?? "",
+        name:            item?.name            ?? "",
+        stage:           item?.stage           ?? "Completado",
+        start_year:      item?.start_year      ?? "",
+        renovation_year: item?.renovation_year ?? "",
     });
 
     const handleChange = (e) => {
@@ -210,8 +234,8 @@ function MunicipalityForm({ item, onClose, onSave }) {
             Swal.fire("Error", "El nombre del municipio es obligatorio.", "warning");
             return false;
         }
-        if (formData.start_year && formData.renewal_year) {
-            if (Number(formData.renewal_year) < Number(formData.start_year)) {
+        if (formData.start_year && formData.renovation_year) {
+            if (Number(formData.renovation_year) < Number(formData.start_year)) {
                 Swal.fire("Error", "El año de renovación no puede ser menor al año de iniciación.", "warning");
                 return false;
             }
@@ -232,19 +256,44 @@ function MunicipalityForm({ item, onClose, onSave }) {
             cancelButtonText: "Cancelar",
             confirmButtonColor: "#6fa174",
         });
+        
         if (!confirm.isConfirmed) return;
 
-        // TODO: connect to API
-        // const token = localStorage.getItem("cmsAdmin");
-        // const method = isEdit ? "PUT" : "POST";
-        // const url = isEdit
-        //   ? `${API_URL}/landslideready-municipalities/${item.id}`
-        //   : `${API_URL}/landslideready-municipalities`;
-        // await fetch(url, { method, headers: { "Content-Type": "application/json",
-        //   "Authorization": `Bearer ${token}` }, body: JSON.stringify(formData) });
+        const token = localStorage.getItem("cmsAdmin"); // Adjust this key if your token name is different
+        const method = isEdit ? "PUT" : "POST";
+        const url = isEdit
+            ? `${API_URL}/municipalities/${item.id}`
+            : `${API_URL}/municipalities`;
 
-        onSave({ ...item, ...formData });
-        Swal.fire("Éxito", "Operación exitosa", "success");
+        // Format payload to properly send ints or nulls to the Go pointers (*int)
+        const payload = {
+            name: formData.name,
+            stage: formData.stage,
+            start_year: formData.start_year ? parseInt(formData.start_year, 10) : null,
+            renovation_year: formData.renovation_year ? parseInt(formData.renovation_year, 10) : null,
+        };
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}` 
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) throw new Error("API response was not OK");
+
+            // The backend returns the completely saved object, including the generated ID!
+            const savedData = await res.json();
+            
+            onSave(savedData);
+            Swal.fire("Éxito", "Operación exitosa", "success");
+        } catch (err) {
+            console.error("Error saving municipality:", err);
+            Swal.fire("Error", "Ocurrió un problema al guardar el municipio.", "error");
+        }
     };
 
     return (
@@ -302,8 +351,8 @@ function MunicipalityForm({ item, onClose, onSave }) {
                     <input
                         className="cms-input"
                         type="number"
-                        name="renewal_year"
-                        value={formData.renewal_year}
+                        name="renovation_year"
+                        value={formData.renovation_year}
                         onChange={handleChange}
                         placeholder="Ej: 2024"
                     />
