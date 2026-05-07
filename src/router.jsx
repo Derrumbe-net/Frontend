@@ -33,6 +33,7 @@ import CMSManageUsers from './cms/pages/CMSManageUsers';
 import CMSTeamMembers from './cms/pages/CMSTeamMembers';
 import CMSFundingSources from './cms/pages/CMSFundingSources';
 import CMSOfficeInfo from './cms/pages/CMSOfficeInfo';
+import CMSLandslideReadyPR from './cms/pages/CMSLandslideReadyPR';
 
 // Auth protection
 import ProtectedRoute from './cms/layout/ProtectedRoute';
@@ -95,6 +96,7 @@ const router = createBrowserRouter([
       { path: 'equipo',          element: <CMSTeamMembers /> }, 
       { path: 'financiamiento',  element: <CMSFundingSources /> },
       { path: 'contacto',        element: <CMSOfficeInfo /> },
+      { path: 'landslideready-municipios', element: <CMSLandslideReadyPR /> },
     ],
   },
 ]);

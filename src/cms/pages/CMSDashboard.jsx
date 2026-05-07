@@ -6,7 +6,7 @@ import PublicationIcon from "../../assets/cms_publication_icon.png";
 import ReportIcon from "../../assets/cms_report_icon.png";
 import StationIcon from "../../assets/cms_station_icon.png";
 import UsersIcon from "../../assets/cms_users_icon.png";
-//import AboutIcon from "../../assets/cms_about_icon.png"; 
+import { FaCheckCircle } from "react-icons/fa"; 
 
 function CMSDashboard() {
       return (
@@ -111,6 +111,19 @@ function CMSDashboard() {
                         <li>Marcar estaciones activas/inactivas</li>
                       </ul>
                       <Link to="/cms/estaciones" className="cms-module-btn">Ir a Estaciones</Link>
+                    </div>
+
+                    <div className="cms-module-card">
+                      <FaCheckCircle style={{ color: "#black", fontSize: "46px", opacity: 0.2 }} />
+                      <h3>LandslideReady</h3>
+                      <p>
+                        Gestione los municipios participantes del programa LandslideReady PR.
+                      </p>
+                      <ul>
+                        <li>Añadir y editar municipios</li>
+                        <li>Actualizar estado y años de participación</li>
+                      </ul>
+                      <Link to="/cms/landslideready-municipios" className="cms-module-btn">Ir a LandslideReady</Link>
                     </div>
 
                     <div className="cms-module-card">
