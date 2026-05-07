@@ -927,71 +927,6 @@ export default function InteractiveMap({ isPreview = false }) {
         setShowPrecipLegend(false);
     };
 
-    // --- KML GENERATOR FUNCTION ---
-    const handleExportKML = (e) => {
-        e.stopPropagation(); // Prevents map clicks if placed directly over the map
-
-        let kmlString = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-        kmlString += `<kml xmlns="http://www.opengis.net/kml/2.2">\n`;
-        kmlString += `  <Document>\n`;
-        kmlString += `    <name>Derrumbe_Data</name>\n`;
-
-        // 1. Export Stations (Only if stations layer is visible)
-        if (showStations) {
-            stationsData.forEach(station => {
-                if (station.is_available !== 1) return;
-                const name = station.name || `Station ${station.station_id}`;
-                const sat = station.soil_saturation != null ? Math.round(station.soil_saturation) + '%' : 'N/A';
-                const precip = station.precipitation != null ? Number(station.precipitation).toFixed(2) + ' in' : 'N/A';
-                
-                kmlString += `    <Placemark>\n`;
-                kmlString += `      <name>${name}</name>\n`;
-                kmlString += `      <description><![CDATA[\n`;
-                kmlString += `        <b>Soil Saturation:</b> ${sat}<br>\n`;
-                kmlString += `        <b>12hr Precip:</b> ${precip}\n`;
-                kmlString += `      ]]></description>\n`;
-                kmlString += `      <Point>\n`;
-                kmlString += `        <coordinates>${station.longitude},${station.latitude},0</coordinates>\n`;
-                kmlString += `      </Point>\n`;
-                kmlString += `    </Placemark>\n`;
-            });
-        }
-
-        // 2. Export Landslides (Respecting active year filters)
-        const exportLandslides = (selectedYear && selectedYear !== 'all')
-            ? landslidesData.filter(ls => ls.landslide_date && new Date(ls.landslide_date).getFullYear() === parseInt(selectedYear))
-            : landslidesData;
-
-        exportLandslides.forEach(ls => {
-            const name = `Landslide Event ${ls.landslide_id || ''}`.trim();
-            const date = ls.landslide_date ? new Date(ls.landslide_date).toLocaleDateString() : 'Unknown Date';
-            
-            kmlString += `    <Placemark>\n`;
-            kmlString += `      <name>${name}</name>\n`;
-            kmlString += `      <description><![CDATA[\n`;
-            kmlString += `        <b>Date:</b> ${date}<br>\n`;
-            kmlString += `      ]]></description>\n`;
-            kmlString += `      <Point>\n`;
-            kmlString += `        <coordinates>${ls.longitude},${ls.latitude},0</coordinates>\n`;
-            kmlString += `      </Point>\n`;
-            kmlString += `    </Placemark>\n`;
-        });
-
-        kmlString += `  </Document>\n`;
-        kmlString += `</kml>`;
-
-        // Trigger Download
-        const blob = new Blob([kmlString], { type: "application/vnd.google-earth.kml+xml" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Derrumbe_Data_${new Date().toISOString().slice(0,10)}.kml`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
     const isMobile = window.innerWidth < 768;
 
     let mapLabelText = "";
@@ -1021,36 +956,6 @@ export default function InteractiveMap({ isPreview = false }) {
                 zoomControl={false}
                 style={{ height: isPreview ? '450px' : '100vh', width: '100%', position: 'relative' }}
             >
-            {/* --- FLOATING EXPORT BUTTON --- */}
-            {!isPreview && (
-                <div 
-                    style={{ 
-                        position: 'absolute', 
-                        top: '120px', /* Increased from 80px to push it down further from the +/- */
-                        right: '15px', 
-                        zIndex: 1000 
-                    }}
-                >
-                    <button 
-                        onClick={handleExportKML}
-                        style={{
-                            padding: '10px 14px',
-                            cursor: 'pointer',
-                            backgroundColor: '#ffffff',
-                            color: '#333',
-                            border: '2px solid rgba(0,0,0,0.2)',
-                            borderRadius: '4px',
-                            fontWeight: 'bold',
-                            boxShadow: '0 1px 5px rgba(0,0,0,0.4)',
-                            transition: 'background-color 0.2s'
-                        }}
-                        onMouseOver={(e) => e.target.style.backgroundColor = '#f4f4f4'}
-                        onMouseOut={(e) => e.target.style.backgroundColor = '#ffffff'}
-                    >
-                        📥 Exportar KML
-                    </button>
-                </div>
-            )}
 
                 {mapLabelText && <div className="map-label">{mapLabelText}</div>}
 
