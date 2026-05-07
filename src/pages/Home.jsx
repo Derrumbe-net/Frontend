@@ -38,17 +38,17 @@ function Home() {
       <section className="hero" style={{ backgroundImage: `url(${heroImage})` }}>
         <div className="hero__overlay">
           <div className="hero__logos">
-            <img src={logo} alt="PRLHMO Logo" className="hero__logo hero__logo--left" />
-            <h1 className="hero__title">
-              Oficina de Mitigación ante <br />
-              Deslizamientos de Tierra en Puerto Rico
-            </h1>
-            <img src={uprmLogo} alt="UPRM Logo" className="hero__logo hero__logo--right" />
+              <img src={logo} alt="PRLHMO Logo" className="hero__logo hero__logo--left" />
+              <h1 className="hero__title">
+                  Oficina de Mitigación ante <br />
+                  Deslizamientos de Tierra en Puerto Rico
+              </h1>
+              <img src={uprmLogo} alt="UPRM Logo" className="hero__logo hero__logo--right" />
           </div>
 
           <div className="hero__buttons">
-            <Link to="/reportar" className="btn btn--report">Haz tu Reporte</Link>
-            <Link to="/solicitud" className="btn btn--outline">Solicita una Charla</Link>
+              <Link to="/reportar" className="btn btn--report">Haz tu Reporte</Link>
+              <Link to="/solicitud" className="btn btn--outline">Solicita una Charla</Link>
           </div>
         </div>
       </section>
@@ -56,7 +56,7 @@ function Home() {
       {/* SECTION: MAPA */}
       <section className="landing__map">
         <div className="landing__map-text">
-          <h2>Explora nuestro Mapa Interactivo de Monitoreo de Deslizamientos</h2>
+          <h2>Explora Nuestro Mapa Interactivo de Monitoreo de Deslizamientos</h2>
           <p>
             Herramienta interactiva que muestra, en tiempo real, datos de saturación del suelo,
             susceptibilidad a deslizamientos y estimaciones de precipitación en Puerto Rico.

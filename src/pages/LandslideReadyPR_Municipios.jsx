@@ -2,8 +2,27 @@ import '../styles/LandslideReadyPR_Municipios_module.css';
 import map from '../assets/municipality_map.webp';
 import cycle from '../assets/landslideready_cycle.webp';
 import groupPics from '../assets/landslideready_pictures.webp';
+import LandslideReadyMap from '../components/LandslideReadyMap';
+import { useState, useEffect } from 'react';
 
 function LandslideReadyPR_Municipios() {
+
+  const [completedMunicipalities, setCompletedMunicipalities] = useState([]);
+
+  // useEffect(() => {
+  //   const API_URL = `${import.meta.env.VITE_API_URL}`;
+
+  //   fetch(`${API_URL}/landslideready-municipalities`)
+  //     .then(r => r.json())
+  //     .then(data => {
+  //       const names = data
+  //         .filter(m => m.stage === "Completado")
+  //         .map(m => m.name);
+  //       setCompletedMunicipalities(names);
+  //     })
+  //     .catch(err => console.error("Error fetching municipalities:", err));
+  // }, []);
+
   return (
     <section className="landslideReady">
       <div className="landslideReady__municipios-section">
@@ -20,7 +39,9 @@ function LandslideReadyPR_Municipios() {
             Mapa de Municipios LandslideReady<br />
             <strong>(Actualizado en Marzo 4, 2025)</strong>
           </h3>
-          <img src={map} alt="Mapa de municipios LandslideReady" className="landslideReady__map" />
+          <div className="landslideReady__map-wrapper">
+            <LandslideReadyMap completedMunicipalities={completedMunicipalities} />
+          </div>
           <p className="landslideReady__map-note">
             Si eres manejador de emergencia del municipio, estás interesado en el proyecto y quieres saber más, comunícate con nosotros.
           </p>

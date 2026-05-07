@@ -32,7 +32,10 @@ function Navbar() {
     setOpenDropdown(openDropdown === menu ? null : menu);
   };
 
-  const closeDropdown = () => setOpenDropdown(null);
+  const closeDropdown = () => {
+    setOpenDropdown(null);
+    setMenuOpen(false);
+  }
 
   return (
     <nav className="nav">

@@ -16,6 +16,7 @@ import Request from './pages/Request'
 import Stations from './pages/Stations';
 import SusceptibilityMap from './pages/SusceptibilityMap';
 import SusceptibilityMunicipalitiesMap from './pages/SusceptibilityMunicipalitiesMap';
+import NotFound from './pages/PageNotFound';
 
 // CMS (Admin Dashboard)
 import CMSLayout from './cms/layout/CMSLayout';
@@ -32,6 +33,7 @@ import CMSManageUsers from './cms/pages/CMSManageUsers';
 import CMSTeamMembers from './cms/pages/CMSTeamMembers';
 import CMSFundingSources from './cms/pages/CMSFundingSources';
 import CMSOfficeInfo from './cms/pages/CMSOfficeInfo';
+import CMSLandslideReadyPR from './cms/pages/CMSLandslideReadyPR';
 
 // Auth protection
 import ProtectedRoute from './cms/layout/ProtectedRoute';
@@ -56,6 +58,7 @@ const router = createBrowserRouter([
       { path: 'solicitud', element: <Request />},
       { path: 'landslideready-individuos', element: <LandslideReadyPR_Individuos /> },
       { path: 'landslideready-municipios', element: <LandslideReadyPR_Municipios /> },
+      { path: '*', element: <NotFound /> },
     ],
   },
 
@@ -93,6 +96,7 @@ const router = createBrowserRouter([
       { path: 'equipo',          element: <CMSTeamMembers /> }, 
       { path: 'financiamiento',  element: <CMSFundingSources /> },
       { path: 'contacto',        element: <CMSOfficeInfo /> },
+      { path: 'landslideready-municipios', element: <CMSLandslideReadyPR /> },
     ],
   },
 ]);

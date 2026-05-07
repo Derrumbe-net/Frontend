@@ -161,7 +161,6 @@
     width: 100% !important;
     height: auto !important;
     object-fit: cover !important;
-    padding-right: 2.3rem !important;
     box-sizing: border-box !important;
   }
 
@@ -175,26 +174,29 @@
     font-size: 1.6rem !important;
     line-height: 1.2 !important;
     margin-bottom: 0.6rem !important;
-    text-align: left !important;
+    text-align: center !important;
   }
 
   .request__text h2 {
     font-size: 0.95rem !important;
     margin-bottom: 0.6rem !important;
-    text-align: left !important;
+    text-align: justify !important;
   }
 
   .request__text p {
     font-size: 0.9rem !important;
     line-height: 1.4 !important;
-    padding-right: 1.5rem !important;
-    text-align: left !important;
+    text-align: justify !important;
     margin-bottom: 1rem !important;
   }
 
   .request__divider {
-    width: 100% !important;
-    margin: 1rem auto !important;
+    width: 90% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    display: block !important;
+    position: relative !important;
+    left: -1rem !important;
   }
 
   /* ===========================
