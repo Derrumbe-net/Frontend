@@ -230,13 +230,13 @@ export default function CMSStations() {
                                                 <td>
                                                     {s.image_url || s.sensor_image_url ? (
                                                         <a
-                                                            href={`${API_URL}/stations/${id}/image/sensor`}
+                                                            href={`${API_URL}/stations/item/${id}/images/sensor`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             title="Ver imagen completa"
                                                         >
                                                             <img 
-                                                                src={`${API_URL}/stations/${id}/image/sensor?t=${new Date().getTime()}`} 
+                                                                src={`${API_URL}/stations/item/${id}/images/sensor?t=${new Date().getTime()}`} 
                                                                 alt={s.name} 
                                                                 className="cms-thumb" 
                                                                 style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} 
@@ -252,10 +252,10 @@ export default function CMSStations() {
                                                         {s.is_available ? "Activa" : "Oculta"}
                                                     </span>
                                                 </td>
-                                                <td>{s.wc1_max || '-'}</td>
-                                                <td>{s.wc2_max || '-'}</td>
-                                                <td>{s.wc3_max || '-'}</td>
-                                                <td>{s.wc4_max || '-'}</td>
+                                                <td>{s.wc1_max ?? s.wc1Max ?? '-'}</td>
+                                                <td>{s.wc2_max ?? s.wc2Max ?? '-'}</td>
+                                                <td>{s.wc3_max ?? s.wc3Max ?? '-'}</td>
+                                                <td>{s.wc4_max ?? s.wc4Max ?? '-'}</td>
                                                 <td style={{ textAlign: 'right' }}>
                                                     <button className="cms-icon-btn" onClick={() => handleOpenForm(s)} title="Editar">
                                                         <FaEdit />
@@ -351,10 +351,10 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
                 susceptibility: station.susceptibility || "",
                 land_unit: station.land_unit || "",
                 geological_unit: station.geological_unit || "",
-                wc1_max: station.wc1_max || "",
-                wc2_max: station.wc2_max || "",
-                wc3_max: station.wc3_max || "",
-                wc4_max: station.wc4_max || "",
+                wc1_max: station.wc1_max ?? station.wc1Max ?? "",
+                wc2_max: station.wc2_max ?? station.wc2Max ?? "",
+                wc3_max: station.wc3_max ?? station.wc3Max ?? "",
+                wc4_max: station.wc4_max ?? station.wc4Max ?? "",
                 soil_saturation: station.soil_saturation || "",
                 precipitation: station.precipitation || "",
                 collaborator: station.collaborator || "",
@@ -363,8 +363,7 @@ function StationForm({ station, onClose, refreshStations, apiUrl }) {
             });
 
             if (station.image_url || station.sensor_image_url) {
-                // Add timestamp to prevent caching old images
-                setPreviewUrl(`${apiUrl}/stations/${stationId}/image/sensor?t=${new Date().getTime()}`);
+                setPreviewUrl(`${apiUrl}/stations/item/${stationId}/images/sensor?t=${new Date().getTime()}`);
             } else {
                 setPreviewUrl(null);
             }
