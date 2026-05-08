@@ -9,19 +9,19 @@ function LandslideReadyPR_Municipios() {
 
   const [completedMunicipalities, setCompletedMunicipalities] = useState([]);
 
-  // useEffect(() => {
-  //   const API_URL = `${import.meta.env.VITE_API_URL}`;
+   useEffect(() => {
+     const API_URL = `${import.meta.env.VITE_API_URL}`;
 
-  //   fetch(`${API_URL}/landslideready-municipalities`)
-  //     .then(r => r.json())
-  //     .then(data => {
-  //       const names = data
-  //         .filter(m => m.stage === "Completado")
-  //         .map(m => m.name);
-  //       setCompletedMunicipalities(names);
-  //     })
-  //     .catch(err => console.error("Error fetching municipalities:", err));
-  // }, []);
+     fetch(`${API_URL}/municipalities`)
+       .then(r => r.json())
+       .then(data => {
+         const names = data
+           .filter(m => m.stage === "Completado")
+           .map(m => m.name);
+         setCompletedMunicipalities(names);
+       })
+       .catch(err => console.error("Error fetching municipalities:", err));
+   }, []);
 
   return (
     <section className="landslideReady">
