@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "../styles/Report_module.css";
 import officeLogo from "../assets/PRLHMO_LOGO.svg";
+import Swal from "sweetalert2";
 
 // --- LEAFLET IMPORTS ---
 import "leaflet/dist/leaflet.css";
@@ -115,7 +116,7 @@ function Report() {
     carretera: "",
   });
 
-  const [message, setMessage] = useState(null);
+  // const [message, setMessage] = useState(null);
   const [files, setFiles] = useState([]);
   const [coords, setCoords] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -128,6 +129,26 @@ function Report() {
   const dropRef = useRef(null);
 
   const today = new Date().toISOString().split("T")[0];
+
+  const tileLayers = {
+    satelite: {
+      label: 'Satélite',
+      url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      attribution: 'Tiles © Esri',
+    },
+    mapa: {
+      label: 'Mapa',
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      attribution: '© OpenStreetMap contributors',
+    },
+    topografico: {
+      label: 'Topográfico',
+      url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+      attribution: '© OpenTopoMap contributors',
+    },
+  };
+
+  const [activeLayer, setActiveLayer] = useState('satelite');
 
   const fieldStyle = {
     backgroundColor: "#ffffff",
@@ -273,7 +294,7 @@ function Report() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    setMessage(null);
+    // setMessage(null);
 
     const errors = [];
     if (!form.pueblo) errors.push("Pueblo");
@@ -281,8 +302,21 @@ function Report() {
     if (!coords) errors.push("Ubicación (Coordenadas)");
     if (files.length === 0) errors.push("Foto/Video");
 
+    // if (errors.length > 0) {
+    //   setMessage({ type: "error", text: `Faltan campos requeridos: ${errors.join(", ")}` });
+    //   window.scrollTo(0, 0);
+    //   return;
+    // }
+    
+    // Validation error
     if (errors.length > 0) {
-      setMessage({ type: "error", text: `Faltan campos requeridos: ${errors.join(", ")}` });
+      Swal.fire({
+        title: "Campos incompletos",
+        html: `Por favor completa los siguientes campos requeridos:<br/><br/><strong>${errors.join(", ")}</strong>`,
+        icon: "warning",
+        confirmButtonText: "Entendido",
+        confirmButtonColor: "#3B7D23",
+      });
       window.scrollTo(0, 0);
       return;
     }
@@ -326,13 +360,29 @@ function Report() {
         }
       }
 
-      setMessage({ type: "success", text: "¡Reporte e imágenes enviados exitosamente!" });
+      // setMessage({ type: "success", text: "¡Reporte e imágenes enviados exitosamente!" });
+      // Success
+      Swal.fire({
+        title: "¡Reporte Enviado!",
+        text: "Tu reporte fue enviado exitosamente. Gracias por tu aportación.",
+        icon: "success",
+        confirmButtonText: "Aceptar",
+        confirmButtonColor: "#3B7D23",
+      });
       setForm({ name: "", phone: "", email: "", date: "", description: "", pueblo: "", carretera: "" });
       setFiles([]);
       setCoords(null);
     } catch (error) {
       console.error("Error submitting:", error);
-      setMessage({ type: "error", text: `Error al enviar: ${error.message}` });
+      // setMessage({ type: "error", text: `Error al enviar: ${error.message}` });
+      // Error
+      Swal.fire({
+        title: "Error al Enviar",
+        text: `Ocurrió un problema al enviar el reporte.`,
+        icon: "error",
+        confirmButtonText: "Intentar de nuevo",
+        confirmButtonColor: "#3B7D23",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -372,7 +422,7 @@ function Report() {
       <hr className="report-divider" />
 
       <form className="report-form" onSubmit={onSubmit}>
-        {message && (
+        {/* {message && (
           <div style={{
             padding: "1rem", marginBottom: "1rem", borderRadius: "5px",
             backgroundColor: message.type === "error" ? "#f8d7da" : "#d4edda",
@@ -381,28 +431,15 @@ function Report() {
           }}>
             {message.text}
           </div>
-        )}
+        )} */}
 
-        <div className="form-row">
-          <label htmlFor="name">Nombre <small style={{color: '#666'}}>(Opcional)</small>:</label>
-          <input id="name" name="name" type="text" value={form.name} onChange={onChange} style={fieldStyle} placeholder="Ej. Juan del Pueblo" />
-        </div>
-
-        <div className="form-row">
-          <label htmlFor="phone">Teléfono <small style={{color: '#666'}}>(Opcional)</small>:</label>
-          <input id="phone" name="phone" type="tel" value={form.phone} onChange={onChange} style={fieldStyle} placeholder="Ej. 787-555-0123" />
-        </div>
-
-        <div className="form-row">
-          <label htmlFor="email">Email <small style={{color: '#666'}}>(Opcional)</small>:</label>
-          <input id="email" name="email" type="email" value={form.email} onChange={onChange} style={fieldStyle} placeholder="Ej. juan@ejemplo.com" />
-        </div>
-
+        {/* 1. FECHA */}
         <div className="form-row">
           <label htmlFor="date">Fecha: <small style={{color: '#d9534f'}}>*</small></label>
-          <input id="date" name="date" type="date" value={form.date} onChange={onChange} style={fieldStyle} required max={today} />
+          <input id="date" name="date" type="date" value={form.date} onChange={onChange} style={fieldStyle} max={today} />
         </div>
 
+        {/* 2. FOTO/VIDEO */}
         <div className="form-row">
           <label> Añadir Foto/Video <small style={{color: '#d9534f'}}>*</small>:</label>
           <div className="dropzone" ref={dropRef}>
@@ -433,25 +470,20 @@ function Report() {
           </div>
         </div>
 
+        {/* 3. PUEBLO */}
         <div className="form-row">
           <label htmlFor="pueblo">Pueblo <small style={{color: '#d9534f'}}>*</small></label>
-          <select id="pueblo" name="pueblo" value={form.pueblo} onChange={onChange} style={fieldStyle} required>
+          <select id="pueblo" name="pueblo" value={form.pueblo} onChange={onChange} style={fieldStyle}>
             <option value="">Seleccione un pueblo...</option>
             {pueblos.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
 
-        <div className="form-row">
-          <label htmlFor="carretera">Carretera / Dirección <small style={{color: '#666'}}>(Opcional)</small>:</label>
-          <input id="carretera" name="carretera" type="text" value={form.carretera} onChange={onChange} style={fieldStyle}
-            placeholder="Ej. PR-123 Km 4.5, Barrio Salto Arriba" />
-        </div>
-
+        {/* 4. UBICACIÓN */}
         <div className="form-row">
           <label>
             Ubicación <small style={{ color: "#d9534f" }}>* Busque una dirección, presione el ícono de GPS, o haga clic en el mapa.</small>
           </label>
-
           <style>{`
             .leaflet-top { top: 15px !important; }
             .leaflet-bottom { bottom: 15px !important; }
@@ -480,12 +512,34 @@ function Report() {
             .leaflet-control-geosearch .results > * { border-bottom: 1px solid #eee !important; }
             .leaflet-control-geosearch .results > *:hover { background: #f4f4f4 !important; border-color: #f4f4f4 !important; }
           `}</style>
+          <div style={{ position: 'relative', height: "400px", width: "100%", borderRadius: "10px", overflow: "hidden", border: "2px solid #a6b09f", marginTop: "10px", zIndex: 0 }}>
+            {/* Toggle buttons */}
+            <div style={{
+              position: 'absolute', bottom: '10px', left: '10px', zIndex: 1000,
+              display: 'flex', gap: '4px', background: 'white',
+              borderRadius: '4px', overflow: 'hidden',
+              boxShadow: '0 1px 5px rgba(0,0,0,0.4)',
+            }}>
+              {Object.entries(tileLayers).map(([key, layer]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveLayer(key)}
+                  style={{
+                    padding: '6px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                    border: 'none', background: activeLayer === key ? '#3B7D23' : 'white',
+                    color: activeLayer === key ? 'white' : '#333',
+                  }}
+                >
+                  {layer.label}
+                </button>
+              ))}
+            </div>
 
-          <div style={{ height: "400px", width: "100%", borderRadius: "10px", overflow: "hidden", border: "2px solid #a6b09f", marginTop: "10px", zIndex: 0 }}>
             <MapContainer center={[18.2, -66.5]} zoom={9} style={{ height: "100%", width: "100%" }}>
               <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                url={tileLayers[activeLayer].url}
+                attribution={tileLayers[activeLayer].attribution}
               />
               <MapClickHandler setCoords={setCoords} onCoordChange={handleCoordChange} />
               <MapSearchControl setCoords={setCoords} onCoordChange={handleCoordChange} />
@@ -495,12 +549,48 @@ function Report() {
           </div>
         </div>
 
+        {/* 5. CARRETERA */}
+        <div className="form-row">
+          <label htmlFor="carretera">Carretera / Dirección <small style={{color: '#666'}}>(Opcional)</small>:</label>
+          <input id="carretera" name="carretera" type="text" value={form.carretera} onChange={onChange} style={fieldStyle}
+            placeholder="Ej. PR-123 Km 4.5, Barrio Salto Arriba" />
+        </div>
+
+        {/* 6. DESCRIPCIÓN */}
         <div className="form-row">
           <label htmlFor="description">Descripción: <small style={{color: '#666'}}>(Opcional)</small></label>
           <textarea id="description" name="description" rows={4} value={form.description} onChange={onChange} style={fieldStyle}
             placeholder="Ej. Deslizamiento bloqueando el carril derecho. Se observan árboles caídos y terreno inestable..." />
         </div>
 
+        {/* SECCIÓN OPCIONAL */}
+        <div style={{
+          margin: '2rem 0 1rem',
+          paddingBottom: '0.5rem',
+          borderBottom: '2px solid #a6b09f',
+        }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#3B7D23' }}>
+            Información Opcional de la Persona
+          </h3>
+        </div>
+
+        {/* 7. NOMBRE */}
+        <div className="form-row">
+          <label htmlFor="name">Nombre:</label>
+          <input id="name" name="name" type="text" value={form.name} onChange={onChange} style={fieldStyle} placeholder="Ej. Juan del Pueblo" />
+        </div>
+
+        {/* 8. TELÉFONO */}
+        <div className="form-row">
+          <label htmlFor="phone">Teléfono:</label>
+          <input id="phone" name="phone" type="tel" value={form.phone} onChange={onChange} style={fieldStyle} placeholder="Ej. 787-555-0123" />
+        </div>
+
+        {/* 9. EMAIL */}
+        <div className="form-row">
+          <label htmlFor="email">Email:</label>
+          <input id="email" name="email" type="email" value={form.email} onChange={onChange} style={fieldStyle} placeholder="Ej. juan@ejemplo.com" />
+        </div>
 
         <div className="form-actions">
           <button className="submit-btn" disabled={submitting}>
