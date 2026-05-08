@@ -89,7 +89,7 @@ function Home() {
         </div>
       </section>
 
-      {/* SECTION: NOTICIA */}
+      {/* SECTION: NOTICIA
       <section className="landing__featured-news">
         <div className="landing__featured-news-image-wrapper">
           <img className="landing__featured-news-image" src={newsImage} alt="Deslizamiento en Alturas de Bélgica" loading="lazy" />
@@ -102,7 +102,7 @@ function Home() {
           <p>This project is an effort of the Puerto Rico Landslide Hazard Mitigation Office and the NSF Collaborative Center for Landslide Geohazards.</p>
           <img className="landing__featured-news-logo" src={CCFLHLogo} alt="Collaborative Center for Landslide Geohazards" />
         </div>
-      </section>
+      </section> */}
 
       {/* SECTION: CONTACTO — driven by office_info table */}
       <section id="contact" className="landing__contact">

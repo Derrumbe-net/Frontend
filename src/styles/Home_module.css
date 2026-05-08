@@ -297,7 +297,7 @@
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 15rem;
+  gap: 7rem;
 }
 
 .landing__contact-text {
@@ -328,13 +328,14 @@
 
 .landing__contact-image-wrapper {
   flex: 1;
-  max-width: 400px;
+  max-width: 500px;
+  display: flex;
+  justify-content: center;
 }
 
 .landing__contact-image {
   width: 100%;
   object-fit: cover;
-  margin-left: -10px;
 }
 
 /* ============================================
