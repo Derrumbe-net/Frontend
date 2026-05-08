@@ -176,7 +176,7 @@
   }
   .report-hero__logo { margin-bottom: 0.5rem; }
   .report-title { text-align: center; }
-  .report-subtitle { text-align: justify; }
+  .report-subtitle { text-align: center; }
   .report-description { 
     max-width: 100%; 
     text-align: justify !important;

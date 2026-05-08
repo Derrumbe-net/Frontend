@@ -37,7 +37,6 @@ function LandslideReadyPR_Municipios() {
 
           <h3 className="landslideReady__subheader">
             Mapa de Municipios LandslideReady<br />
-            <strong>(Actualizado en Marzo 4, 2025)</strong>
           </h3>
           <div className="landslideReady__map-wrapper">
             <LandslideReadyMap completedMunicipalities={completedMunicipalities} />

@@ -80,7 +80,7 @@ export default function About() {
         </p>
       ) : (
         <>
-          <h2 className="directory__subtitle">Facultad</h2>
+          <h2 className="directory__subtitle">Personal Principal</h2> 
           <div className="directory__profiles">
             {faculty.map((m) => (
               <MemberCard key={m.id || m.member_id} member={m} memberType="faculty" showContact />
