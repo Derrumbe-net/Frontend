@@ -123,11 +123,11 @@ const StationsMap = ({ stations, selectedMetric, onStationSelect, selectedStatio
 
 /* --- PERCENTILE BANDS & DATA --- */
 const PERCENTILE_BANDS = [
-    { label: 'D4 – Exceptionally Dry',  lo: 0,     hi: 2,     fill: '#4a0000' },
-    { label: 'D3 – Extremely Dry',      lo: 2,     hi: 5,     fill: '#cc0000' },
-    { label: 'D2 – Severely Dry',       lo: 5,     hi: 10,    fill: '#f77f00' },
-    { label: 'D1 – Moderately Dry',     lo: 10,    hi: 20,    fill: '#f5c97a' },
-    { label: 'D0 – Abnormally Dry',     lo: 20,    hi: 30,    fill: '#ffff00' },
+    { label: 'Exceptionally Dry',  lo: 0,     hi: 2,     fill: '#4a0000' },
+    { label: 'Extremely Dry',      lo: 2,     hi: 5,     fill: '#cc0000' },
+    { label: 'Severely Dry',       lo: 5,     hi: 10,    fill: '#f77f00' },
+    { label: 'Moderately Dry',     lo: 10,    hi: 20,    fill: '#f5c97a' },
+    { label: 'Abnormally Dry',     lo: 20,    hi: 30,    fill: '#ffff00' },
     { label: 'Normal',                  lo: 30,    hi: 70,    fill: '#ffffff' },
     { label: 'Abnormally Wet',          lo: 70,    hi: 80,    fill: '#b3f0ff' },
     { label: 'Moderately Wet',          lo: 80,    hi: 90,    fill: '#66ccff' },
@@ -275,7 +275,7 @@ const StationChart = ({ station, sensorIndex }) => {
         setLoading(true);
 
         const stId = station.id || station.station_id;
-        const wcMax = station[`wc${sensorIndex}`];
+        const wcMax = station[`wc${sensorIndex}_max`];
         const percentiles = STATIC_PERCENTILES;
 
         const now = new Date();
@@ -718,7 +718,12 @@ function buildChartOptions(pSeries, obsSeries, medianSeries, monthBands, wcMax, 
                     content += `<b>${this.series.name}</b>: ${this.point.low.toFixed(4)} - ${this.point.high.toFixed(4)}`;
                 } else {
                     const val = sensorIndex === 'sat' ? this.y.toFixed(2) + '%' : this.y.toFixed(4);
-                    content += `${sensorIndex === 'sat' ? 'Saturación' : 'Observación'}: ${val}`;
+                    content += `${sensorIndex === 'sat' ? '<b>Saturación</b>' : '<b>Observación</b>'}: ${val}`;
+
+                    if (sensorIndex !== 'sat' && wcMax) {
+                        const percentileSat = (this.y / wcMax) * 100;
+                        content += `<br/><b>Percentile Saturation</b>: ${percentileSat.toFixed(2)}%`;
+                    }
                 }
                 return content + `</div>`;
             }
