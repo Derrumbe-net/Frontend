@@ -23,7 +23,7 @@ function SusceptibilityMunicipalitiesMap() {
                 Hemos preparado un mapa interactivo de susceptibilidad a deslizamientos de tierra por municipios.
                 Para explorar la información, puede seleccionar un municipio directamente en el mapa o buscarlo en el menú desplegable (dropdown).
                 Al hacer “clic” sobre municipio, se abrirá una ventana con una vista previa del mapa municipal
-                y las opciones de **descargar el archivo PDF** o verlo en pantalla completa.
+                y las opciones de descargar el archivo PDF o verlo en pantalla completa.
             </p>
 
             <p className="municipality-intro">
