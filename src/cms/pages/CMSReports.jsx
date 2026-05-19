@@ -31,9 +31,17 @@ export default function CMSReports() {
         try {
             const res = await fetch(`${API_URL}/reports`);
             const data = await res.json();
-            setReports(data || []);
+            
+            if (Array.isArray(data)) {
+                setReports(data);
+            } else if (data && Array.isArray(data.data)) {
+                setReports(data.data);
+            } else {
+                setReports([]);
+            }
         } catch (err) {
             console.error("Error loading reports:", err);
+            setReports([]); // Fallback a array vacío en caso de error
         }
     };
 
@@ -46,6 +54,41 @@ export default function CMSReports() {
     const handleCloseForm = () => {
         setShowForm(false);
         setEditReport(null);
+    };
+
+    const handleDeleteReport = async (id) => {
+        const confirm = await Swal.fire({
+            title: "¿Eliminar reporte?",
+            text: "Esta acción no se puede deshacer y eliminará el reporte de la base de datos.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Sí, eliminar",
+            cancelButtonText: "Cancelar",
+            confirmButtonColor: "#d33",
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const token = localStorage.getItem("cmsAdmin");
+            const res = await fetch(`${API_URL}/reports/${id}`, {
+                method: "DELETE",
+                headers: { 
+                    Authorization: `Bearer ${token}` 
+                }
+            });
+
+            if (res.ok) {
+                Swal.fire("Eliminado", "El reporte ha sido eliminado.", "success");
+                fetchReports();
+            } else {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || "No se pudo eliminar el reporte");
+            }
+        } catch (error) {
+            console.error("Error deleting report:", error);
+            Swal.fire("Error", error.message, "error");
+        }
     };
 
     const handleSort = (key) => {
@@ -61,7 +104,10 @@ export default function CMSReports() {
         return sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />;
     };
 
-    const sortedReports = [...reports].sort((a, b) => {
+    // Doble validación para prevenir el error "reports is not iterable"
+    const safeReports = Array.isArray(reports) ? reports : [];
+
+    const sortedReports = [...safeReports].sort((a, b) => {
         let aValue = a[sortConfig.key];
         let bValue = b[sortConfig.key];
 
@@ -200,7 +246,6 @@ export default function CMSReports() {
                                     return (
                                         <tr key={id}>
                                             <td>
-                                                {/* FIXED: Check image_path instead of image_url so it correctly triggers a fetch */}
                                                 <ReportThumbnail reportId={id} hasFolder={!!r.image_path || !!r.image_url} />
                                             </td>
                                             <td>{r.reported_at?.slice(0, 10)}</td>
@@ -221,6 +266,14 @@ export default function CMSReports() {
                                                     title="Validar / Editar"
                                                 >
                                                     <FaEdit />
+                                                </button>
+                                                <button
+                                                    className="cms-icon-btn"
+                                                    onClick={() => handleDeleteReport(id)}
+                                                    title="Eliminar Reporte"
+                                                    style={{ color: '#d32f2f', marginLeft: '8px' }}
+                                                >
+                                                    <FaTrash />
                                                 </button>
                                             </td>
                                         </tr>
@@ -279,7 +332,7 @@ function ReportThumbnail({ reportId, hasFolder }) {
             .then(res => res.json())
             .then(data => {
                 if (data && Array.isArray(data) && data.length > 0) {
-                    setFirstImage(data[0]); // Adjusted: Your Go backend returns a direct array, not { images: [...] }
+                    setFirstImage(data[0]); 
                 }
             })
             .catch(err => console.error("Thumb load error", err));
@@ -337,7 +390,7 @@ function ReportForm({ report, onClose, refreshReports }) {
                 physical_address: report.physical_address || "",
                 latitude: report.latitude || "",
                 longitude: report.longitude || "",
-                is_validated: report.is_validated ? 1 : 0, // Ensure it sets to 1/0
+                is_validated: report.is_validated ? 1 : 0, 
                 landslide_id: report.landslide_id || report.id || null
             });
             fetchServerImages();
@@ -354,7 +407,6 @@ function ReportForm({ report, onClose, refreshReports }) {
             const res = await fetch(`${API_URL}/reports/${reportId}/images`);
             if (res.ok) {
                 const data = await res.json();
-                // Adjusted: Your Go backend returns a direct array, not { images: [...] }
                 if (Array.isArray(data)) {
                     setExistingImages(data);
                 } else {
@@ -457,7 +509,6 @@ function ReportForm({ report, onClose, refreshReports }) {
                 console.warn("Could not parse Admin ID from token, defaulting to 1");
             }
 
-            // FIXED: Look for image_path from the backend
             let sharedFolder = report.image_path || report.image_url;
             if (!sharedFolder && formData.reported_at) {
                 const datePart = formData.reported_at.slice(0, 10);
@@ -473,7 +524,7 @@ function ReportForm({ report, onClose, refreshReports }) {
                     landslide_date: formData.reported_at,
                     latitude: formData.latitude ? parseFloat(formData.latitude) : null,
                     longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-                    image_url: sharedFolder // Left this as image_url, assumes landslides expects it
+                    image_url: sharedFolder
                 };
 
                 const lsRes = await fetch(`${API_URL}/landslides`, {
@@ -499,9 +550,7 @@ function ReportForm({ report, onClose, refreshReports }) {
                 latitude: formData.latitude ? parseFloat(formData.latitude) : null,
                 longitude: formData.longitude ? parseFloat(formData.longitude) : null,
                 landslide_id: finalLandslideId,
-                // FIXED: Send 'image_path' to match Go Backend structs
                 image_path: sharedFolder, 
-
                 is_validated: formData.is_validated === 1,
                 reported_at: formData.reported_at ? new Date(formData.reported_at).toISOString() : null
             };
