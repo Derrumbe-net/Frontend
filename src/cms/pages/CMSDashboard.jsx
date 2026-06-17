@@ -36,7 +36,7 @@ function CMSDashboard() {
                     editar código. Este CMS fue diseñado específicamente para Derrumbe.net 
                     para que el PRLHMO mantenga los datos actualizados de forma rápida y segura. Desde aquí pueden
                     administrar proyectos, publicaciones, reportes,
-      )estaciones, el directorio del equipo y los usuarios de este sistema.
+          estaciones, el directorio del equipo y los usuarios de este sistema.
                   </p>
                 </section>
 
