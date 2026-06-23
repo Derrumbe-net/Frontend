@@ -9,6 +9,7 @@ import officeImage from '../assets/office_door.webp';
 import uprmLogo from "../assets/UPRM_LOGO.png";
 import logo from '../assets/PRLHMO_LOGO.svg';
 import CCFLHLogo from "../assets/CCFLH_LOGO.svg";
+import { SITE_CONFIG } from "@config";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -40,15 +41,14 @@ function Home() {
           <div className="hero__logos">
               <img src={logo} alt="PRLHMO Logo" className="hero__logo hero__logo--left" />
               <h1 className="hero__title">
-                  Oficina de Mitigación ante <br />
-                  Deslizamientos de Tierra en Puerto Rico
+                  {renderLocation(SITE_CONFIG.HOME.TITLE)}
               </h1>
               <img src={uprmLogo} alt="UPRM Logo" className="hero__logo hero__logo--right" />
           </div>
 
           <div className="hero__buttons">
-              <Link to="/reportar" className="btn btn--report">Haz tu Reporte</Link>
-              <Link to="/solicitud" className="btn btn--outline">Solicita una Charla</Link>
+              <Link to="/reportar" className="btn btn--report">{SITE_CONFIG.HOME.HERO_REPORT_BTN}</Link>
+              <Link to="/solicitud" className="btn btn--outline">{SITE_CONFIG.HOME.HERO_REQUEST_BTN}</Link>
           </div>
         </div>
       </section>
@@ -56,12 +56,11 @@ function Home() {
       {/* SECTION: MAPA */}
       <section className="landing__map">
         <div className="landing__map-text">
-          <h2>Explora Nuestro Mapa Interactivo de Monitoreo de Deslizamientos</h2>
+          <h2>{SITE_CONFIG.HOME.MAP_SECTION_TITLE}</h2>
           <p>
-            Herramienta interactiva que muestra, en tiempo real, datos de saturación del suelo,
-            susceptibilidad a deslizamientos y estimaciones de precipitación en Puerto Rico.
+            {SITE_CONFIG.HOME.MAP_SECTION_DESC}
           </p>
-          <Link to="/mapa-interactivo" className="landing__map-link">¡Haz clic en el mapa!</Link>
+          <Link to="/mapa-interactivo" className="landing__map-link">{SITE_CONFIG.HOME.MAP_SECTION_LINK}</Link>
         </div>
 
         <div className="landing__map-preview-container">
@@ -77,12 +76,11 @@ function Home() {
       {/* SECTION: REPORTAR */}
       <section className="landing__report">
         <div className="landing__report-text">
-          <h2>Reporta un Deslizamiento</h2>
+          <h2>{SITE_CONFIG.HOME.REPORT_SECTION_TITLE}</h2>
           <p>
-            Ayúdanos a mejorar el monitoreo reportando deslizamientos que observes
-            en tu área. Tu apoyo puede brindar ayuda para la comunidad.
+            {SITE_CONFIG.HOME.REPORT_SECTION_DESC}
           </p>
-          <Link to="/reportar" className="btn--black">¡Haz tu Reporte!</Link>
+          <Link to="/reportar" className="btn--black">{SITE_CONFIG.HOME.REPORT_SECTION_BTN}</Link>
         </div>
         <div className="landing__report-image-wrapper">
           <img src={landslidePhoto} alt="Ejemplo de deslizamiento" className="landing__report-image" loading="lazy" />
@@ -107,7 +105,7 @@ function Home() {
       {/* SECTION: CONTACTO — driven by office_info table */}
       <section id="contact" className="landing__contact">
         <div className="landing__contact-text">
-          <h2>Contáctenos</h2>
+          <h2>{SITE_CONFIG.HOME.CONTACT_SECTION_TITLE}</h2>
           <hr />
           {officeInfo ? (
             <>
@@ -134,9 +132,9 @@ function Home() {
             </>
           ) : (
             <>
-              <p><strong>Email:</strong><br />slidespr@uprm.edu</p>
-              <p><strong>Teléfono:</strong><br />787-832-4040 Ext. 6844</p>
-              <p><strong>Oficina:</strong><br />Residencia 4B<br />Universidad de Puerto Rico, Recinto de Mayagüez</p>
+              <p><strong>Email:</strong><br />{SITE_CONFIG.HOME.CONTACT_DEFAULT_EMAIL}</p>
+              <p><strong>Teléfono:</strong><br />{SITE_CONFIG.HOME.CONTACT_DEFAULT_PHONE}</p>
+              <p><strong>Oficina:</strong><br />{renderLocation(SITE_CONFIG.HOME.CONTACT_DEFAULT_OFFICE)}</p>
             </>
           )}
         </div>

@@ -3,6 +3,7 @@ import { useState } from "react";
 import layersIcon from "../assets/layers-icon.png";
 import historyIcon from "../assets/history-icon.png";
 import settingsIcon from "../assets/settings-icon.png";
+import { SITE_CONFIG } from "@config";
 
 export default function MapMenu({
                                     showStations,
@@ -73,7 +74,7 @@ export default function MapMenu({
                 <div className="filters">
 
                     {/* --- STATIONS SECTION --- */}
-                    <div className="filter-title">Stations & Monitoring Data</div>
+                    <div className="filter-title">{SITE_CONFIG.MAP_MENU.TITLE_STATIONS}</div>
 
                     <div className="nested-section">
 
@@ -84,7 +85,7 @@ export default function MapMenu({
                         checked={showSaturation}
                         onChange={onToggleSaturation}
                         />
-                        Soil Saturation (%)
+                        {SITE_CONFIG.MAP_MENU.LABEL_SOIL_SATURATION_PCT}
                     </label>
 
                     <label>
@@ -94,23 +95,23 @@ export default function MapMenu({
                         checked={showPrecip12hr}
                         onChange={onTogglePrecip12hr}
                         />
-                        Precipitation (Last 12hr)
+                        {SITE_CONFIG.MAP_MENU.LABEL_PRECIPITATION_12HR}
                     </label>
                     </div>
 
                     {/* --- OTHER LAYERS --- */}
                     <div className="filter-title" style={{ marginTop: "15px" }}>
-                    Other Layers
+                        {SITE_CONFIG.MAP_MENU.TITLE_OTHER_LAYERS}
                     </div>
 
                     <label>
                     <input type="checkbox" checked={showPrecip} onChange={onTogglePrecip} />
-                    12hr Precipitation Estimates
+                    {SITE_CONFIG.MAP_MENU.LABEL_PRECIP_ESTIMATES}
                     </label>
 
                     <label>
                     <input type="checkbox" checked={showForecast} onChange={onToggleForecast} />
-                    Weather Radar
+                    {SITE_CONFIG.MAP_MENU.LABEL_WEATHER_RADAR}
                     </label>
 
                     <label>
@@ -119,12 +120,12 @@ export default function MapMenu({
                         checked={showSusceptibility}
                         onChange={onToggleSusceptibility}
                     />
-                    Landslide Susceptibility
+                    {SITE_CONFIG.MAP_MENU.LABEL_SUSCEPTIBILITY}
                     </label>
 
                     {/* --- LEGENDS --- */}
                     <div className="filter-title" style={{ marginTop: "15px" }}>
-                    Legends
+                        {SITE_CONFIG.MAP_MENU.TITLE_LEGENDS}
                     </div>
 
                     <label>
@@ -133,7 +134,7 @@ export default function MapMenu({
                         checked={showSaturationLegend}
                         onChange={onToggleSaturationLegend}
                     />
-                    Soil Saturation
+                    {SITE_CONFIG.INTERACTIVE_MAP.LEGEND_SATURATION_TITLE}
                     </label>
 
                     <label>
@@ -142,7 +143,7 @@ export default function MapMenu({
                         checked={showSusceptibilityLegend}
                         onChange={onToggleSusceptibilityLegend}
                     />
-                    Susceptibility
+                    {SITE_CONFIG.INTERACTIVE_MAP.LEGEND_SUSCEPTIBILITY_TITLE}
                     </label>
 
                     <label>
@@ -151,50 +152,15 @@ export default function MapMenu({
                         checked={showPrecipLegend}
                         onChange={onTogglePrecipLegend}
                     />
-                    Precipitation Estimates
+                    {SITE_CONFIG.INTERACTIVE_MAP.LEGEND_PRECIPITATION_TITLE}
                     </label>
 
                 </div>
             )}
 
-            {/* {activeMenu === "settings" && (
-                <div className="filters">
-
-                    <div className="filter-title">Legends</div>
-
-                    <label>
-                    <input
-                        type="checkbox"
-                        checked={showSaturationLegend}
-                        onChange={onToggleSaturationLegend}
-                    />
-                    Soil Saturation
-                    </label>
-
-                    <label>
-                    <input
-                        type="checkbox"
-                        checked={showSusceptibilityLegend}
-                        onChange={onToggleSusceptibilityLegend}
-                    />
-                    Susceptibility
-                    </label>
-
-                    <label>
-                    <input
-                        type="checkbox"
-                        checked={showPrecipLegend}
-                        onChange={onTogglePrecipLegend}
-                    />
-                    Precipitation Estimates
-                    </label>
-
-                </div>
-            )} */}
-
             {activeMenu === "history" && (
                 <div className="filters">
-                    <div className="filter-title">Filter Landslides by Year</div>
+                    <div className="filter-title">{SITE_CONFIG.MAP_MENU.TITLE_HISTORY}</div>
 
                     <label>
                         <input
@@ -209,7 +175,7 @@ export default function MapMenu({
                                 }
                             }}
                         />
-                        All Years
+                        {SITE_CONFIG.MAP_MENU.LABEL_ALL_YEARS}
                     </label>
 
                     {availableYears.map((year) => (

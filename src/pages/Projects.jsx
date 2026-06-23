@@ -5,6 +5,7 @@ import searchIcon from "../assets/search-icon-png-9.png";
 
 // Local images
 import placeholder from "../assets/placeholder.png";
+import { SITE_CONFIG } from "@config";
 
 function Projects() {
   const [projects, setProjects] = useState([]);
@@ -63,24 +64,19 @@ function Projects() {
 
   return (
     <div className="projects-page">
-      <h1 className="projects-title">Proyectos</h1>
+      <h1 className="projects-title">{SITE_CONFIG.PROJECTS.TITLE}</h1>
       <p className="projects-intro">
-        Explore los proyectos de investigación y cooperación desarrollados por la Oficina
-        de Mitigación ante Deslizamientos de Tierra de Puerto Rico. Estas iniciativas, en
-        colaboración con agencias federales, universidades y comunidades, abarcan desde el
-        análisis de riesgos y procesos geológicos hasta programas de participación
-        ciudadana y adaptación climática.
+        {SITE_CONFIG.PROJECTS.INTRO}
       </p>
       <p className="projects-subintro">
-        Su propósito es generar conocimiento científico, fortalecer la mitigación de
-        deslizamientos y apoyar la resiliencia de Puerto Rico ante eventos extremos.
+        {SITE_CONFIG.PROJECTS.SUBINTRO}
       </p>
 
       <div className="projects-controls">
         <div className="search-container">
           <input
             type="text"
-            placeholder="Search"
+            placeholder={SITE_CONFIG.PROJECTS.SEARCH_PLACEHOLDER}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -93,9 +89,9 @@ function Projects() {
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
           >
-            <option value="all">Todos los Proyectos</option>
-            <option value="present">Proyectos Actuales</option>
-            <option value="past">Proyectos Pasados</option>
+            <option value="all">{SITE_CONFIG.PROJECTS.FILTER_ALL}</option>
+            <option value="present">{SITE_CONFIG.PROJECTS.FILTER_PRESENT}</option>
+            <option value="past">{SITE_CONFIG.PROJECTS.FILTER_PAST}</option>
           </select>
         </div>
       </div>

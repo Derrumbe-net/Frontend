@@ -1,21 +1,22 @@
 import '../styles/RainForecast_module.css';
+import { SITE_CONFIG } from "@config";
 
 function RainForecast() {
   return (
     <section className="rain-forecast">
       <div className="rain-forecast__content">
         <div className="rain-forecast__text">
-          <h1>Pronóstico de Lluvia</h1>
+          <h1>{SITE_CONFIG.RAIN_FORECAST.TITLE}</h1>
           <p className="rain-forecast__note">
             <em>
-              Si las imágenes no se han actualizado, actualice la página o haga clic en ellas para ver las últimas versiones.
+              {SITE_CONFIG.RAIN_FORECAST.NOTE}
             </em>
           </p>
           <p>
-            El pronóstico de lluvia provee información através del mapa interactivo de <strong>National Weather Service</strong>, al igual que provee la precipitación esperada para hoy y mañana.
+            {SITE_CONFIG.RAIN_FORECAST.DESC_1}
           </p>
           <p>
-            La lluvia es uno de los factores principales que desencadenan deslizamientos en Puerto Rico, por lo que conocer su distribución y acumulación permite anticipar condiciones de riesgo y fortalecer la preparación.
+            {SITE_CONFIG.RAIN_FORECAST.DESC_2}
           </p>
         </div>
 
@@ -35,7 +36,7 @@ function RainForecast() {
 
         <div className="rain-forecast__comparison">
           <div className="rain-forecast__card">
-            <h2>Pronóstico del Día</h2>
+            <h2>{SITE_CONFIG.RAIN_FORECAST.DAY_FORECAST}</h2>
             <a
               href="https://www.weather.gov/images/sju/marine/wrf/nbm24hr_prec.png"
               target="_blank"
@@ -49,7 +50,7 @@ function RainForecast() {
           </div>
 
           <div className="rain-forecast__card">
-            <h2>Pronóstico de Mañana</h2>
+            <h2>{SITE_CONFIG.RAIN_FORECAST.TOMORROW_FORECAST}</h2>
             <a
               href="https://www.weather.gov/images/sju/marine/wrf/nbm48hr_prec.png"
               target="_blank"

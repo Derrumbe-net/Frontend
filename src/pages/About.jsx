@@ -3,6 +3,7 @@ import "../styles/About_module.css";
 import officeMonitors from "../assets/office_monitors.webp";
 import logo from "../assets/PRLHMO_LOGO.svg";
 import linkedinLogo from "../assets/LINKEDIN_LOGO.svg";
+import { SITE_CONFIG } from "@config";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -53,48 +54,42 @@ export default function About() {
         </div>
         <div className="about__text-block">
           <img src={logo} alt="Logo PRLHMO" className="about__logo-bg" />
-          <h1 className="about__title">¿Quiénes somos?</h1>
+          <h1 className="about__title">{SITE_CONFIG.ABOUT.TITLE}</h1>
           <p className="about__description">
-            La Oficina de Mitigación de Peligros de Deslizamientos de Tierra en Puerto Rico
-            es parte del Departamento de Geología de la Universidad de Puerto Rico en Mayagüez.
-            La oficina trabaja con diversas agencias, partes interesadas, organizaciones comunitarias
-            y otros en los asuntos relacionados con los peligros de deslizamientos de tierra en Puerto Rico.
+            {SITE_CONFIG.ABOUT.DESCRIPTION}
           </p>
           <p className="about__mission">
-            <strong>Misión:</strong> Llevar a cabo investigaciones continuas y actividades de
-            participación comunitaria relacionadas con los peligros de deslizamientos de tierra en
-            Puerto Rico.
+            <strong>{SITE_CONFIG.ABOUT.MISSION_LABEL}</strong> {SITE_CONFIG.ABOUT.MISSION}
           </p>
           <p className="about__vision">
-            <strong>Visión:</strong> Ciencia y preparación para los peligros de deslizamientos de
-            tierra en Puerto Rico.
+            <strong>{SITE_CONFIG.ABOUT.VISION_LABEL}</strong> {SITE_CONFIG.ABOUT.VISION}
           </p>
         </div>
       </div>
 
-      <div className="directory__title">Directorio de Oficina</div>
+      <div className="directory__title">{SITE_CONFIG.ABOUT.DIRECTORY_TITLE}</div>
 
       {loading ? (
         <p style={{ textAlign: "center", color: "#465a52", padding: "3rem" }}>
-          Cargando directorio…
+          {SITE_CONFIG.ABOUT.LOADING_TEXT}
         </p>
       ) : (
         <>
-          <h2 className="directory__subtitle">Personal Principal</h2> 
+          <h2 className="directory__subtitle">{SITE_CONFIG.ABOUT.SECTION_FACULTY}</h2> 
           <div className="directory__profiles">
             {faculty.map((m) => (
               <MemberCard key={m.id || m.member_id} member={m} memberType="faculty" showContact />
             ))}
           </div>
 
-          <h2 className="directory__subtitle">Estudiantes Graduados</h2>
+          <h2 className="directory__subtitle">{SITE_CONFIG.ABOUT.SECTION_GRADUATE}</h2>
           <div className="directory__profiles directory__profiles--students">
             {graduate.map((m) => (
               <MemberCard key={m.id || m.student_member_id || m.member_id} member={m} memberType="student" />
             ))}
           </div>
 
-          <h2 className="directory__subtitle">Estudiantes Subgraduados</h2>
+          <h2 className="directory__subtitle">{SITE_CONFIG.ABOUT.SECTION_UNDERGRADUATE}</h2>
           <div className="directory__profiles directory__profiles--students">
             {undergraduate.map((m) => (
               <MemberCard key={m.id || m.student_member_id || m.member_id} member={m} memberType="student" />
@@ -103,7 +98,7 @@ export default function About() {
 
           {fundingSources.length > 0 && (
             <div className="funding__section">
-              <div className="directory__title funding__banner">Fuentes de Financiamiento</div>
+              <div className="directory__title funding__banner">{SITE_CONFIG.ABOUT.SECTION_FUNDING}</div>
               <div className="funding__grid">
                 {fundingSources.map((f) => (
                   <FundingCard key={f.id || f.funding_id} source={f} />

@@ -10,6 +10,7 @@ import GreenPinIcon from '../assets/green-location-pin.png';
 import L from 'leaflet';
 import MapMenu from "../components/MapMenu.jsx";
 import Cookies from 'js-cookie';
+import { SITE_CONFIG } from "@config";
 
 const COOKIE_NAME = 'landslide_map_filters';
 
@@ -33,15 +34,15 @@ const Disclaimer = ({ onAgree }) => {
     return (
         <div className="disclaimer-overlay">
             <div className="disclaimer-box">
-                <h2>Aviso | Disclaimer</h2>
+                <h2>{SITE_CONFIG.INTERACTIVE_MAP.DISCLAIMER_TITLE}</h2>
                 <p>
-                    <strong>EN:</strong> The data presented on this platform is experimental. The Puerto Rico Landslide Hazard Mitigation Office is not responsible for the decisions taken after utilizing our data. By proceeding, you acknowledge and accept this disclaimer.
+                    <strong>EN:</strong> {SITE_CONFIG.INTERACTIVE_MAP.DISCLAIMER_EN}
                 </p>
                 <p>
-                    <strong>ES:</strong> Los datos presentados en esta plataforma son experimentales. La Oficina de Mitigación ante Deslizamientos de Puerto Rico no se hace responsable de las decisiones tomadas utilizando nuestra información. Al continuar, usted reconoce y acepta este aviso.
+                    <strong>ES:</strong> {SITE_CONFIG.INTERACTIVE_MAP.DISCLAIMER_ES}
                 </p>
                 <button onClick={onAgree}>
-                    Acepto | Agree
+                    {SITE_CONFIG.INTERACTIVE_MAP.DISCLAIMER_BTN}
                 </button>
             </div>
         </div>
@@ -571,7 +572,7 @@ const PopulateLandslides = ({ selectedYear, setAvailableYears, onDataUpdate }) =
 
 const getStationStatus = (lastUpdated) => {
     if (!lastUpdated) {
-        return { isOutdated: true, timeString: "Desconocido" };
+        return { isOutdated: true, timeString: SITE_CONFIG.INTERACTIVE_MAP.STATION_STATUS_UNKNOWN };
     }
     const cleanDate = lastUpdated.replace(' ', 'T').replace('Z', '');
     const last = new Date(cleanDate + (cleanDate.includes('-04:00') ? '' : '-04:00'));
@@ -585,11 +586,11 @@ const getStationStatus = (lastUpdated) => {
 
     let timeString = "";
     if (diffDays > 0) {
-        timeString = `Hace ${diffDays} día(s)`;
+        timeString = `${SITE_CONFIG.INTERACTIVE_MAP.STATION_STATUS_AGO} ${diffDays} día(s)`;
     } else if (diffHours > 0) {
-        timeString = `Hace ${diffHours} hora(s)`;
+        timeString = `${SITE_CONFIG.INTERACTIVE_MAP.STATION_STATUS_AGO} ${diffHours} hora(s)`;
     } else {
-        timeString = `Hace ${diffMins} minuto(s)`;
+        timeString = `${SITE_CONFIG.INTERACTIVE_MAP.STATION_STATUS_AGO} ${diffMins} minuto(s)`;
     }
 
     return {
@@ -600,7 +601,7 @@ const getStationStatus = (lastUpdated) => {
 
 const SoilSaturationLegend = () => (
     <div className="legend-container legend-soil-saturation">
-        <div className="legend-title">Soil Saturation</div>
+        <div className="legend-title">{SITE_CONFIG.INTERACTIVE_MAP.LEGEND_SATURATION_TITLE}</div>
         <div className="legend-item">
             <span className="legend-color-box" style={{background:"#e0c853"}}></span>
             <p>0% - 79%</p>
@@ -618,7 +619,7 @@ const SoilSaturationLegend = () => (
 
 const SusceptibilityLegend = () => (
     <div className="legend-container legend-landslide-susceptibility">
-        <div className="legend-title">Landslide Susceptibility</div>
+        <div className="legend-title">{SITE_CONFIG.INTERACTIVE_MAP.LEGEND_SUSCEPTIBILITY_TITLE}</div>
         <div className="legend-item">
             <span className="legend-color-box" style={{background:"#C0C0C0"}}></span>
             <p>Low</p>
@@ -664,7 +665,7 @@ const PrecipLegend = () => {
 
     return (
         <div ref={ref} className="legend-container legend-precipitation legend-scrollable">
-            <div className="legend-title">Precipitation (inches)</div>
+            <div className="legend-title">{SITE_CONFIG.INTERACTIVE_MAP.LEGEND_PRECIPITATION_TITLE}</div>
             {[
                 ["#9FEAFF", "0.01 - 0.05"], ["#7FD6FF", "0.05 - 0.10"], ["#5FC2FF", "0.10 - 0.15"], ["#0099FF", "0.15 - 0.20"],
                 ["#00CC00", "0.20 - 0.40"], ["#00B200", "0.40 - 0.60"], ["#009900", "0.60 - 0.80"], ["#007F00", "0.80 - 1.00"],
@@ -913,13 +914,13 @@ export default function InteractiveMap({ isPreview = false }) {
     let mapLabelText = "";
 
     if (selectedYear) {
-        mapLabelText = "HISTORICAL LANDSLIDE DATA";
+        mapLabelText = SITE_CONFIG.INTERACTIVE_MAP.LABEL_HISTORICAL;
     } else if (showSaturation) {
-        mapLabelText = "SOIL SATURATION PERCENTAGE";
+        mapLabelText = SITE_CONFIG.INTERACTIVE_MAP.LABEL_SATURATION;
     } else if (showPrecip12hr) {
-        mapLabelText = "PAST 12 HOUR PRECIPITATION (INCHES)";
+        mapLabelText = SITE_CONFIG.INTERACTIVE_MAP.LABEL_PRECIPITATION;
     } else {
-        mapLabelText = "SOIL SATURATION PERCENTAGE"; 
+        mapLabelText = SITE_CONFIG.INTERACTIVE_MAP.LABEL_SATURATION; 
     }
 
     return (
@@ -951,7 +952,7 @@ export default function InteractiveMap({ isPreview = false }) {
 
                {showZoomHint && (
                 <div className="zoom-hint">
-                    Press Ctrl + scroll to zoom
+                    {SITE_CONFIG.INTERACTIVE_MAP.ZOOM_HINT}
                 </div>
                 )} 
 

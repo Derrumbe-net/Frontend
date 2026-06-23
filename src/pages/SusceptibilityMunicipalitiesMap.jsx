@@ -3,6 +3,7 @@ import InteractiveMunicipalityMap from "../components/InteractiveMunicipalityMap
 import "../styles/SusceptibilityMunicipalitiesMap.css";
 import municipalityPng from "../components/MunicipalityPNGs";
 import municipalityPdf from "../components/MunicipalityPDFs"; 
+import { SITE_CONFIG } from "@config";
 
 function SusceptibilityMunicipalitiesMap() {
     const [activeMunicipality, setActiveMunicipality] = useState(null);
@@ -17,23 +18,18 @@ function SusceptibilityMunicipalitiesMap() {
 
     return (
         <div className="municipality-page">
-            <h1 className="municipality-title">Mapas Municipales</h1>
+            <h1 className="municipality-title">{SITE_CONFIG.SUSCEPTIBILITY.MUNICIPAL_TITLE}</h1>
 
             <p className="municipality-intro">
-                Hemos preparado un mapa interactivo de susceptibilidad a deslizamientos de tierra por municipios.
-                Para explorar la información, puede seleccionar un municipio directamente en el mapa o buscarlo en el menú desplegable (dropdown).
-                Al hacer “clic” sobre municipio, se abrirá una ventana con una vista previa del mapa municipal
-                y las opciones de descargar el archivo PDF o verlo en pantalla completa.
+                {SITE_CONFIG.SUSCEPTIBILITY.MUNICIPAL_INTRO_1}
             </p>
 
             <p className="municipality-intro">
-                Los archivos pueden tardar en cargar debido a su tamaño.
-                Si alguna imagen no aparece o algún enlace no funciona correctamente,
-                favor de comunicarse con nosotros: <strong>slidespr@uprm.edu</strong>.
+                {SITE_CONFIG.SUSCEPTIBILITY.MUNICIPAL_INTRO_2}
             </p>
 
             <div className="municipality-list-wrapper">
-                <h2 className="municipality-list-title">Seleccione un Municipio</h2>
+                <h2 className="municipality-list-title">{SITE_CONFIG.SUSCEPTIBILITY.SELECT_MUNICIPALITY}</h2>
 
                 <select
                     className="municipality-dropdown"
@@ -44,7 +40,7 @@ function SusceptibilityMunicipalitiesMap() {
                     }}
                     value={activeMunicipality ? activeMunicipality.name : ""}
                 >
-                    <option value="">-- Escoger Municipio --</option>
+                    <option value="">{SITE_CONFIG.SUSCEPTIBILITY.DROPDOWN_DEFAULT}</option>
                     {Object.keys(municipalityPdf).sort().map((name) => (
                         <option key={name} value={name}>
                             {name}
@@ -83,7 +79,7 @@ function MunicipalityModal({ municipality, onClose }) {
                 {imagePreview ? (
                     <img src={imagePreview} alt={`Vista previa de ${name}`} className="modal-image" />
                 ) : (
-                    <div className="no-preview">Vista previa no disponible</div>
+                    <div className="no-preview">{SITE_CONFIG.SUSCEPTIBILITY.MODAL_NO_PREVIEW}</div>
                 )}
 
                 <div className="modal-buttons">
@@ -95,11 +91,11 @@ function MunicipalityModal({ municipality, onClose }) {
                                 rel="noopener noreferrer"
                                 className="modal-button"
                             >
-                                Abrir / Descargar PDF
+                                {SITE_CONFIG.SUSCEPTIBILITY.MODAL_BTN_PDF}
                             </a>
                         </>
                     ) : (
-                        <span className="error-text">PDF no disponible</span>
+                        <span className="error-text">{SITE_CONFIG.SUSCEPTIBILITY.MODAL_PDF_ERROR}</span>
                     )}
                 </div>
             </div>
