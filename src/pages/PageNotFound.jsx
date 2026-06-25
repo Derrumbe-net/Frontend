@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import logo404 from '../assets/404_page_logo.png';
+import { SITE_CONFIG } from "@config";
 
 function NotFound() {
   const isMobile = window.innerWidth < 768;
@@ -29,27 +30,23 @@ function NotFound() {
         {/* LEFT / TOP — Text content */}
         <div style={{ flex: '0 0 auto', maxWidth: isMobile ? '100%' : '420px', zIndex: 2 }}>
           <p style={{ color: '#3b7d23', fontWeight: 800, fontSize: isMobile ? '0.8rem' : '1rem', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.5rem' }}>
-            Error 404
+            {SITE_CONFIG.NOT_FOUND.ERROR_LABEL}
           </p>
           <h1 style={{ fontSize: isMobile ? '3rem' : 'clamp(4rem, 6vw, 6rem)', fontWeight: 900, color: '#13241e', lineHeight: 1, margin: '0 0 0.5rem' }}>
-            ¡Oops!
+            {SITE_CONFIG.NOT_FOUND.TITLE}
           </h1>
           <h2 style={{ fontSize: isMobile ? '1.4rem' : 'clamp(1.5rem, 3vw, 2.8rem)', fontWeight: 800, color: '#13241e', lineHeight: 1.15, margin: '0 0 0.75rem' }}>
-            Algo salió mal.
+            {SITE_CONFIG.NOT_FOUND.SUBTITLE}
           </h2>
           <p style={{ color: '#465a52', fontSize: isMobile ? '0.9rem' : '1.05rem', lineHeight: 1.7, marginBottom: '1rem' }}>
-            La página que buscas no fue encontrada.
+            {SITE_CONFIG.NOT_FOUND.DESCRIPTION}
           </p>
 
           <div style={{ marginBottom: '1.5rem' }}>
             <p style={{ color: '#3b7d23', fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.6rem' }}>
-              Causas probables
+              {SITE_CONFIG.NOT_FOUND.CAUSES_LABEL}
             </p>
-            {[
-              'La URL fue escrita incorrectamente',
-              'La página fue movida o eliminada',
-              'No tienes permiso para acceder a esta sección',
-            ].map((cause, i) => (
+            {SITE_CONFIG.NOT_FOUND.CAUSES.map((cause, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
                 <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#3b7d23', flexShrink: 0 }} />
                 <p style={{ color: '#2d4a2d', fontSize: isMobile ? '0.85rem' : '1rem', margin: 0, lineHeight: 1.5 }}>{cause}</p>
@@ -63,7 +60,7 @@ function NotFound() {
             onMouseOver={e => e.currentTarget.style.backgroundColor = '#2d6018'}
             onMouseOut={e => e.currentTarget.style.backgroundColor = '#3b7d23'}
           >
-            Volver a página de inicio
+            {SITE_CONFIG.NOT_FOUND.HOME_BTN}
           </Link>
         </div>
 

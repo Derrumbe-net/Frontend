@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Popup } from 'react-leaflet';
 import '../styles/StationPopup.css';
+import { SITE_CONFIG } from "@config";
 
 const isMobile = window.matchMedia("(max-width: 768px)").matches;
 
@@ -32,13 +33,13 @@ const StationPopup = ({ station }) => {
         if (station.sensor_image_path) {
             imgs.push({
                 src: `${API_URL}/stations/item/${id}/images/sensor`,
-                label: 'Sensor View'
+                label: SITE_CONFIG.POPUPS.SENSOR_VIEW
             });
         }
         if (station.plot_image_path) {
             imgs.push({
                 src: `${API_URL}/stations/item/${id}/images/plot`,
-                label: 'Data Plot'
+                label: SITE_CONFIG.POPUPS.DATA_PLOT
             });
         }
 
@@ -49,7 +50,7 @@ const StationPopup = ({ station }) => {
     if (!station) return null;
 
     // Fixed: Ensure we pull 'name' first since that matches the new DB schema!
-    const stationName = station.name || station.city || "Estación Desconocida";
+    const stationName = station.name || station.city || SITE_CONFIG.POPUPS.STATION_UNKNOWN;
     const soilSaturation = station.soil_saturation;
     const lastUpdated = station.last_updated;
     const precip = station.precipitation;
@@ -142,9 +143,9 @@ const StationPopup = ({ station }) => {
                     )}
 
                     <ul>
-                        <li><strong>Last Updated:</strong> <span>{formattedLastUpdated} AST</span></li>
-                        <li><strong>Soil Saturation:</strong> <span>{formattedSoilSaturation}%</span></li>
-                        <li><strong>12 HRS Precipitation:</strong> <span>{formattedPrecip} inches</span></li>
+                        <li><strong>{SITE_CONFIG.POPUPS.LAST_UPDATED_LABEL}</strong> <span>{formattedLastUpdated} AST</span></li>
+                        <li><strong>{SITE_CONFIG.POPUPS.SOIL_SATURATION_LABEL}</strong> <span>{formattedSoilSaturation}%</span></li>
+                        <li><strong>{SITE_CONFIG.POPUPS.PRECIPITATION_LABEL}</strong> <span>{formattedPrecip} inches</span></li>
                     </ul>
                 </div>
             </div>

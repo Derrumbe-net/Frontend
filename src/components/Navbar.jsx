@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import logo from '../assets/PRLHMO_LOGO.svg';
 import landslideReadyLogo from '../assets/LANDSLIDEREADY_LOGO.png';
+import { SITE_CONFIG } from "@config";
 
 function Navbar() {
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -58,13 +59,13 @@ function Navbar() {
 
           <li className="nav__item">
             <Link to="/" className="nav__link" onClick={closeDropdown}>
-              Inicio
+              {SITE_CONFIG.NAVBAR.START}
             </Link>
           </li>
 
           <li className="nav__item">
             <Link to="/sobre-nosotros" className="nav__link" onClick={closeDropdown}>
-              Sobre Nosotros
+              {SITE_CONFIG.NAVBAR.ABOUT_US}
             </Link>
           </li>
 
@@ -74,20 +75,20 @@ function Navbar() {
               className="nav__link nav__toggle"
               onClick={() => toggleDropdown('investigación')}
             >
-              Investigación {openDropdown === 'investigación' ? '▴' : '▾'}
+              {SITE_CONFIG.NAVBAR.INVESTIGATION} {openDropdown === 'investigación' ? '▴' : '▾'}
             </button>
 
             {openDropdown === 'investigación' && (
               <ul className="nav__menu">
                 <li>
                   <Link to="/proyectos" className="nav__sublink" onClick={closeDropdown}>
-                    Proyectos
+                    {SITE_CONFIG.NAVBAR.PROJECTS}
                   </Link>
                 </li>
 
                 <li>
                   <Link to="/publicaciones" className="nav__sublink" onClick={closeDropdown}>
-                    Publicaciones
+                    {SITE_CONFIG.NAVBAR.PUBLICATIONS}
                   </Link>
                 </li>
               </ul>
@@ -100,24 +101,24 @@ function Navbar() {
               className="nav__link nav__toggle"
               onClick={() => toggleDropdown('monitoreo')}
             >
-              Monitoreo {openDropdown === 'monitoreo' ? '▴' : '▾'}
+              {SITE_CONFIG.NAVBAR.MONITORING} {openDropdown === 'monitoreo' ? '▴' : '▾'}
             </button>
 
             {openDropdown === 'monitoreo' && (
               <ul className="nav__menu">
                 <li>
                   <Link to="/mapa-interactivo" className="nav__sublink" onClick={closeDropdown}>
-                    Mapa Interactivo
+                    {SITE_CONFIG.NAVBAR.INTERACTIVE_MAP}
                   </Link>
                 </li>
                 <li>
                   <Link to="/estaciones" className="nav__sublink" onClick={closeDropdown}>
-                    Estaciones
+                    {SITE_CONFIG.NAVBAR.STATIONS}
                   </Link>
                 </li>
                 <li>
                   <Link to="/pronostico-lluvia" className="nav__sublink" onClick={closeDropdown}>
-                    Pronóstico de lluvia
+                    {SITE_CONFIG.NAVBAR.RAIN_FORECAST}
                   </Link>
                 </li>
               </ul>
@@ -130,24 +131,24 @@ function Navbar() {
               className="nav__link nav__toggle"
               onClick={() => toggleDropdown('recursos')}
             >
-              Recursos {openDropdown === 'recursos' ? '▴' : '▾'}
+              {SITE_CONFIG.NAVBAR.RESOURCES} {openDropdown === 'recursos' ? '▴' : '▾'}
             </button>
 
             {openDropdown === 'recursos' && (
               <ul className="nav__menu">
                 <li>
                   <Link to="/guia-deslizamientos" className="nav__sublink" onClick={closeDropdown}>
-                    Guía sobre Deslizamientos
+                    {SITE_CONFIG.NAVBAR.LANDSLIDE_GUIDE}
                   </Link>
                 </li>
                 <li>
                   <Link to="/mapa-susceptibilidad" className="nav__sublink" onClick={closeDropdown}>
-                    Mapa Susceptibilidad
+                    {SITE_CONFIG.NAVBAR.SUSCEPTIBILITY_MAP}
                   </Link>
                 </li>
                 <li>
                   <Link to="/mapa-susceptibilidad-municipios" className="nav__sublink" onClick={closeDropdown}>
-                    Mapas Municipales
+                    {SITE_CONFIG.NAVBAR.MUNICIPAL_MAPS}
                   </Link>
                 </li>
               </ul>
@@ -156,7 +157,7 @@ function Navbar() {
 
           <li className="nav__item">
             <Link to="/reportar" className="nav__link" onClick={closeDropdown}>
-              Reportar
+              {SITE_CONFIG.NAVBAR.REPORT}
             </Link>
           </li>
 
@@ -179,12 +180,12 @@ function Navbar() {
               <ul className="nav__menu">
                 <li>
                   <Link to="/landslideready-individuos" className="nav__sublink" onClick={closeDropdown}>
-                    LandslideReady para Individuos
+                    {SITE_CONFIG.NAVBAR.LANDSLIDEREADY_INDIVIDUALS}
                   </Link>
                 </li>
                 <li>
                   <Link to="/landslideready-municipios" className="nav__sublink" onClick={closeDropdown}>
-                    LandslideReady para Municipios
+                    {SITE_CONFIG.NAVBAR.LANDSLIDEREADY_MUNICIPALITIES}
                   </Link>
                 </li>
               </ul>

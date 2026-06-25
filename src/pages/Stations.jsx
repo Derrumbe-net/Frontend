@@ -8,6 +8,7 @@ import "leaflet/dist/leaflet.css";
 import "../styles/Stations.css";
 import stationSchematic from "../assets/station_schematic.png";
 import Cookies from 'js-cookie';
+import { PERCENTILE_BANDS, STATIC_PERCENTILES, SITE_CONFIG } from "@config";
 
 // Initialize highcharts-more (enables arearange series type)
 try {
@@ -119,36 +120,6 @@ const StationsMap = ({ stations, selectedMetric, onStationSelect, selectedStatio
             })}
         </>
     );
-};
-
-/* --- PERCENTILE BANDS & DATA --- */
-const PERCENTILE_BANDS = [
-    { label: 'Exceptionally Dry',  lo: 0,     hi: 2,     fill: '#4a0000' },
-    { label: 'Extremely Dry',      lo: 2,     hi: 5,     fill: '#cc0000' },
-    { label: 'Severely Dry',       lo: 5,     hi: 10,    fill: '#f77f00' },
-    { label: 'Moderately Dry',     lo: 10,    hi: 20,    fill: '#f5c97a' },
-    { label: 'Abnormally Dry',     lo: 20,    hi: 30,    fill: '#ffff00' },
-    { label: 'Normal',                  lo: 30,    hi: 70,    fill: '#ffffff' },
-    { label: 'Abnormally Wet',          lo: 70,    hi: 80,    fill: '#b3f0ff' },
-    { label: 'Moderately Wet',          lo: 80,    hi: 90,    fill: '#66ccff' },
-    { label: 'Severely Wet',            lo: 90,    hi: 95,    fill: '#0099ff' },
-    { label: 'Extremely Wet',           lo: 95,    hi: 98,    fill: '#0044ff' },
-    { label: 'Exceptionally Wet',       lo: 98,    hi: 100,   fill: '#1a00cc' },
-];
-
-const STATIC_PERCENTILES = {
-    0:  { p0: 0.0500, p2: 0.0802, p5: 0.1072, p10: 0.1341, p20: 0.1665, p30: 0.1934, p50: 0.2419, p70: 0.2905, p80: 0.3174, p90: 0.3498, p95: 0.3767, p98: 0.4037, p100: 0.4300 },
-    1:  { p0: 0.0200, p2: 0.0563, p5: 0.0929, p10: 0.1295, p20: 0.1734, p30: 0.2099, p50: 0.2758, p70: 0.3416, p80: 0.3782, p90: 0.4221, p95: 0.4586, p98: 0.4620, p100: 0.4800 },
-    2:  { p0: 0.1200, p2: 0.1556, p5: 0.1833, p10: 0.2110, p20: 0.2443, p30: 0.2720, p50: 0.3220, p70: 0.3719, p80: 0.3996, p90: 0.4329, p95: 0.4606, p98: 0.4620, p100: 0.4800 },
-    3:  { p0: 0.0700, p2: 0.1016, p5: 0.1460, p10: 0.1904, p20: 0.2437, p30: 0.2882, p50: 0.3682, p70: 0.4481, p80: 0.4620, p90: 0.4620, p95: 0.4620, p98: 0.4620, p100: 0.4800 },
-    4:  { p0: 0.2000, p2: 0.2489, p5: 0.2744, p10: 0.2999, p20: 0.3305, p30: 0.3560, p50: 0.4020, p70: 0.4479, p80: 0.4620, p90: 0.4620, p95: 0.4620, p98: 0.4620, p100: 0.4800 },
-    5:  { p0: 0.1200, p2: 0.1600, p5: 0.2024, p10: 0.2448, p20: 0.2956, p30: 0.3380, p50: 0.4144, p70: 0.4620, p80: 0.4620, p90: 0.4620, p95: 0.4620, p98: 0.4620, p100: 0.4800 },
-    6:  { p0: 0.1800, p2: 0.2208, p5: 0.2510, p10: 0.2812, p20: 0.3174, p30: 0.3476, p50: 0.4020, p70: 0.4563, p80: 0.4620, p90: 0.4620, p95: 0.4620, p98: 0.4620, p100: 0.4800 },
-    7:  { p0: 0.1400, p2: 0.1750, p5: 0.2072, p10: 0.2394, p20: 0.2780, p30: 0.3102, p50: 0.3682, p70: 0.4261, p80: 0.4583, p90: 0.4620, p95: 0.4620, p98: 0.4620, p100: 0.4800 },
-    8:  { p0: 0.0500, p2: 0.0965, p5: 0.1341, p10: 0.1716, p20: 0.2167, p30: 0.2543, p50: 0.3220, p70: 0.3896, p80: 0.4272, p90: 0.4620, p95: 0.4620, p98: 0.4620, p100: 0.4800 },
-    9:  { p0: 0.0400, p2: 0.0802, p5: 0.1128, p10: 0.1454, p20: 0.1845, p30: 0.2171, p50: 0.2758, p70: 0.3344, p80: 0.3670, p90: 0.4061, p95: 0.4387, p98: 0.4620, p100: 0.4800 },
-    10: { p0: 0.0000, p2: 0.0100, p5: 0.0200, p10: 0.0622, p20: 0.1161, p30: 0.1611, p50: 0.2419, p70: 0.3228, p80: 0.3678, p90: 0.4217, p95: 0.4620, p98: 0.4620, p100: 0.4800 },
-    11: { p0: 0.0000, p2: 0.0100, p5: 0.0216, p10: 0.0632, p20: 0.1131, p30: 0.1547, p50: 0.2296, p70: 0.3044, p80: 0.3460, p90: 0.3960, p95: 0.4376, p98: 0.4620, p100: 0.4800 }
 };
 
 /* --- HELPERS & CHART LOGIC --- */
@@ -276,7 +247,7 @@ const StationChart = ({ station, sensorIndex }) => {
 
         const stId = station.id || station.station_id;
         const wcMax = station[`wc${sensorIndex}_max`];
-        const percentiles = STATIC_PERCENTILES;
+        const percentiles = STATIC_PERCENTILES[stId] || STATIC_PERCENTILES[0] || STATIC_PERCENTILES;
 
         const now = new Date();
         const endDateStr = now.toISOString().split('T')[0];
@@ -338,7 +309,9 @@ const StationChart = ({ station, sensorIndex }) => {
                     const actualMax = obsSeries[obsSeries.length - 1][0];
                     setChartOptions(buildChartOptions(null, obsSeries, null, buildMonthBands(lastYear, now), null, sensorIndex, actualMin, actualMax));
                 } else {
-                    const pSeries = buildPercentileSeries(percentiles, lastYear, now);
+                    // Check if statically provided percentiles exist as an array for buildPercentileSeries logic, otherwise fallback structure
+                    const parsedPercentiles = Array.isArray(percentiles) ? percentiles : Object.values(STATIC_PERCENTILES);
+                    const pSeries = buildPercentileSeries(parsedPercentiles, lastYear, now);
                     const medianSeries = computeObsMedian(obsSeries, lastYear, now);
                     const actualMin = obsSeries[0][0];
                     const actualMax = obsSeries[obsSeries.length - 1][0];
@@ -367,7 +340,7 @@ const StationChart = ({ station, sensorIndex }) => {
                 ))}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '9.5px', fontWeight: '600', color: '#333' }}>
                     <span style={{ display: 'inline-block', width: 13, height: 2, background: '#111', borderRadius: 1 }} />
-                    {sensorIndex === 'sat' ? 'Saturación' : 'Observado'}
+                    {sensorIndex === 'sat' ? SITE_CONFIG.STATIONS.SATURATION_LABEL : SITE_CONFIG.STATIONS.OBSERVATION_LABEL}
                 </div>
             </div>
         </div>
@@ -527,7 +500,7 @@ function Stations() {
                                         className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
                                         onClick={() => setActiveTab(tab)}
                                     >
-                                        {tab === 'data' ? 'Datos' : tab === 'info' ? 'Información' : 'Gráfico'}
+                                        {tab === 'data' ? SITE_CONFIG.STATIONS.TAB_DATA : tab === 'info' ? SITE_CONFIG.STATIONS.TAB_INFO : SITE_CONFIG.STATIONS.TAB_GRAPHIC}
                                     </button>
                                 ))}
                             </div>
@@ -542,14 +515,14 @@ function Stations() {
                                                     className={`sensor-btn ${selectedSensor === num ? 'active' : ''}`}
                                                     onClick={() => setSelectedSensor(num)}
                                                 >
-                                                    Sensor {num}
+                                                    {SITE_CONFIG.STATIONS.SENSOR_LABEL} {num}
                                                 </button>
                                             ))}
                                             <button
                                                 className={`sensor-btn ${selectedSensor === 'sat' ? 'active' : ''}`}
                                                 onClick={() => setSelectedSensor('sat')}
                                             >
-                                                Saturación
+                                                {SITE_CONFIG.STATIONS.SATURATION_LABEL}
                                             </button>
                                         </div>
                                         <StationChart station={selectedStation} sensorIndex={selectedSensor} />
@@ -566,23 +539,23 @@ function Stations() {
                                         </div>
                                         <ul className="meta-list">
                                             <li>
-                                                <strong>Fecha de Instalación:</strong> {selectedStation.station_installation_date ? new Date(selectedStation.station_installation_date).toLocaleDateString() : "N/A"}
+                                                <strong>{SITE_CONFIG.STATIONS.META_INSTALL_DATE}</strong> {selectedStation.station_installation_date ? new Date(selectedStation.station_installation_date).toLocaleDateString() : "N/A"}
                                             </li>
-                                            <li><strong>Unidad Geológica:</strong> {selectedStation.geological_unit || "N/A"}</li>
-                                            <li><strong>Unidad de Suelo:</strong> {selectedStation.land_unit || "N/A"}</li>
-                                            <li><strong>Susceptibilidad:</strong> {selectedStation.susceptibility || "N/A"}</li>
+                                            <li><strong>{SITE_CONFIG.STATIONS.META_GEOLOGIC_UNIT}</strong> {selectedStation.geological_unit || "N/A"}</li>
+                                            <li><strong>{SITE_CONFIG.STATIONS.META_LAND_UNIT}</strong> {selectedStation.land_unit || "N/A"}</li>
+                                            <li><strong>{SITE_CONFIG.STATIONS.META_SUSCEPTIBILITY}</strong> {selectedStation.susceptibility || "N/A"}</li>
                                             <li>
-                                                <strong>Profundidad:</strong> {selectedStation.depth ? (
+                                                <strong>{SITE_CONFIG.STATIONS.META_DEPTH}</strong> {selectedStation.depth ? (
                                                     <div style={{ marginLeft: '10px', marginTop: '4px' }}>
                                                         {selectedStation.depth.split(',').map((d, index) => (
-                                                            <div key={index}>Sensor {index + 1}: {d.trim()}</div>
+                                                            <div key={index}>{SITE_CONFIG.STATIONS.SENSOR_LABEL} {index + 1}: {d.trim()}</div>
                                                         ))}
                                                     </div>
                                                 ) : "N/A"}
                                             </li>
-                                            <li><strong>Elevación:</strong> {selectedStation.elevation != null ? `${selectedStation.elevation} m` : "N/A"}</li>
-                                            <li><strong>Pendiente:</strong> {selectedStation.slope != null ? `${selectedStation.slope}°` : "N/A"}</li>
-                                            <li><strong>Colaborador:</strong> {selectedStation.collaborator || "N/A"}</li>
+                                            <li><strong>{SITE_CONFIG.STATIONS.META_ELEVATION}</strong> {selectedStation.elevation != null ? `${selectedStation.elevation} m` : "N/A"}</li>
+                                            <li><strong>{SITE_CONFIG.STATIONS.META_SLOPE}</strong> {selectedStation.slope != null ? `${selectedStation.slope}°` : "N/A"}</li>
+                                            <li><strong>{SITE_CONFIG.STATIONS.META_COLLABORATOR}</strong> {selectedStation.collaborator || "N/A"}</li>
                                         </ul>
                                     </div>
                                 )}
@@ -606,49 +579,25 @@ function Stations() {
             <div className="stations-footer">
                 <div className="footer-layout-wrapper">
                     <div className="footer-text-column">
-                        <h2>Sensores y equipos de la estación</h2>
-                            <p>
-                            Cada estación de la Red de Pronóstico de Deslizamientos de Tierra de Puerto Rico incluye estaciones de monitoreo equipadas con sensores subterráneos que miden el contenido volumétrico de agua, la presión de succión del suelo, la temperatura del suelo y la presión del agua subterránea. Los sensores se instalan en un hoyo excavado a mano hasta la base del suelo, donde se encuentra material de lecho rocoso meteorizado.
-                        </p>
-                        <p>
-                            El conjunto de sensores se instala a intervalos de 0.25d, 0.50d, 0.75d y 1.00d, donde "d" es la profundidad total del perfil del suelo. La distribución de los sensores se muestra en el diagrama adjunto.
-                        </p>
-                        <p>
-                            Los sensores sobre el suelo miden la temperatura del aire, la presión barométrica y la lluvia. Cada estación está controlada por un registrador de datos que recopila datos cada 5 minutos y transmite datos cada hora a través de un módem celular a nuestro servidor local entre las 7:00 y las 20:00 AST. Debido a que las estaciones funcionan con energía solar y batería, los datos generalmente no se transmiten durante la noche para ahorrar energía.
-                        </p>
+                        <h2>{SITE_CONFIG.STATIONS.FOOTER_TITLE_EQUIPMENT}</h2>
+                        <p>{SITE_CONFIG.STATIONS.FOOTER_DESC_EQUIPMENT_1}</p>
+                        <p>{SITE_CONFIG.STATIONS.FOOTER_DESC_EQUIPMENT_2}</p>
+                        <p>{SITE_CONFIG.STATIONS.FOOTER_DESC_EQUIPMENT_3}</p>
                     </div>
                     <div className="footer-image-column">
                         <img src={stationSchematic} alt="Esquema de sensores" className="schematic-img" />
                     </div>
                 </div>
-      <div className="footer-full-width">
-                    <h2 className="secondary-footer-header">Datos de la estación</h2>
-                    <p>
-                        Los datos medidos incluyen el contenido volumétrico de agua, la succión del suelo, el nivel de agua subterránea, la temperatura del suelo, la temperatura del aire, la presión barométrica y la lluvia.
-                    </p>
+                <div className="footer-full-width">
+                    <h2 className="secondary-footer-header">{SITE_CONFIG.STATIONS.FOOTER_TITLE_DATA}</h2>
+                    <p>{SITE_CONFIG.STATIONS.FOOTER_DESC_DATA}</p>
 
                     <ul className="glossary-list">
-                        <li>
-                            <strong>El contenido volumétrico de agua (VWC)</strong> es la relación entre el volumen de agua y el volumen total del suelo. Los valores normalmente no superan los 0,5 cm³/cm³. El contenido volumétrico de agua se puede utilizar para calcular la saturación del suelo.
-                        </li>
-                        <li>
-                            <strong>La succión del suelo</strong> es la presión negativa de los poros dentro del suelo. Cuando la presión de los poros del suelo es positiva, no hay succión. Nuestros sensores solo miden presiones negativas de hasta 0 kPa. Cuando los sensores leen ~0 kPa, la presión de los poros del suelo podría ser positiva.
-                        </li>
-                        <li>
-                            <strong>El nivel de agua subterránea del suelo</strong> se mide con un piezómetro de cuerda vibrante. El piezómetro mide la presión del agua subterránea por encima de su posición. Las unidades informadas están en centímetros de agua. Las lecturas del piezómetro se corrigen según las variaciones de presión atmosférica del barómetro sobre el suelo.
-                        </li>
-                        <li>
-                            <strong>La temperatura del suelo</strong> también se mide con nuestro instrumento piezómetro. Las unidades informadas son grados Celsius.
-                        </li>
-                        <li>
-                            <strong>La temperatura del aire</strong> se mide con un termómetro situado sobre la superficie. Las unidades que se indican son grados Celsius. Los valores de temperatura del aire que se indican pueden ser excesivamente altos si el sensor está expuesto directamente al sol.
-                        </li>
-                        <li>
-                            <strong>La presión atmosférica</strong> se mide con un barómetro situado sobre la superficie.
-                        </li>
-                        <li>
-                            <strong>La cantidad y la tasa de lluvia</strong> se miden con un pluviómetro de cubeta basculante. Las unidades que se indican son milímetros.
-                        </li>
+                        {SITE_CONFIG.STATIONS.GLOSSARY.map((item, i) => (
+                            <li key={i}>
+                                <strong>{item.TERM}</strong> {item.DESC}
+                            </li>
+                        ))}
                     </ul>
                 </div>
             </div>
@@ -699,7 +648,7 @@ function buildChartOptions(pSeries, obsSeries, medianSeries, monthBands, wcMax, 
             plotBands: monthBands,
         },
         yAxis: {
-            title: { text: sensorIndex === 'sat' ? 'Saturación (%)' : 'VWC (m³/m³)' },
+            title: { text: sensorIndex === 'sat' ? SITE_CONFIG.STATIONS.SATURATION_LABEL + ' (%)' : 'VWC (m³/m³)' },
             min: 0, 
             max: sensorIndex === 'sat' ? 100 : 0.6,
             labels: { 
@@ -718,11 +667,11 @@ function buildChartOptions(pSeries, obsSeries, medianSeries, monthBands, wcMax, 
                     content += `<b>${this.series.name}</b>: ${this.point.low.toFixed(4)} - ${this.point.high.toFixed(4)}`;
                 } else {
                     const val = sensorIndex === 'sat' ? this.y.toFixed(2) + '%' : this.y.toFixed(4);
-                    content += `${sensorIndex === 'sat' ? '<b>Saturación</b>' : '<b>Observación</b>'}: ${val}`;
+                    content += `${sensorIndex === 'sat' ? `<b>${SITE_CONFIG.STATIONS.SATURATION_LABEL}</b>` : `<b>${SITE_CONFIG.STATIONS.OBSERVATION_LABEL}</b>`}: ${val}`;
 
                     if (sensorIndex !== 'sat' && wcMax) {
                         const percentileSat = (this.y / wcMax) * 100;
-                        content += `<br/><b>Percentile Saturation</b>: ${percentileSat.toFixed(2)}%`;
+                        content += `<br/><b>${SITE_CONFIG.STATIONS.PERCENTILE_SAT_LABEL || 'Percentile Saturation'}</b>: ${percentileSat.toFixed(2)}%`;
                     }
                 }
                 return content + `</div>`;
@@ -731,7 +680,7 @@ function buildChartOptions(pSeries, obsSeries, medianSeries, monthBands, wcMax, 
         series: [
             ...bandSeriesConfig,
             { 
-                name: sensorIndex === 'sat' ? 'Saturación' : 'Observado', 
+                name: sensorIndex === 'sat' ? SITE_CONFIG.STATIONS.SATURATION_LABEL : SITE_CONFIG.STATIONS.OBSERVATION_LABEL, 
                 type: 'spline', 
                 data: obsSeries, 
                 color: '#111', 

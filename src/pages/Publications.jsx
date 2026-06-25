@@ -6,6 +6,7 @@ import searchIcon from "../assets/search-icon-png-9.png";
 // Local images
 import publication1 from "../assets/publications/publication1.webp";
 import placeholder from "../assets/placeholder.png";
+import { SITE_CONFIG } from "@config";
 
 function Publications() {
   const [publications, setPublications] = useState([]);
@@ -58,18 +59,16 @@ function Publications() {
 
   return (
     <div className="projects-page">
-      <h1 className="projects-title">Publicaciones</h1>
+      <h1 className="projects-title">{SITE_CONFIG.PUBLICATIONS.TITLE}</h1>
       <p className="projects-intro">
-        Explore nuestra colección de publicaciones, resultado del trabajo académico y
-        técnico de la oficina, enfocadas en la investigación y el entendimiento de los
-        deslizamientos en Puerto Rico.
+        {SITE_CONFIG.PUBLICATIONS.INTRO}
       </p>
 
       <div className="projects-controls">
         <div className="search-container">
           <input
             type="text"
-            placeholder="Search"
+            placeholder={SITE_CONFIG.PUBLICATIONS.SEARCH_PLACEHOLDER}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -89,7 +88,7 @@ function Publications() {
               rel="noopener noreferrer"
               className="publication-button"
             >
-              Leer más →
+              {SITE_CONFIG.PUBLICATIONS.READ_MORE_BTN}
             </a>
           </div>
         ))}

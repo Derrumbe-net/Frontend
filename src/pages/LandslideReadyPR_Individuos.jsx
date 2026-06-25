@@ -1,19 +1,20 @@
 import '../styles/LandslideReadyPR_Individuos_module.css';
 import ecoLogo from '../assets/ECOEXPLORATORIO_LOGO.svg';
 import coursePreview from '../assets/landslideready_module.webp';
+import { SITE_CONFIG } from "@config";
 
 function LandslideReadyPR_Individuos() {
   return (
     <div className="landslideReadyIndividuos">
-      <h2 className="landslideReadyIndividuos__header">LandslideReady para Individuos</h2>
+      <h2 className="landslideReadyIndividuos__header">{SITE_CONFIG.LANDSLIDE_READY.INDIVIDUOS_TITLE}</h2>
 
       <div className="landslideReadyIndividuos__content">
         <div className="landslideReadyIndividuos__text">
           <p>
-            El Ecoexploratorio Instituto de Resiliencia cuenta con unos módulos gratuitos con los cuales podrán aprender sobre deslizamientos de tierra. Estos módulos incluyen enseñanzas tales como qué son deslizamientos de tierra y cómo se pueden mitigar.
+            {SITE_CONFIG.LANDSLIDE_READY.INDIVIDUOS_DESC_1}
           </p>
           <p>
-            Este módulo está bajo el nombre de LANDS101: LandslideReady/Deslizamientos de tierra en P.R. Estos módulos cuentan como 4 horas de contacto verde y el curso tiene una duración promedio de 5 horas en total.
+            {SITE_CONFIG.LANDSLIDE_READY.INDIVIDUOS_DESC_2}
           </p>
         </div>
 
@@ -30,11 +31,11 @@ function LandslideReadyPR_Individuos() {
         target="_blank"
         rel="noopener noreferrer"
       >
-        Accede los Cursos
+        {SITE_CONFIG.LANDSLIDE_READY.INDIVIDUOS_BTN}
       </a>
 
       <h3 className="landslideReadyIndividuos__label">
-        Una vez que accedas a los módulos, la página se verá de esta manera:
+        {SITE_CONFIG.LANDSLIDE_READY.INDIVIDUOS_LABEL}
       </h3>
       <img
         src={coursePreview}

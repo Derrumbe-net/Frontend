@@ -4,6 +4,7 @@ import cycle from '../assets/landslideready_cycle.webp';
 import groupPics from '../assets/landslideready_pictures.webp';
 import LandslideReadyMap from '../components/LandslideReadyMap';
 import { useState, useEffect } from 'react';
+import { SITE_CONFIG } from "@config";
 
 function LandslideReadyPR_Municipios() {
 
@@ -27,25 +28,25 @@ function LandslideReadyPR_Municipios() {
     <section className="landslideReady">
       <div className="landslideReady__municipios-section">
         <div className="landslideReady__municipios-left">
-          <h2>LandslideReady para Municipios</h2>
+          <h2>{SITE_CONFIG.LANDSLIDE_READY.MUNICIPIOS_TITLE}</h2>
           <p>
-            LandslideReady es un programa de reconocimiento municipal organizado por la Oficina de Mitigación de Riesgos de Deslizamientos de Tierra de Puerto Rico.
+            {SITE_CONFIG.LANDSLIDE_READY.MUNICIPIOS_DESC_1}
           </p>
           <p>
-            Trabajando con colaboradores de oficinas de emergencias municipales, nuestro objetivo es aumentar las actividades de preparación, mitigación y recuperación relacionadas con los peligros de deslizamientos de tierra.
+            {SITE_CONFIG.LANDSLIDE_READY.MUNICIPIOS_DESC_2}
           </p>
 
           <h3 className="landslideReady__subheader">
-            Mapa de Municipios LandslideReady<br />
+            {SITE_CONFIG.LANDSLIDE_READY.MAP_SUBHEADER}<br />
           </h3>
           <div className="landslideReady__map-wrapper">
             <LandslideReadyMap completedMunicipalities={completedMunicipalities} />
           </div>
           <p className="landslideReady__map-note">
-            Si eres manejador de emergencia del municipio, estás interesado en el proyecto y quieres saber más, comunícate con nosotros.
+            {SITE_CONFIG.LANDSLIDE_READY.MAP_NOTE}
           </p>
 
-          <h3 className="landslideReady__subheader">Ciclo de LandslideReady</h3>
+          <h3 className="landslideReady__subheader">{SITE_CONFIG.LANDSLIDE_READY.CYCLE_SUBHEADER}</h3>
           <img src={cycle} alt="Ciclo LandslideReady" className="landslideReady__cycle" />
         </div>
 
@@ -58,3 +59,4 @@ function LandslideReadyPR_Municipios() {
 }
 
 export default LandslideReadyPR_Municipios;
+

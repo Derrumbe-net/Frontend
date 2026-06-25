@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Popup } from 'react-leaflet';
 import '../styles/StationPopup.css';
+import { SITE_CONFIG } from "@config";
 
 const isMobile = window.matchMedia("(max-width: 768px)").matches;
 
@@ -108,7 +109,7 @@ const LandslidePopup = ({ landslide }) => {
             <div className="custom-popup-content">
                 <div className="info roboto-condensed">
 
-                    <h2 className="bebas-neue">Reported Landslide</h2>
+                    <h2 className="bebas-neue">{SITE_CONFIG.POPUPS.LANDSLIDE_TITLE}</h2>
 
                     {/* --- CAROUSEL SECTION --- */}
                     <div className="popup-carousel">
@@ -128,7 +129,7 @@ const LandslidePopup = ({ landslide }) => {
                             {loading && (
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                     <div className="spinner" style={{ marginBottom: '5px' }}></div>
-                                    <span style={{ color: '#666', fontSize: '14px' }}>Fetching images...</span>
+                                    <span style={{ color: '#666', fontSize: '14px' }}>{SITE_CONFIG.POPUPS.FETCHING_IMAGES}</span>
                                 </div>
                             )}
 
@@ -148,7 +149,7 @@ const LandslidePopup = ({ landslide }) => {
                                     </>
                                 ) : (
                                     <div style={{ color: '#666', fontSize: '14px', fontStyle: 'italic' }}>
-                                        No images available
+                                        {SITE_CONFIG.POPUPS.NO_IMAGES}
                                     </div>
                                 )
                             )}
@@ -156,7 +157,7 @@ const LandslidePopup = ({ landslide }) => {
                             {/* Before popup is opened for first time, show a neutral placeholder */}
                             {!loading && !hasLoaded && (
                                 <div style={{ color: '#aaa', fontSize: '14px', fontStyle: 'italic' }}>
-                                    Click marker to load images
+                                    {SITE_CONFIG.POPUPS.CLICK_TO_LOAD}
                                 </div>
                             )}
                         </div>
@@ -176,7 +177,7 @@ const LandslidePopup = ({ landslide }) => {
 
                     <ul>
                         <li>
-                            <strong>Date:</strong>
+                            <strong>{SITE_CONFIG.POPUPS.DATE_LABEL}</strong>
                             <span>{formatDate(dateStr)}</span>
                         </li>
                     </ul>

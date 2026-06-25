@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "../styles/Report_module.css";
 import officeLogo from "../assets/PRLHMO_LOGO.svg";
 import Swal from "sweetalert2";
+import { SITE_CONFIG } from "@config";
 
 // --- LEAFLET IMPORTS ---
 import "leaflet/dist/leaflet.css";
@@ -161,18 +162,6 @@ function Report() {
     fontSize: "16px",
   };
 
-  const pueblos = [
-    "Adjuntas", "Aguada", "Aguadilla", "Aguas Buenas", "Aibonito", "Añasco", "Arecibo", "Arroyo", "Barceloneta",
-    "Barranquitas", "Bayamón", "Cabo Rojo", "Caguas", "Camuy", "Canóvanas", "Carolina", "Cataño", "Cayey", "Ceiba",
-    "Ciales", "Cidra", "Coamo", "Comerío", "Corozal", "Culebra", "Dorado", "Fajardo", "Florida", "Guánica", "Guayama",
-    "Guayanilla", "Guaynabo", "Gurabo", "Hatillo", "Hormigueros", "Humacao", "Isabela", "Jayuya", "Juana Díaz",
-    "Juncos", "Lajas", "Lares", "Las Marías", "Las Piedras", "Loíza", "Luquillo", "Manatí", "Maricao", "Maunabo",
-    "Mayagüez", "Moca", "Morovis", "Naguabo", "Naranjito", "Orocovis", "Patillas", "Peñuelas", "Ponce", "Quebradillas",
-    "Rincón", "Río Grande", "Sabana Grande", "Salinas", "San Germán", "San Juan", "San Lorenzo", "San Sebastián",
-    "Santa Isabel", "Toa Alta", "Toa Baja", "Trujillo Alto", "Utuado", "Vega Alta", "Vega Baja", "Vieques", "Villalba",
-    "Yabucoa", "Yauco"
-  ];
-
   // Load GeoJSON for municipality detection
   useEffect(() => {
     fetch("/puerto-rico-municipalities.geojson")
@@ -294,25 +283,18 @@ function Report() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    // setMessage(null);
 
     const errors = [];
-    if (!form.pueblo) errors.push("Pueblo");
-    if (!form.date) errors.push("Fecha");
-    if (!coords) errors.push("Ubicación (Coordenadas)");
-    if (files.length === 0) errors.push("Foto/Video");
+    if (!form.pueblo) errors.push(SITE_CONFIG.REPORT.LABEL_PUEBLO);
+    if (!form.date) errors.push(SITE_CONFIG.REPORT.LABEL_DATE.replace(":", ""));
+    if (!coords) errors.push(SITE_CONFIG.REPORT.LABEL_LOCATION);
+    if (files.length === 0) errors.push(SITE_CONFIG.REPORT.LABEL_PHOTO);
 
-    // if (errors.length > 0) {
-    //   setMessage({ type: "error", text: `Faltan campos requeridos: ${errors.join(", ")}` });
-    //   window.scrollTo(0, 0);
-    //   return;
-    // }
-    
     // Validation error
     if (errors.length > 0) {
       Swal.fire({
-        title: "Campos incompletos",
-        html: `Por favor completa los siguientes campos requeridos:<br/><br/><strong>${errors.join(", ")}</strong>`,
+        title: SITE_CONFIG.REPORT.VALIDATION_ERROR_TITLE,
+        html: `${SITE_CONFIG.REPORT.VALIDATION_ERROR_HTML}${errors.join(", ")}</strong>`,
         icon: "warning",
         confirmButtonText: "Entendido",
         confirmButtonColor: "#3B7D23",
@@ -360,11 +342,10 @@ function Report() {
         }
       }
 
-      // setMessage({ type: "success", text: "¡Reporte e imágenes enviados exitosamente!" });
       // Success
       Swal.fire({
-        title: "¡Reporte Enviado!",
-        text: "Tu reporte fue enviado exitosamente. Gracias por tu aportación.",
+        title: SITE_CONFIG.REPORT.SUCCESS_TITLE,
+        text: SITE_CONFIG.REPORT.SUCCESS_TEXT,
         icon: "success",
         confirmButtonText: "Aceptar",
         confirmButtonColor: "#3B7D23",
@@ -374,11 +355,10 @@ function Report() {
       setCoords(null);
     } catch (error) {
       console.error("Error submitting:", error);
-      // setMessage({ type: "error", text: `Error al enviar: ${error.message}` });
       // Error
       Swal.fire({
-        title: "Error al Enviar",
-        text: `Ocurrió un problema al enviar el reporte.`,
+        title: SITE_CONFIG.REPORT.ERROR_TITLE,
+        text: SITE_CONFIG.REPORT.ERROR_TEXT,
         icon: "error",
         confirmButtonText: "Intentar de nuevo",
         confirmButtonColor: "#3B7D23",
@@ -405,7 +385,7 @@ function Report() {
               aria-label="Tomar foto" />
             <button type="button" onClick={() => setShowCamera(false)}
               style={{ backgroundColor: "transparent", color: "white", border: "none", fontSize: "18px", cursor: "pointer" }}>
-              Cancelar
+              {SITE_CONFIG.REPORT.CAMERA_CANCEL}
             </button>
           </div>
         </div>
@@ -414,46 +394,36 @@ function Report() {
       <div className="report-hero">
         <img src={officeLogo} alt="PRLHMO" className="report-hero__logo" />
         <div className="report-hero__text">
-          <h1 className="report-title">Reporte de Deslizamiento</h1>
-          <p className="report-subtitle"><strong>¿Viste un deslizamiento?</strong> Ayúdanos reportándolo.</p>
+          <h1 className="report-title">{SITE_CONFIG.REPORT.TITLE}</h1>
+          <p className="report-subtitle"><strong>{SITE_CONFIG.REPORT.HERO_LABEL}</strong> {SITE_CONFIG.REPORT.SUBTITLE}</p>
         </div>
       </div>
 
       <hr className="report-divider" />
 
       <form className="report-form" onSubmit={onSubmit}>
-        {/* {message && (
-          <div style={{
-            padding: "1rem", marginBottom: "1rem", borderRadius: "5px",
-            backgroundColor: message.type === "error" ? "#f8d7da" : "#d4edda",
-            color: message.type === "error" ? "#721c24" : "#155724",
-            border: `1px solid ${message.type === "error" ? "#f5c6cb" : "#c3e6cb"}`
-          }}>
-            {message.text}
-          </div>
-        )} */}
 
         {/* 1. FECHA */}
         <div className="form-row">
-          <label htmlFor="date">Fecha: <small style={{color: '#d9534f'}}>*</small></label>
+          <label htmlFor="date">{SITE_CONFIG.REPORT.LABEL_DATE} <small style={{color: '#d9534f'}}>*</small></label>
           <input id="date" name="date" type="date" value={form.date} onChange={onChange} style={fieldStyle} max={today} />
         </div>
 
         {/* 2. FOTO/VIDEO */}
         <div className="form-row">
-          <label> Añadir Foto/Video <small style={{color: '#d9534f'}}>*</small>:</label>
+          <label> {SITE_CONFIG.REPORT.LABEL_PHOTO} <small style={{color: '#d9534f'}}>*</small>:</label>
           <div className="dropzone" ref={dropRef}>
             <div className="dropzone__hint">
               <span className="drop-cloud">☁️</span>
-              <p>Arrastra fotos aquí</p>
+              <p>{SITE_CONFIG.REPORT.DROPZONE_HINT}</p>
               <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px', flexWrap: 'wrap' }}>
                 <label className="pick-files-btn">
-                  📁 Seleccionar
+                  {SITE_CONFIG.REPORT.DROPZONE_PICK}
                   <input type="file" multiple onChange={onFilePick} style={{ display: 'none', cursor: 'pointer' }} />
                 </label>
                 <button type="button" className="camera-btn" onClick={() => setShowCamera(true)}
                   style={{ backgroundColor: 'none', color: 'black', border: 1, padding: '8px 15px', borderRadius: '5px', cursor: 'pointer' }}>
-                  📷 Tomar Foto
+                  {SITE_CONFIG.REPORT.DROPZONE_CAMERA}
                 </button>
               </div>
             </div>
@@ -472,17 +442,17 @@ function Report() {
 
         {/* 3. PUEBLO */}
         <div className="form-row">
-          <label htmlFor="pueblo">Pueblo <small style={{color: '#d9534f'}}>*</small></label>
+          <label htmlFor="pueblo">{SITE_CONFIG.REPORT.LABEL_PUEBLO} <small style={{color: '#d9534f'}}>*</small></label>
           <select id="pueblo" name="pueblo" value={form.pueblo} onChange={onChange} style={fieldStyle}>
-            <option value="">Seleccione un pueblo...</option>
-            {pueblos.map(p => <option key={p} value={p}>{p}</option>)}
+            <option value="">{SITE_CONFIG.REPORT.PUEBLO_PLACEHOLDER}</option>
+            {SITE_CONFIG.REPORT.PUEBLOS.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
 
         {/* 4. UBICACIÓN */}
         <div className="form-row">
           <label>
-            Ubicación <small style={{ color: "#d9534f" }}>* Busque una dirección, presione el ícono de GPS, o haga clic en el mapa.</small>
+            {SITE_CONFIG.REPORT.LABEL_LOCATION} <small style={{ color: "#d9534f" }}>{SITE_CONFIG.REPORT.LOCATION_HINT}</small>
           </label>
           <style>{`
             .leaflet-top { top: 15px !important; }
@@ -551,16 +521,16 @@ function Report() {
 
         {/* 5. CARRETERA */}
         <div className="form-row">
-          <label htmlFor="carretera">Carretera / Dirección <small style={{color: '#666'}}>(Opcional)</small>:</label>
+          <label htmlFor="carretera">{SITE_CONFIG.REPORT.LABEL_ROAD}</label>
           <input id="carretera" name="carretera" type="text" value={form.carretera} onChange={onChange} style={fieldStyle}
-            placeholder="Ej. PR-123 Km 4.5, Barrio Salto Arriba" />
+            placeholder={SITE_CONFIG.REPORT.ROAD_PLACEHOLDER} />
         </div>
 
         {/* 6. DESCRIPCIÓN */}
         <div className="form-row">
-          <label htmlFor="description">Descripción: <small style={{color: '#666'}}>(Opcional)</small></label>
+          <label htmlFor="description">{SITE_CONFIG.REPORT.LABEL_DESCRIPTION}</label>
           <textarea id="description" name="description" rows={4} value={form.description} onChange={onChange} style={fieldStyle}
-            placeholder="Ej. Deslizamiento bloqueando el carril derecho. Se observan árboles caídos y terreno inestable..." />
+            placeholder={SITE_CONFIG.REPORT.DESCRIPTION_PLACEHOLDER} />
         </div>
 
         {/* SECCIÓN OPCIONAL */}
@@ -570,31 +540,31 @@ function Report() {
           borderBottom: '2px solid #a6b09f',
         }}>
           <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#3B7D23' }}>
-            Información Opcional de la Persona
+            {SITE_CONFIG.REPORT.OPTIONAL_SECTION_TITLE}
           </h3>
         </div>
 
         {/* 7. NOMBRE */}
         <div className="form-row">
-          <label htmlFor="name">Nombre:</label>
-          <input id="name" name="name" type="text" value={form.name} onChange={onChange} style={fieldStyle} placeholder="Ej. Juan del Pueblo" />
+          <label htmlFor="name">{SITE_CONFIG.REPORT.LABEL_NAME}</label>
+          <input id="name" name="name" type="text" value={form.name} onChange={onChange} style={fieldStyle} placeholder={SITE_CONFIG.REPORT.NAME_PLACEHOLDER} />
         </div>
 
         {/* 8. TELÉFONO */}
         <div className="form-row">
-          <label htmlFor="phone">Teléfono:</label>
-          <input id="phone" name="phone" type="tel" value={form.phone} onChange={onChange} style={fieldStyle} placeholder="Ej. 787-555-0123" />
+          <label htmlFor="phone">{SITE_CONFIG.REPORT.LABEL_PHONE}</label>
+          <input id="phone" name="phone" type="tel" value={form.phone} onChange={onChange} style={fieldStyle} placeholder={SITE_CONFIG.REPORT.PHONE_PLACEHOLDER} />
         </div>
 
         {/* 9. EMAIL */}
         <div className="form-row">
-          <label htmlFor="email">Email:</label>
-          <input id="email" name="email" type="email" value={form.email} onChange={onChange} style={fieldStyle} placeholder="Ej. juan@ejemplo.com" />
+          <label htmlFor="email">{SITE_CONFIG.REPORT.LABEL_EMAIL}</label>
+          <input id="email" name="email" type="email" value={form.email} onChange={onChange} style={fieldStyle} placeholder={SITE_CONFIG.REPORT.EMAIL_PLACEHOLDER} />
         </div>
 
         <div className="form-actions">
           <button className="submit-btn" disabled={submitting}>
-            {submitting ? "Enviando..." : "Enviar Reporte"}
+            {submitting ? SITE_CONFIG.REPORT.SUBMITTING_BTN : SITE_CONFIG.REPORT.SUBMIT_BTN}
           </button>
         </div>
       </form>
